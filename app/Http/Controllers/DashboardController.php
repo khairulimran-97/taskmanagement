@@ -161,95 +161,6 @@ class DashboardController extends Controller
                 : 0,
         ];
 
-        // Weekly Activity Data (last 7 days)
-        $weeklyActivity = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $tasksCreated = Task::where('user_id', $userId)
-                ->whereDate('created_at', $date)
-                ->count();
-            $tasksCompleted = Task::where('user_id', $userId)
-                ->whereDate('completed_at', $date)
-                ->count();
-
-            $weeklyActivity[] = [
-                'date' => $date->format('M j'),
-                'created' => $tasksCreated,
-                'completed' => $tasksCompleted,
-            ];
-        }
-
-        // Monthly Progress (last 6 months)
-        $monthlyProgress = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $startOfMonth = now()->subMonths($i)->startOfMonth();
-            $endOfMonth = now()->subMonths($i)->endOfMonth();
-
-            $monthlyTasks = Task::where('user_id', $userId)
-                ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-                ->count();
-            $monthlyCompleted = Task::where('user_id', $userId)
-                ->whereBetween('completed_at', [$startOfMonth, $endOfMonth])
-                ->count();
-
-            $monthlyProgress[] = [
-                'month' => $startOfMonth->format('M Y'),
-                'total' => $monthlyTasks,
-                'completed' => $monthlyCompleted,
-                'completion_rate' => $monthlyTasks > 0 ? round(($monthlyCompleted / $monthlyTasks) * 100, 1) : 0,
-            ];
-        }
-
-        // Project Status Chart Data
-        $projectStatusChart = [
-            'labels' => ['Active', 'Completed', 'Paused', 'Archived'],
-            'data' => [
-                $projectStats['active'],
-                $projectStats['completed'],
-                $projectStats['paused'],
-                $projectStats['archived']
-            ],
-            'colors' => ['#3B82F6', '#10B981', '#F59E0B', '#6B7280']
-        ];
-
-        // Task Status Chart Data
-        $taskStatusChart = [
-            'labels' => ['To Do', 'In Progress', 'Completed', 'Cancelled'],
-            'data' => [
-                $taskStats['todo'],
-                $taskStats['in_progress'],
-                $taskStats['completed'],
-                $taskStats['cancelled']
-            ],
-            'colors' => ['#64748B', '#3B82F6', '#10B981', '#EF4444']
-        ];
-
-        // Priority Distribution Chart Data
-        $priorityChart = [
-            'labels' => ['Urgent', 'High', 'Medium', 'Low'],
-            'data' => [
-                $taskPriorityDistribution['urgent'],
-                $taskPriorityDistribution['high'],
-                $taskPriorityDistribution['medium'],
-                $taskPriorityDistribution['low']
-            ],
-            'colors' => ['#DC2626', '#EA580C', '#D97706', '#65A30D']
-        ];
-
-        // Top Projects by Task Count
-        $topProjects = Project::where('user_id', $userId)
-            ->withCount('tasks')
-            ->orderBy('tasks_count', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(function ($project) {
-                return [
-                    'name' => $project->name,
-                    'task_count' => $project->tasks_count,
-                    'color' => $project->color,
-                ];
-            });
-
         return Inertia::render('Dashboard', [
             'projectStats' => $projectStats,
             'taskStats' => $taskStats,
@@ -260,12 +171,6 @@ class DashboardController extends Controller
             'projectPriorityDistribution' => $projectPriorityDistribution,
             'taskPriorityDistribution' => $taskPriorityDistribution,
             'completionRates' => $completionRates,
-            'weeklyActivity' => $weeklyActivity,
-            'monthlyProgress' => $monthlyProgress,
-            'projectStatusChart' => $projectStatusChart,
-            'taskStatusChart' => $taskStatusChart,
-            'priorityChart' => $priorityChart,
-            'topProjects' => $topProjects,
         ]);
     }
 }
