@@ -39,6 +39,7 @@ export interface User {
 
 export type BreadcrumbItemType = BreadcrumbItem;
 
+// Project types
 export type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived';
 export type ProjectPriority = 'low' | 'medium' | 'high';
 
@@ -60,15 +61,54 @@ export interface Project {
     tasks?: Task[];
 }
 
+// Task types
+export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
 export interface Task {
     id: number;
     title: string;
     description?: string | null;
-    status: 'pending' | 'in_progress' | 'completed';
+    status: TaskStatus;
+    priority: TaskPriority;
+    due_date?: string | null;
+    start_date?: string | null;
     project_id: number;
     user_id: number;
-    due_date?: string | null;
+    assigned_to?: number | null;
+    parent_task_id?: number | null;
+    sort_order: number;
     completed_at?: string | null;
     created_at: string;
     updated_at: string;
+    // Relationships
+    tags?: Tag[];
+    subtasks?: Task[];
+    parentTask?: Task;
+    assignedUser?: User;
+}
+
+// Tag types
+export interface Tag {
+    id: number;
+    name: string;
+    slug: string;
+    color: string;
+    description?: string | null;
+    user_id: number;
+    created_at: string;
+    updated_at: string;
+    // Relationships
+    tasks?: Task[];
+}
+
+// Extended interfaces for complex components
+export interface ExtendedTask extends Task {
+    tags?: Tag[];
+    subtasks?: ExtendedTask[];
+    parent_task_id?: number;
+}
+
+export interface ExtendedProject extends Project {
+    tasks?: ExtendedTask[];
 }
