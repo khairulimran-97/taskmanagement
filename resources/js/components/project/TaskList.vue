@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Plus, ChevronDown, MoreVertical, CheckCircle2 } from 'lucide-vue-next';
+import { Plus, ChevronDown, MoreVertical, CheckCircle2, Trash2, Tag as TagIcon } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 
 const props = defineProps({
     project: {
@@ -18,7 +24,7 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['add-task', 'view-task', 'toggle-task']);
+const emit = defineEmits(['add-task', 'view-task', 'toggle-task', 'delete-task', 'view-tags']);
 
 // Computed - Group tasks by status
 const tasksByStatus = computed(() => {
@@ -97,6 +103,11 @@ const getPriorityClass = (priority) => {
     };
     return classes[priority] || 'bg-gray-100 text-gray-800 border-gray-200';
 };
+
+// Check if task has tags
+const hasTaskTags = (task) => {
+    return task.tags && task.tags.length > 0;
+};
 </script>
 
 <template>
@@ -132,7 +143,8 @@ const getPriorityClass = (priority) => {
                             <TableHead>Descriptions</TableHead>
                             <TableHead>Timeline Date</TableHead>
                             <TableHead>Priority</TableHead>
-                            <TableHead class="w-10"></TableHead>
+                            <TableHead>Tags</TableHead>
+                            <TableHead class="w-28 text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -159,9 +171,50 @@ const getPriorityClass = (priority) => {
                                 </Badge>
                             </TableCell>
                             <TableCell>
-                                <Button variant="ghost" size="sm" class="h-8 w-8 p-0" @click="$emit('view-task', task)">
-                                    <MoreVertical class="h-4 w-4" />
-                                </Button>
+                                <div v-if="hasTaskTags(task)" class="flex flex-wrap gap-1">
+                                    <Badge
+                                        v-for="tag in task.tags.slice(0, 2)"
+                                        :key="tag.id"
+                                        variant="outline"
+                                        class="px-1.5 py-0.5 text-xs"
+                                        :style="`border-color: ${tag.color}; color: ${tag.color}`"
+                                    >
+                                        {{ tag.name }}
+                                    </Badge>
+                                    <Badge
+                                        v-if="task.tags.length > 2"
+                                        variant="outline"
+                                        class="px-1.5 py-0.5 text-xs cursor-pointer hover:bg-gray-100"
+                                        @click="$emit('view-tags', task)"
+                                    >
+                                        +{{ task.tags.length - 2 }} more
+                                    </Badge>
+                                </div>
+                                <span v-else class="text-xs text-gray-400">No tags</span>
+                            </TableCell>
+                            <TableCell class="text-right">
+                                <div class="flex justify-end space-x-1">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                                <MoreVertical class="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" class="w-40">
+                                            <DropdownMenuItem @click="$emit('view-task', task)">
+                                                <span class="text-xs">View Details</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem @click="$emit('view-tags', task)">
+                                                <TagIcon class="mr-2 h-3 w-3" />
+                                                <span class="text-xs">Manage Tags</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem @click="$emit('delete-task', task)" class="text-red-600">
+                                                <Trash2 class="mr-2 h-3 w-3" />
+                                                <span class="text-xs">Delete</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             </TableCell>
                         </TableRow>
                     </TableBody>

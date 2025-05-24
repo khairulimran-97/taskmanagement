@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { BreadcrumbItem } from '@/types';
 
@@ -240,9 +240,22 @@ const createNewTag = (tagData) => {
     );
 };
 
+watch(
+    () => props.tags,
+    (newTags) => {
+        availableTags.value = [...newTags];
+    },
+    { deep: true },
+);
+
 const deleteTask = (task) => {
     taskToDelete.value = task;
     isDeleteTaskDialogOpen.value = true;
+};
+
+const handleViewTags = (task) => {
+    selectedTask.value = task;
+    isTaskDetailModalOpen.value = true;
 };
 
 const confirmDeleteTask = () => {
@@ -293,6 +306,8 @@ const closeTaskModals = () => {
                 @add-task="openAddTaskModal"
                 @view-task="openTaskDetailModal"
                 @toggle-task="toggleTaskCompletion"
+                @delete-task="deleteTask"
+                @view-tags="handleViewTags"
             />
         </div>
 
@@ -338,9 +353,11 @@ const closeTaskModals = () => {
             :project-id="project.id"
             :editing-task="editingTask"
             :is-submitting="isSubmitting"
+            :available-tags="availableTags"
             @update:open="(open) => { if (!open) closeTaskModals(); }"
             @submit="submitTaskForm"
             @cancel="closeTaskModals"
+            @create-tag="createNewTag"
         />
 
         <!-- Delete Task Confirmation Dialog -->

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue';
-import { Calendar, Plus } from 'lucide-vue-next';
+import { Calendar, Plus, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,12 +44,8 @@ const df = new DateFormatter('en-US', { dateStyle: 'long' });
 const subtaskStartDateValue = ref<DateValue>();
 const subtaskDueDateValue = ref<DateValue>();
 
-// New tag form state
-const newTagForm = reactive({
-    name: '',
-    color: '#6B7280',
-    description: '',
-});
+// New tag state
+const newTagName = ref('');
 const isCreatingTag = ref(false);
 
 // Subtask form data
@@ -81,6 +77,7 @@ const resetForm = () => {
     subtaskForm.new_tags = [];
     subtaskStartDateValue.value = undefined;
     subtaskDueDateValue.value = undefined;
+    newTagName.value = '';
 };
 
 const populateForm = (task: any) => {
@@ -125,15 +122,24 @@ const handleSubmit = () => {
 };
 
 const createTag = () => {
-    if (!newTagForm.name.trim() || isCreatingTag.value) return;
+    if (!newTagName.value.trim() || isCreatingTag.value) return;
 
     isCreatingTag.value = true;
-    emit('create-tag', { ...newTagForm });
 
-    // Reset form after emitting event
-    newTagForm.name = '';
-    newTagForm.color = '#6B7280';
-    newTagForm.description = '';
+    // Create the tag in the database with default color
+    emit('create-tag', {
+        name: newTagName.value.trim(),
+        color: '#6B7280',
+        description: ''
+    });
+
+    // Clear the input
+    newTagName.value = '';
+
+    // Reset creating state after a delay
+    setTimeout(() => {
+        isCreatingTag.value = false;
+    }, 500);
 };
 
 // Now set up watchers after functions are defined
@@ -272,60 +278,68 @@ watch(subtaskDueDateValue, (newValue) => {
                         v-for="tagId in subtaskForm.tag_ids"
                         :key="tagId"
                         variant="outline"
-                        class="cursor-pointer px-1.5 py-0.5 text-xs hover:bg-red-50"
-                        :style="`border-color: ${availableTags.find((t) => t.id === tagId)?.color}; color: ${availableTags.find((t) => t.id === tagId)?.color}`"
+                        class="cursor-pointer px-1.5 py-0.5 text-xs hover:bg-red-50 flex items-center"
+                        :style="`border-color: ${props.availableTags.find((t) => t.id === tagId)?.color}; color: ${props.availableTags.find((t) => t.id === tagId)?.color}`"
                         @click="
-              () => {
-                const index = subtaskForm.tag_ids.indexOf(tagId);
-                if (index > -1) {
-                  subtaskForm.tag_ids.splice(index, 1);
-                }
-              }
-            "
+                          () => {
+                            const index = subtaskForm.tag_ids.indexOf(tagId);
+                            if (index > -1) {
+                              subtaskForm.tag_ids.splice(index, 1);
+                            }
+                          }
+                        "
                     >
-                        {{ availableTags.find((t) => t.id === tagId)?.name }}
-                        <span class="ml-1 text-xs">×</span>
+                        {{ props.availableTags.find((t) => t.id === tagId)?.name }}
+                        <X class="ml-1 h-3 w-3" />
                     </Badge>
                 </div>
 
                 <!-- Available Tags Selection -->
-                <div v-if="availableTags.length > 0">
+                <div v-if="props.availableTags.length > 0">
                     <div class="flex max-h-20 flex-wrap gap-1 overflow-y-auto rounded-md border bg-white p-2">
                         <Badge
-                            v-for="tag in availableTags.filter((t) => !subtaskForm.tag_ids.includes(t.id))"
+                            v-for="tag in props.availableTags.filter((t) => !subtaskForm.tag_ids.includes(t.id))"
                             :key="tag.id"
                             variant="outline"
                             class="cursor-pointer px-1.5 py-0.5 text-xs transition-colors hover:bg-gray-50"
                             @click="
-                () => {
-                  if (!subtaskForm.tag_ids.includes(tag.id)) {
-                    subtaskForm.tag_ids.push(tag.id);
-                  }
-                }
-              "
+                                () => {
+                                  if (!subtaskForm.tag_ids.includes(tag.id)) {
+                                    subtaskForm.tag_ids.push(tag.id);
+                                  }
+                                }
+                              "
                         >
-                            <span class="mr-1 text-xs">+</span>
+                            <Plus class="mr-1 h-3 w-3" />
                             {{ tag.name }}
                         </Badge>
                     </div>
                 </div>
 
                 <!-- Create New Tag -->
-                <div class="space-y-2 border-t pt-2">
-                    <Label class="text-xs font-medium text-gray-600">Create New Tag</Label>
+                <div class="mt-3 space-y-1">
+                    <Label class="text-xs font-medium text-gray-600">Create new tag</Label>
                     <div class="flex items-center space-x-2">
-                        <Input v-model="newTagForm.name" placeholder="Tag name" class="h-7 flex-1 text-xs" />
+                        <Input
+                            v-model="newTagName"
+                            placeholder="New tag name"
+                            class="h-7 flex-1 text-xs"
+                            @keyup.enter="createTag"
+                        />
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             @click="createTag"
-                            :disabled="!newTagForm.name.trim() || isCreatingTag"
-                            class="h-7 px-2 text-xs"
+                            :disabled="!newTagName.trim() || isCreatingTag"
+                            class="h-7 px-2 text-xs whitespace-nowrap"
                         >
-                            {{ isCreatingTag ? 'Adding...' : 'Add' }}
+                            {{ isCreatingTag ? 'Creating...' : 'Create' }}
                         </Button>
                     </div>
+                    <p class="text-xs text-gray-500">
+                        New tag will appear in the selection list above
+                    </p>
                 </div>
             </div>
 
