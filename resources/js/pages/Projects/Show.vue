@@ -303,15 +303,12 @@ const getProjectPriorityClass = (priority: string): string => {
     }
 };
 
-// Watch for flash messages to handle new tag creation
 watch(() => page.props.flash, (flash: any) => {
     if (flash?.newTag && !taskForm.tag_ids.includes(flash.newTag.id)) {
-        // Auto-select the newly created tag
         taskForm.tag_ids.push(flash.newTag.id);
     }
 }, { deep: true, immediate: true });
 
-// Lifecycle - removed onMounted since tags come from props
 </script>
 
 <template>
