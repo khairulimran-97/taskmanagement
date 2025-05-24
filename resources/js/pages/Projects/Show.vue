@@ -281,6 +281,10 @@ const closeTaskModals = () => {
     isEditTaskModalOpen.value = false;
     editingTask.value = null;
 };
+
+const handleEditTask = (task) => {
+    openEditTaskModal(task);
+};
 </script>
 
 <template>
@@ -308,6 +312,7 @@ const closeTaskModals = () => {
                 @toggle-task="toggleTaskCompletion"
                 @delete-task="deleteTask"
                 @view-tags="handleViewTags"
+                @edit-task="handleEditTask"
             />
         </div>
 

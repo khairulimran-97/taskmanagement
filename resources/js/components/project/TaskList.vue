@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Plus, ChevronDown, MoreVertical, CheckCircle2, Trash2, Tag as TagIcon } from 'lucide-vue-next';
+import { Plus, ChevronDown, MoreVertical, CheckCircle2, Trash2, Tag as TagIcon, Edit } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,7 +24,7 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['add-task', 'view-task', 'toggle-task', 'delete-task', 'view-tags']);
+const emit = defineEmits(['add-task', 'view-task', 'toggle-task', 'delete-task', 'view-tags', 'edit-task']);
 
 // Computed - Group tasks by status
 const tasksByStatus = computed(() => {
@@ -37,6 +37,24 @@ const tasksByStatus = computed(() => {
         cancelled: rootTasks.filter((task) => task.status === 'cancelled'),
     };
 });
+
+const subtaskCountMap = computed<Record<string | number, number>>(() => {
+    const map: Record<string | number, number> = {};
+    const allTasks = props.project.tasks || [];
+
+    allTasks.forEach(task => {
+        if (task.parent_task_id != null) {
+            if (!map[task.parent_task_id]) {
+                map[task.parent_task_id] = 0;
+            }
+            map[task.parent_task_id]++;
+        }
+    });
+
+    return map;
+});
+
+
 
 // Status section configuration
 const statusSections = computed(() => {
@@ -138,12 +156,13 @@ const hasTaskTags = (task) => {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead class="w-8"></TableHead>
-                            <TableHead>Task Name</TableHead>
-                            <TableHead>Descriptions</TableHead>
-                            <TableHead>Timeline Date</TableHead>
-                            <TableHead>Priority</TableHead>
-                            <TableHead>Tags</TableHead>
+                            <TableHead class="w-12"></TableHead>
+                            <TableHead class="w-48">Task Name</TableHead>
+                            <TableHead class="w-64">Description</TableHead>
+                            <TableHead class="w-24">Subtasks</TableHead>
+                            <TableHead class="w-40">Timeline Date</TableHead>
+                            <TableHead class="w-32">Priority</TableHead>
+                            <TableHead class="w-48">Tags</TableHead>
                             <TableHead class="w-28 text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -156,9 +175,20 @@ const hasTaskTags = (task) => {
                             </TableCell>
                             <TableCell class="font-medium" :class="{'line-through text-gray-500': task.status === 'completed'}">
                                 {{ task.title }}
+                                <span v-if="subtaskCountMap[task.id]" class="ml-2 text-xs text-gray-400">
+                                    ({{ subtaskCountMap[task.id] }} subtask{{ subtaskCountMap[task.id] > 1 ? 's' : '' }})
+                                </span>
                             </TableCell>
                             <TableCell class="text-gray-500 max-w-md">
                                 <span class="line-clamp-1">{{ task.description || 'No description provided.' }}</span>
+                            </TableCell>
+                            <TableCell>
+                                  <span
+                                      v-if="subtaskCountMap[task.id]"
+                                      class="text-blue-600 cursor-pointer hover:underline text-sm"
+                                      @click="$emit('view-task', task)">{{ subtaskCountMap[task.id] }} tasks
+                                  </span>
+                                <span v-else class="text-gray-400 text-xs">0 task</span>
                             </TableCell>
                             <TableCell>
                                 <div class="text-xs text-gray-600">
@@ -202,11 +232,12 @@ const hasTaskTags = (task) => {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" class="w-40">
                                             <DropdownMenuItem @click="$emit('view-task', task)">
+                                                <TagIcon class="mr-2 h-3 w-3" />
                                                 <span class="text-xs">View Details</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem @click="$emit('view-tags', task)">
-                                                <TagIcon class="mr-2 h-3 w-3" />
-                                                <span class="text-xs">Manage Tags</span>
+                                            <DropdownMenuItem @click="$emit('edit-task', task)">
+                                                <Edit class="mr-2 h-3 w-3" />
+                                                <span class="text-xs">Edit Task</span>
                                             </DropdownMenuItem>
                                             <DropdownMenuItem @click="$emit('delete-task', task)" class="text-red-600">
                                                 <Trash2 class="mr-2 h-3 w-3" />
@@ -256,5 +287,18 @@ const hasTaskTags = (task) => {
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+.table-container {
+    overflow-x: auto;
+}
+
+.table-fixed {
+    table-layout: fixed;
+}
+
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>

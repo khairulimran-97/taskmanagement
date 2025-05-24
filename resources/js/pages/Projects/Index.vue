@@ -482,10 +482,18 @@ function getStatusClass(status: string): string {
                             <TableCell>
                                 <div v-if="project.completion_percentage !== undefined" class="min-w-24">
                                     <div class="flex items-center space-x-2">
-                                        <Progress :value="project.completion_percentage" class="flex-1" />
+                                        <Progress
+                                            :model-value="project.completion_percentage"
+                                            class="flex-1"
+                                            :class="{
+                                                      'bg-red-200 [&>div]:bg-red-500': project.completion_percentage < 25,
+                                                      'bg-orange-200 [&>div]:bg-orange-500': project.completion_percentage >= 25 && project.completion_percentage < 50,
+                                                      'bg-yellow-200 [&>div]:bg-yellow-500': project.completion_percentage >= 50 && project.completion_percentage < 75,
+                                                      'bg-green-200 [&>div]:bg-green-500': project.completion_percentage >= 75
+                                                    }" />
                                         <span class="text-xs text-gray-500 font-medium min-w-8 text-right">
                                             {{ project.completion_percentage }}%
-                                        </span>
+                                          </span>
                                     </div>
                                 </div>
                                 <span v-else class="text-gray-400 text-sm">-</span>
