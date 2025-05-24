@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Project;
+use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,11 +80,23 @@ class ProjectController extends Controller
     public function show(string $id): Response
     {
         $project = Project::where('user_id', Auth::id())
-            ->with('tasks')
+            ->with([
+                'tasks' => function ($query) {
+                    $query->with(['tags', 'subtasks.tags'])
+                        ->orderBy('sort_order')
+                        ->orderBy('created_at');
+                },
+                'tasks.parentTask'
+            ])
             ->findOrFail($id);
+
+        $tags = Tag::where('user_id', Auth::id())
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('Projects/Show', [
             'project' => $project,
+            'tags' => $tags,
             'completionPercentage' => $project->getCompletionPercentageAttribute()
         ]);
     }
