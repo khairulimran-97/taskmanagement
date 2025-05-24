@@ -16,6 +16,8 @@ import {
     Trash2,
     X,
     XCircle,
+    ChevronDown,
+    MoreVertical,
 } from 'lucide-vue-next';
 
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -43,6 +45,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DateFormatter, type DateValue, getLocalTimeZone, parseDate } from '@internationalized/date';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Props {
     project: Project & {
@@ -155,23 +158,58 @@ const newTagForm = reactive({
 });
 const isCreatingTag = ref(false);
 
-// Computed - Group root tasks by priority
-const tasksByPriority = computed(() => {
+// Computed - Group tasks by status (instead of priority)
+const tasksByStatus = computed(() => {
     const rootTasks = (props.project.tasks || []).filter((task) => !task.parent_task_id);
 
     return {
-        urgent: rootTasks.filter((task) => task.priority === 'urgent'),
-        high: rootTasks.filter((task) => task.priority === 'high'),
-        medium: rootTasks.filter((task) => task.priority === 'medium'),
-        low: rootTasks.filter((task) => task.priority === 'low'),
+        todo: rootTasks.filter((task) => task.status === 'todo'),
+        in_progress: rootTasks.filter((task) => task.status === 'in_progress'),
+        completed: rootTasks.filter((task) => task.status === 'completed'),
+        cancelled: rootTasks.filter((task) => task.status === 'cancelled'),
     };
 });
 
+// Status section configuration
+const statusSections = computed(() => {
+    return [
+        {
+            key: 'todo',
+            label: 'Not Started',
+            bgColor: 'bg-amber-100',
+            textColor: 'text-amber-800',
+            tasks: tasksByStatus.value.todo || [],
+        },
+        {
+            key: 'in_progress',
+            label: 'In Progress',
+            bgColor: 'bg-amber-100',
+            textColor: 'text-amber-800',
+            tasks: tasksByStatus.value.in_progress || [],
+        },
+        {
+            key: 'completed',
+            label: 'Completed',
+            bgColor: 'bg-green-100',
+            textColor: 'text-green-800',
+            tasks: tasksByStatus.value.completed || [],
+        },
+        {
+            key: 'cancelled',
+            label: 'Cancelled',
+            bgColor: 'bg-red-100',
+            textColor: 'text-red-800',
+            tasks: tasksByStatus.value.cancelled || [],
+        },
+    ].filter(section => section.tasks.length > 0);
+});
+
+// Get subtasks - keep this function
 const getSubtasks = (parentId: number) => {
     return (props.project.tasks || []).filter((task) => task.parent_task_id === parentId);
 };
 
-// Priority configurations
+// Priority configurations - keep this
 const priorityConfig = {
     urgent: {
         key: 'urgent',
@@ -207,18 +245,7 @@ const priorityConfig = {
     },
 };
 
-// Computed priority sections for easy looping
-const prioritySections = computed(() => {
-    return Object.values(priorityConfig)
-        .map((config) => ({
-            ...config,
-            tasks: tasksByPriority.value[config.key] || [],
-            count: (tasksByPriority.value[config.key] || []).length,
-        }))
-        .filter((section) => section.tasks.length > 0);
-});
-
-// Status configurations
+// Status configurations - keep this
 const statusConfig = {
     todo: {
         label: 'To Do',
@@ -244,6 +271,38 @@ const statusConfig = {
         class: 'bg-red-100 text-red-800 hover:bg-red-200',
         iconClass: 'text-red-500 hover:text-red-700',
     },
+};
+
+// Format timeline date for new UI
+const formatTimelineDate = (task) => {
+    if (!task.start_date && !task.due_date) return '-';
+
+    let result = '';
+    if (task.start_date) {
+        const startDate = new Date(task.start_date);
+        result += startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    if (task.due_date) {
+        const dueDate = new Date(task.due_date);
+        if (result) {
+            result += ' - ';
+        }
+        result += dueDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    return result;
+};
+
+// Get priority class
+const getPriorityClass = (priority) => {
+    const classes = {
+        'urgent': 'bg-red-100 text-red-800 border-red-200',
+        'high': 'bg-red-100 text-red-800 border-red-200',
+        'medium': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        'low': 'bg-green-100 text-green-800 border-green-200',
+    };
+    return classes[priority] || 'bg-gray-100 text-gray-800 border-gray-200';
 };
 
 // Methods
@@ -289,7 +348,7 @@ const editSubtask = (subtask: ExtendedTask) => {
     isSubtaskFormOpen.value = true;
 };
 
-// Create new tag method (this was missing)
+// Create new tag method
 const createNewTag = () => {
     if (!newTagForm.name.trim() || isCreatingTag.value) return;
 
@@ -628,7 +687,7 @@ watch(dueDateValue, (newValue) => {
         <Head :title="project.name" />
 
         <div class="container mx-auto px-4 py-6">
-            <!-- Project Header -->
+            <!-- Project Header - Kept as-is -->
             <div class="mb-6">
                 <div class="mb-3 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
@@ -646,6 +705,7 @@ watch(dueDateValue, (newValue) => {
                     </div>
                 </div>
 
+                <!-- Project Cards Section - Kept as-is -->
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <Card>
                         <CardHeader class="pb-2">
@@ -709,108 +769,77 @@ watch(dueDateValue, (newValue) => {
                 </div>
             </div>
 
-            <!-- Tasks Section -->
+            <!-- Modified Task Sections -->
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-semibold text-gray-900">Tasks by Priority</h2>
+                    <h2 class="text-xl font-semibold text-gray-900">Tasks</h2>
                     <Button @click="openAddTaskModal()" class="flex h-8 items-center space-x-2 px-3 text-xs shadow-sm">
                         <Plus class="h-3 w-3" />
                         <span>Add Task</span>
                     </Button>
                 </div>
 
-                <!-- Tasks by Priority -->
+                <!-- Tasks by Status -->
                 <div class="space-y-4">
-                    <!-- Dynamic Priority Sections -->
-                    <Card v-for="section in prioritySections" :key="section.key">
-                        <CardHeader :class="section.headerClass" class="rounded-t-lg py-3">
-                            <CardTitle class="flex items-center justify-between">
-                                <span class="text-base font-semibold">{{ section.emoji }} {{ section.label }}</span>
-                                <Badge :class="section.class" class="text-xs">{{ section.count }}</Badge>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent class="p-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow class="h-10">
-                                        <TableHead class="w-12 py-2"></TableHead>
-                                        <TableHead class="w-96 py-2">Task</TableHead>
-                                        <TableHead class="w-24 py-2">Status</TableHead>
-                                        <TableHead class="w-28 py-2">Due</TableHead>
-                                        <TableHead class="w-16 py-2">Sub</TableHead>
-                                        <TableHead class="w-32 py-2 text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    <TableRow v-for="task in section.tasks" :key="task.id" :class="`${section.hoverClass} h-12`">
-                                        <TableCell class="w-12 py-2">
-                                            <button
-                                                @click="toggleTaskCompletion(task)"
-                                                :disabled="updatingTasks.has(task.id)"
-                                                class="flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:scale-110"
-                                                :class="[
-                                                    task.status === 'completed' ? 'bg-green-100 hover:bg-green-200' : 'bg-gray-100 hover:bg-gray-200',
-                                                ]"
-                                            >
-                                                <Loader2 v-if="updatingTasks.has(task.id)" class="h-3 w-3 animate-spin text-gray-500" />
-                                                <CheckCircle2 v-else-if="task.status === 'completed'" class="h-3 w-3 text-green-600" />
-                                                <Circle v-else class="h-3 w-3 text-gray-400" />
-                                            </button>
-                                        </TableCell>
-                                        <TableCell class="w-96 py-2 font-medium">
-                                            <div>
-                                                <p
-                                                    :class="task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'"
-                                                    class="text-sm"
-                                                >
-                                                    {{ task.title }}
-                                                </p>
-                                                <p v-if="task.description" class="line-clamp-1 text-xs text-gray-500">
-                                                    {{ task.description }}
-                                                </p>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell class="w-24 py-2">
-                                            <Badge :class="statusConfig[task.status]?.class || 'bg-gray-100 text-gray-800'" class="px-2 py-1 text-xs">
-                                                {{ statusConfig[task.status]?.label || task.status }}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell class="w-28 py-2">
-                                            <div v-if="task.due_date" class="flex items-center text-xs" :class="getDueDateClass(task)">
-                                                <Clock class="mr-1 h-3 w-3" />
-                                                {{ formatDate(task.due_date) }}
-                                            </div>
-                                            <span v-else class="text-xs text-gray-400">-</span>
-                                        </TableCell>
-                                        <TableCell class="w-16 py-2">
-                                            <div class="flex items-center text-xs text-gray-500">
-                                                <span v-if="getSubtasks(task.id).length > 0" class="rounded-full bg-gray-100 px-2 py-0.5 text-xs">
-                                                    {{ getSubtasks(task.id).filter((st) => st.status === 'completed').length }}/{{
-                                                        getSubtasks(task.id).length
-                                                    }}
-                                                </span>
-                                                <span v-else>-</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell class="w-32 py-2 text-right">
-                                            <div class="flex items-center justify-end space-x-1">
-                                                <Button variant="outline" size="sm" @click="openTaskDetailModal(task)" class="h-7 px-2 text-xs">
-                                                    <Eye class="mr-1 h-3 w-3" />
-                                                    Detail
-                                                </Button>
-                                                <Button variant="ghost" size="sm" @click="openEditTaskModal(task)" class="h-7 w-7 p-0">
-                                                    <Edit class="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                    <!-- Status Sections -->
+                    <div v-for="status in statusSections" :key="status.key" class="rounded-md border border-gray-200 overflow-hidden">
+                        <div class="flex items-center justify-between p-3 bg-gray-50">
+                            <div class="flex items-center space-x-2">
+                                <div class="h-6 w-6 rounded-md" :class="status.bgColor"></div>
+                                <span class="font-medium text-gray-700">{{ status.label }}</span>
+                                <Badge class="bg-gray-100 text-gray-700">{{ status.tasks.length }}</Badge>
+                            </div>
+                            <Button variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                <ChevronDown class="h-4 w-4" />
+                            </Button>
+                        </div>
 
-                    <!-- No Tasks -->
-                    <Card v-if="prioritySections.length === 0" class="py-8 text-center">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead class="w-8"></TableHead>
+                                    <TableHead>Task Name</TableHead>
+                                    <TableHead>Descriptions</TableHead>
+                                    <TableHead>Timeline Date</TableHead>
+                                    <TableHead>Priority</TableHead>
+                                    <TableHead class="w-10"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow v-for="task in status.tasks" :key="task.id" class="hover:bg-gray-50">
+                                    <TableCell class="w-8">
+                                        <Checkbox :checked="task.status === 'completed'"
+                                                  @click="toggleTaskCompletion(task)"
+                                                  :disabled="updatingTasks.has(task.id)" />
+                                    </TableCell>
+                                    <TableCell class="font-medium" :class="{'line-through text-gray-500': task.status === 'completed'}">
+                                        {{ task.title }}
+                                    </TableCell>
+                                    <TableCell class="text-gray-500 max-w-md">
+                                        <span class="line-clamp-1">{{ task.description || 'No description provided.' }}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div class="text-xs text-gray-600">
+                                            {{ formatTimelineDate(task) }}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge :class="getPriorityClass(task.priority)" class="px-2 py-1">
+                                            {{ task.priority.charAt(0).toUpperCase() + task.priority.slice(1) }}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button variant="ghost" size="sm" class="h-8 w-8 p-0" @click="openTaskDetailModal(task)">
+                                            <MoreVertical class="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    <!-- No Tasks Message -->
+                    <Card v-if="statusSections.length === 0" class="py-8 text-center">
                         <CardContent>
                             <div class="flex flex-col items-center space-y-3">
                                 <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
@@ -828,10 +857,17 @@ watch(dueDateValue, (newValue) => {
                         </CardContent>
                     </Card>
                 </div>
+                
+                <!-- Add New Task Button (Fixed at bottom) -->
+                <div class="fixed bottom-10 right-10">
+                    <Button @click="openAddTaskModal()" size="lg" class="rounded-full h-14 w-14 p-0 shadow-lg">
+                        <Plus class="h-6 w-6" />
+                    </Button>
+                </div>
             </div>
         </div>
 
-        <!-- Right Side Task Detail Modal -->
+        <!-- Task Detail Modal -->
         <div
             v-if="isTaskDetailModalOpen && selectedTask"
             class="fixed inset-y-0 right-0 z-50 w-full transform bg-white shadow-2xl transition-transform duration-300 ease-in-out md:w-2xl lg:w-2xl"
@@ -1172,7 +1208,7 @@ watch(dueDateValue, (newValue) => {
                         </div>
                     </div>
 
-                    <div v-else class="py-6 text-center text-gray-500">
+                    <div v-else-if="getSubtasks(selectedTask.id).length === 0" class="py-6 text-center text-gray-500">
                         <p class="text-sm">No subtasks yet</p>
                         <Button variant="outline" size="sm" @click="openSubtaskForm(selectedTask)" class="mt-2 h-7 px-3 text-xs">
                             <Plus class="mr-1 h-3 w-3" />
@@ -1326,16 +1362,12 @@ watch(dueDateValue, (newValue) => {
     </AppLayout>
 </template>
 
-<style scoped>
+<style>
 .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
-}
-
-#app > div > main > div > div.space-y-4 > div.space-y-4 > div:nth-child(n) {
-    padding: 0;
 }
 
 .line-clamp-2 {
