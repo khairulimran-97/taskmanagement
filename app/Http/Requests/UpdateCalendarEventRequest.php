@@ -75,4 +75,5 @@ class UpdateCalendarEventRequest extends FormRequest
             ]);
         }
     }
+
 }

@@ -154,7 +154,14 @@ class CalendarEvent extends Model
         ];
 
         if ($this->end_date) {
-            $event['end'] = $this->end_date->toISOString();
+            if ($this->all_day) {
+                // For all-day events, FullCalendar uses exclusive end dates
+                // So we need to add one day to our end date for proper display
+                $end = $this->end_date->copy()->addDay();
+                $event['end'] = $end->toISOString();
+            } else {
+                $event['end'] = $this->end_date->toISOString();
+            }
         }
 
         return $event;

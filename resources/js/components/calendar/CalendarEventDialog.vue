@@ -81,11 +81,19 @@ const populateForm = (event: any) => {
     }
 };
 
+const toLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+
 // Populate form with selected date
 const populateFromSelectedDate = (selectedDate: any) => {
     if (selectedDate) {
         const startDate = new Date(selectedDate.start);
-        form.start_date = startDate.toISOString().split('T')[0];
+        form.start_date = toLocalDateString(startDate);
         form.all_day = selectedDate.allDay || false;
 
         if (!form.all_day && selectedDate.start) {
@@ -94,13 +102,13 @@ const populateFromSelectedDate = (selectedDate: any) => {
 
         if (selectedDate.end && !selectedDate.allDay) {
             const endDate = new Date(selectedDate.end);
-            form.end_date = endDate.toISOString().split('T')[0];
+            form.end_date = toLocalDateString(endDate);
             form.end_time = endDate.toTimeString().slice(0, 5);
         } else if (selectedDate.allDay && selectedDate.end) {
             // For all-day selections, end date is exclusive, so subtract a day
             const endDate = new Date(selectedDate.end);
             endDate.setDate(endDate.getDate() - 1);
-            form.end_date = endDate.toISOString().split('T')[0];
+            form.end_date = toLocalDateString(endDate);
         }
     }
 };
@@ -249,15 +257,6 @@ const formatDate = (dateString: string): string => {
                         placeholder="Enter event description (optional)"
                         rows="3"
                     />
-                </div>
-
-                <!-- All Day Toggle -->
-                <div class="flex items-center space-x-3">
-                    <Switch
-                        id="all-day"
-                        v-model:checked="form.all_day"
-                    />
-                    <Label for="all-day" class="text-sm font-medium">All day event</Label>
                 </div>
 
                 <!-- Date and Time -->
