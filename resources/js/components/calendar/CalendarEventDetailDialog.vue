@@ -143,8 +143,8 @@ const handleClose = () => {
                         <X class="h-4 w-4" />
                     </Button>
                 </div>
-                <DialogDescription v-if="event?.extendedProps?.description">
-                    {{ event.extendedProps.description }}
+                <DialogDescription>
+                    {{ event?.extendedProps?.description || 'View and manage this calendar event.' }}
                 </DialogDescription>
             </DialogHeader>
 

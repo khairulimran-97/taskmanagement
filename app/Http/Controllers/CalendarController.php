@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
@@ -125,8 +126,16 @@ class CalendarController extends Controller
         $event = CalendarEvent::where('user_id', Auth::id())->findOrFail($id);
         $validated = $request->validated();
 
-        // Handle all day events - set time to start/end of day
-        if (isset($validated['all_day']) && $validated['all_day']) {
+        // Log before update
+        Log::info('Updating calendar event', [
+            'event_id' => $event->id,
+            'user_id' => Auth::id(),
+            'original' => $event->toArray(),
+            'validated' => $validated,
+        ]);
+
+        // Normalize dates if it's an all-day event
+        if (array_key_exists('all_day', $validated) && $validated['all_day']) {
             if (isset($validated['start_date'])) {
                 $validated['start_date'] = Carbon::parse($validated['start_date'])->startOfDay();
             }
@@ -136,6 +145,12 @@ class CalendarController extends Controller
         }
 
         $event->update($validated);
+
+        // Log after update
+        Log::info('Event updated successfully', [
+            'event_id' => $event->id,
+            'updated_data' => $event->toArray(),
+        ]);
 
         return redirect()->route('calendar.index')
             ->with('success', 'Event updated successfully');

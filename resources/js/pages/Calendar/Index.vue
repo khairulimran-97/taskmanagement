@@ -167,12 +167,6 @@ function handleEventResize(resizeInfo: any) {
     });
 }
 
-// Handle view/date changes
-const handleViewChange = (viewInfo: any) => {
-    currentView.value = viewInfo.view.type;
-    currentDate.value = viewInfo.view.currentStart;
-};
-
 // Create new event
 const createEvent = (eventData: any) => {
     isSubmitting.value = true;
@@ -242,40 +236,8 @@ const resetForm = () => {
     selectedEvent.value = null;
 };
 
-// Calendar navigation
-const navigateCalendar = (action: string) => {
-    if (calendarRef.value) {
-        const calendarApi = calendarRef.value.getApi();
-
-        switch (action) {
-            case 'prev':
-                calendarApi.prev();
-                break;
-            case 'next':
-                calendarApi.next();
-                break;
-            case 'today':
-                calendarApi.today();
-                break;
-        }
-
-        // Update current date for display
-        currentDate.value = calendarApi.view.currentStart;
-    }
-};
-
-// Change calendar view
-const changeView = (viewName: string) => {
-    if (calendarRef.value) {
-        const calendarApi = calendarRef.value.getApi();
-        calendarApi.changeView(viewName);
-        currentView.value = viewName;
-        currentDate.value = calendarApi.view.currentStart;
-    }
-};
-
 // Format current date for display
-const formatCurrentDate = computed(() => {
+computed(() => {
     if (currentView.value === 'dayGridMonth') {
         return currentDate.value.toLocaleDateString('en-US', {
             month: 'long',
@@ -303,7 +265,6 @@ const formatCurrentDate = computed(() => {
         });
     }
 });
-
 // Open new event dialog
 const openNewEventDialog = () => {
     resetForm();

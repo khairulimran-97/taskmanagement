@@ -69,10 +69,9 @@ class UpdateCalendarEventRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // Convert all_day to boolean if present
         if ($this->has('all_day')) {
             $this->merge([
-                'all_day' => filter_var($this->all_day, FILTER_VALIDATE_BOOLEAN),
+                'all_day' => in_array($this->input('all_day'), [1, '1', true, 'true'], true),
             ]);
         }
     }
