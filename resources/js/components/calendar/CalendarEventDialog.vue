@@ -44,6 +44,20 @@ const dialogTitle = computed(() => {
     return props.editingEvent ? 'Edit Event' : 'Create New Event';
 });
 
+// Helper functions to avoid timezone issues
+const toLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const toLocalTimeString = (date: Date) => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+};
+
 // Reset form
 const resetForm = () => {
     form.title = '';
@@ -57,7 +71,7 @@ const resetForm = () => {
     errors.value = {};
 };
 
-// Populate form with event data
+// Populate form with event data (fixed for timezone issues)
 const populateForm = (event: any) => {
     form.title = event.title || '';
     form.description = event.extendedProps?.description || '';
@@ -66,28 +80,22 @@ const populateForm = (event: any) => {
 
     if (event.start) {
         const startDate = new Date(event.start);
-        form.start_date = startDate.toISOString().split('T')[0];
+        // Use timezone-safe date extraction
+        form.start_date = toLocalDateString(startDate);
         if (!form.all_day) {
-            form.start_time = startDate.toTimeString().slice(0, 5);
+            form.start_time = toLocalTimeString(startDate);
         }
     }
 
     if (event.end) {
         const endDate = new Date(event.end);
-        form.end_date = endDate.toISOString().split('T')[0];
+        // Use timezone-safe date extraction
+        form.end_date = toLocalDateString(endDate);
         if (!form.all_day) {
-            form.end_time = endDate.toTimeString().slice(0, 5);
+            form.end_time = toLocalTimeString(endDate);
         }
     }
 };
-
-const toLocalDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
 
 // Populate form with selected date
 const populateFromSelectedDate = (selectedDate: any) => {
@@ -97,13 +105,13 @@ const populateFromSelectedDate = (selectedDate: any) => {
         form.all_day = selectedDate.allDay || false;
 
         if (!form.all_day && selectedDate.start) {
-            form.start_time = startDate.toTimeString().slice(0, 5);
+            form.start_time = toLocalTimeString(startDate);
         }
 
         if (selectedDate.end && !selectedDate.allDay) {
             const endDate = new Date(selectedDate.end);
             form.end_date = toLocalDateString(endDate);
-            form.end_time = endDate.toTimeString().slice(0, 5);
+            form.end_time = toLocalTimeString(endDate);
         } else if (selectedDate.allDay && selectedDate.end) {
             // For all-day selections, end date is exclusive, so subtract a day
             const endDate = new Date(selectedDate.end);
@@ -163,7 +171,7 @@ const validateForm = (): boolean => {
     return Object.keys(errors.value).length === 0;
 };
 
-// Build event data for submission
+// Build event data for submission (already timezone-safe)
 const buildEventData = () => {
     const eventData: any = {
         title: form.title.trim(),
@@ -172,14 +180,14 @@ const buildEventData = () => {
         all_day: form.all_day,
     };
 
-    // Build start_date
+    // Build start_date - this creates local datetime strings
     if (form.all_day) {
         eventData.start_date = form.start_date + 'T00:00:00';
     } else {
         eventData.start_date = form.start_date + 'T' + (form.start_time || '00:00') + ':00';
     }
 
-    // Build end_date if provided
+    // Build end_date if provided - this creates local datetime strings
     if (form.end_date) {
         if (form.all_day) {
             eventData.end_date = form.end_date + 'T23:59:59';
@@ -257,6 +265,15 @@ const formatDate = (dateString: string): string => {
                         placeholder="Enter event description (optional)"
                         rows="3"
                     />
+                </div>
+
+                <!-- All Day Toggle -->
+                <div class="flex items-center space-x-3">
+                    <Switch
+                        id="all-day"
+                        v-model:checked="form.all_day"
+                    />
+                    <Label for="all-day" class="cursor-pointer">All Day Event</Label>
                 </div>
 
                 <!-- Date and Time -->

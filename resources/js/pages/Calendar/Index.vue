@@ -131,15 +131,46 @@ function handleEventClick(clickInfo: any) {
     isEventDetailDialogOpen.value = true;
 }
 
+const toLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+const toLocalDateTimeString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
+
 // Handle event drag and drop
 function handleEventDrop(dropInfo: any) {
     const event = dropInfo.event;
-
-    const updateData = {
-        start_date: event.start.toISOString(),
-        end_date: event.end ? event.end.toISOString() : null,
+    const updateData: any = {
         all_day: event.allDay,
     };
+
+    if (event.allDay) {
+        const startDate = new Date(event.start);
+        updateData.start_date = toLocalDateString(startDate) + 'T00:00:00';
+
+        if (event.end) {
+            const endDate = new Date(event.end);
+            endDate.setDate(endDate.getDate() - 1);
+            updateData.end_date = toLocalDateString(endDate) + 'T23:59:59';
+        }
+    } else {
+        updateData.start_date = toLocalDateTimeString(new Date(event.start));
+        if (event.end) {
+            updateData.end_date = toLocalDateTimeString(new Date(event.end));
+        }
+    }
 
     router.patch(route('calendar.update-dates', event.id), updateData, {
         preserveScroll: true,
@@ -154,8 +185,8 @@ function handleEventResize(resizeInfo: any) {
     const event = resizeInfo.event;
 
     const updateData = {
-        start_date: event.start.toISOString(),
-        end_date: event.end ? event.end.toISOString() : null,
+        start_date: toLocalDateString(event.start),
+        end_date: event.end ? toLocalDateString(event.end) : null,
         all_day: event.allDay,
     };
 

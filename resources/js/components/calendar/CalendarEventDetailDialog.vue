@@ -19,11 +19,38 @@ const emit = defineEmits<{
     delete: [eventId: string];
 }>();
 
-// Format date for display
+// Helper function to parse date without timezone conversion
+const parseLocalDate = (date: Date | string): Date => {
+    if (!date) return new Date();
+
+    if (typeof date === 'string') {
+        // If it's a string in format YYYY-MM-DDTHH:mm:ss, treat as local time
+        if (date.includes('T') && !date.includes('Z') && !date.includes('+')) {
+            const parts = date.split('T');
+            const dateParts = parts[0].split('-');
+            const timeParts = parts[1] ? parts[1].split(':') : ['0', '0', '0'];
+
+            return new Date(
+                parseInt(dateParts[0]), // year
+                parseInt(dateParts[1]) - 1, // month (0-indexed)
+                parseInt(dateParts[2]), // day
+                parseInt(timeParts[0]) || 0, // hour
+                parseInt(timeParts[1]) || 0, // minute
+                parseInt(timeParts[2]) || 0  // second
+            );
+        }
+        // For other string formats, fall back to regular parsing
+        return new Date(date);
+    }
+
+    return date;
+};
+
+// Format date for display (timezone-safe)
 const formatDateTime = (date: Date | string, allDay: boolean = false): string => {
     if (!date) return '';
 
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const dateObj = parseLocalDate(date);
 
     if (allDay) {
         return dateObj.toLocaleDateString('en-US', {
@@ -44,12 +71,12 @@ const formatDateTime = (date: Date | string, allDay: boolean = false): string =>
     });
 };
 
-// Get event duration text
+// Get event duration text (timezone-safe)
 const getDurationText = computed(() => {
     if (!props.event?.start) return '';
 
-    const start = new Date(props.event.start);
-    const end = props.event.end ? new Date(props.event.end) : null;
+    const start = parseLocalDate(props.event.start);
+    const end = props.event.end ? parseLocalDate(props.event.end) : null;
 
     if (!end) {
         return 'No end time';
@@ -81,14 +108,19 @@ const getDurationText = computed(() => {
     }
 });
 
-// Get relative time text
+// Get relative time text (timezone-safe)
 const getRelativeTime = computed(() => {
     if (!props.event?.start) return '';
 
-    const start = new Date(props.event.start);
+    const start = parseLocalDate(props.event.start);
     const now = new Date();
-    const diffTime = start.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Compare dates at the day level to avoid time-of-day issues
+    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const diffTime = startDate.getTime() - todayDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
         const pastDays = Math.abs(diffDays);
@@ -139,9 +171,6 @@ const handleClose = () => {
                         />
                         <span>{{ event?.title || 'Event Details' }}</span>
                     </DialogTitle>
-                    <Button variant="ghost" size="icon" @click="handleClose" class="h-6 w-6">
-                        <X class="h-4 w-4" />
-                    </Button>
                 </div>
                 <DialogDescription>
                     {{ event?.extendedProps?.description || 'View and manage this calendar event.' }}
