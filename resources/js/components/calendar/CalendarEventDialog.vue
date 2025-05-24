@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from 'vue';
+import { ref, reactive, watch, computed, nextTick } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,6 +36,9 @@ const form = reactive({
     all_day: false,
 });
 
+// Force re-render key for Switch component
+const switchKey = ref(0);
+
 // Form validation errors
 const errors = ref<Record<string, string>>({});
 
@@ -69,6 +72,9 @@ const resetForm = () => {
     form.color = '#3B82F6';
     form.all_day = false;
     errors.value = {};
+
+    // Force Switch component re-render
+    switchKey.value++;
 };
 
 // Populate form with event data (fixed for timezone issues)
@@ -80,7 +86,6 @@ const populateForm = (event: any) => {
 
     if (event.start) {
         const startDate = new Date(event.start);
-        // Use timezone-safe date extraction
         form.start_date = toLocalDateString(startDate);
         if (!form.all_day) {
             form.start_time = toLocalTimeString(startDate);
@@ -89,7 +94,6 @@ const populateForm = (event: any) => {
 
     if (event.end) {
         const endDate = new Date(event.end);
-        // Use timezone-safe date extraction
         form.end_date = toLocalDateString(endDate);
         if (!form.all_day) {
             form.end_time = toLocalTimeString(endDate);
@@ -122,14 +126,28 @@ const populateFromSelectedDate = (selectedDate: any) => {
 };
 
 // Watch for prop changes
-watch(() => props.isOpen, (isOpen) => {
+watch(() => props.isOpen, async (isOpen) => {
     if (isOpen) {
         resetForm();
+
+        // Use nextTick to ensure DOM updates before populating
+        await nextTick();
+
         if (props.editingEvent) {
             populateForm(props.editingEvent);
         } else if (props.selectedDate) {
             populateFromSelectedDate(props.selectedDate);
         }
+
+        // Another nextTick to ensure form population completes
+        await nextTick();
+    }
+});
+
+// Watch the editingEvent prop specifically
+watch(() => props.editingEvent, (newEvent) => {
+    if (newEvent && props.isOpen) {
+        populateForm(newEvent);
     }
 });
 
@@ -171,7 +189,7 @@ const validateForm = (): boolean => {
     return Object.keys(errors.value).length === 0;
 };
 
-// Build event data for submission (already timezone-safe)
+// Build event data for submission
 const buildEventData = () => {
     const eventData: any = {
         title: form.title.trim(),
@@ -270,8 +288,10 @@ const formatDate = (dateString: string): string => {
                 <!-- All Day Toggle -->
                 <div class="flex items-center space-x-3">
                     <Switch
+                        :key="switchKey"
                         id="all-day"
-                        v-model:checked="form.all_day"
+                        :model-value="form.all_day"
+                        @update:model-value="(value) => form.all_day = value"
                     />
                     <Label for="all-day" class="cursor-pointer">All Day Event</Label>
                 </div>
