@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { BreadcrumbItem, Project } from '@/types';
-import { Calendar, CheckCircle2, Edit, GripVertical, Loader2, Trash2 } from 'lucide-vue-next';
+import { CheckCircle2, Edit, GripVertical, Loader2, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-// Import the separated dialog components
 import CreateProjectDialog from './Create.vue';
 import EditProjectDialog from './Edit.vue';
 
@@ -70,12 +69,10 @@ const openEditModal = (project: Project) => {
 
 // Handle successful creation
 const handleCreateSuccess = (project: any) => {
-    // Project list will be updated via Inertia.js automatically
 };
 
 // Handle successful edit
 const handleEditSuccess = (project: any) => {
-    // Project list will be updated via Inertia.js automatically
     editingProject.value = null;
 };
 
@@ -98,7 +95,6 @@ const confirmDelete = () => {
         router.delete(route('projects.destroy', projectToDelete.value.id), {
             preserveScroll: true,
             onError: () => {
-                // Error will be handled by the alert dialog
             },
             onFinish: () => {
                 isDeleteDialogOpen.value = false;
@@ -293,7 +289,7 @@ function getStatusClass(status: string): string {
         <Head title="Projects" />
         <div class="container mx-auto px-4 py-6">
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
 
                 <CreateProjectDialog
                     v-model:open="isCreateModalOpen"
@@ -309,65 +305,68 @@ function getStatusClass(status: string): string {
             />
 
             <div class="mt-6 mb-10 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 mb-1">Total Projects</div>
-                            <div class="text-3xl font-bold text-gray-900">{{ props.projects.length }}</div>
+                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Projects</div>
+                            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ props.projects.length }}</div>
                         </div>
-                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <GripVertical class="w-6 h-6 text-gray-600" />
+                        <div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                            <GripVertical class="w-6 h-6 text-gray-600 dark:text-gray-300" />
                         </div>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 mb-1">Active</div>
-                            <div class="text-3xl font-bold text-blue-600">
+                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Active</div>
+                            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
                                 {{ props.projects.filter(p => p.status === 'active').length }}
                             </div>
                         </div>
-                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <div class="w-3 h-3 bg-blue-600 dark:bg-blue-400 rounded-full"></div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 mb-1">Completed</div>
-                            <div class="text-3xl font-bold text-green-600">
+                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Completed</div>
+                            <div class="text-3xl font-bold text-green-600 dark:text-green-400">
                                 {{ props.projects.filter(p => p.status === 'completed').length }}
                             </div>
                         </div>
-                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <CheckCircle2 class="w-6 h-6 text-green-600" />
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                            <CheckCircle2 class="w-6 h-6 text-green-600 dark:text-green-400" />
                         </div>
                     </div>
                 </div>
-                <div class="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 mb-1">High Priority</div>
-                            <div class="text-3xl font-bold text-red-600">
+                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">High Priority</div>
+                            <div class="text-3xl font-bold text-red-600 dark:text-red-400">
                                 {{ props.projects.filter(p => p.priority === 'high').length }}
                             </div>
                         </div>
-                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                            <div class="w-3 h-3 bg-red-600 rounded-full"></div>
+                        <div class="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+                            <div class="w-3 h-3 bg-red-600 dark:bg-red-400 rounded-full"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 flex items-center justify-between">
-                    <div class="flex items-center text-sm text-blue-700">
+            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border-b border-blue-100 dark:border-gray-600 flex items-center justify-between">
+                    <div class="flex items-center text-sm text-blue-700 dark:text-blue-300">
                         <GripVertical class="w-4 h-4 mr-2" />
                         <span class="font-medium">Drag & Drop to Reorder Projects</span>
                     </div>
-                    <div v-if="isReordering" class="flex items-center text-sm text-blue-600">
+                    <div v-if="isReordering" class="flex items-center text-sm text-blue-600 dark:text-blue-300">
                         <Loader2 class="w-4 h-4 mr-2 animate-spin" />
                         <span>Saving order...</span>
                     </div>
@@ -375,42 +374,44 @@ function getStatusClass(status: string): string {
 
                 <Table>
                     <TableHeader>
-                        <TableRow class="bg-gray-50">
+                        <TableRow class="bg-gray-50 dark:bg-gray-800">
                             <TableHead class="w-8"></TableHead>
                             <TableHead class="w-8"></TableHead>
-                            <TableHead class="font-semibold">Project Name</TableHead>
-                            <TableHead class="font-semibold">Description</TableHead>
-                            <TableHead class="font-semibold">Status</TableHead>
-                            <TableHead class="font-semibold">Priority</TableHead>
-                            <TableHead class="font-semibold">Progress</TableHead>
-                            <TableHead class="text-right font-semibold">Actions</TableHead>
+                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Project Name</TableHead>
+                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Description</TableHead>
+                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Status</TableHead>
+                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Priority</TableHead>
+                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Progress</TableHead>
+                            <TableHead class="text-right font-semibold text-gray-700 dark:text-gray-200">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
+
                     <TableBody>
                         <TableRow v-if="sortedProjects.length === 0">
-                            <TableCell :colspan="10" class="text-center py-12 text-gray-500">
+                            <TableCell :colspan="10" class="text-center py-12 text-gray-500 dark:text-gray-400">
                                 <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                        <GripVertical class="w-8 h-8 text-gray-300" />
+                                    <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                                        <GripVertical class="w-8 h-8 text-gray-300 dark:text-gray-500" />
                                     </div>
                                     <span class="text-lg font-medium">No projects yet</span>
                                     <span class="text-sm">Create your first project to get started</span>
                                 </div>
                             </TableCell>
                         </TableRow>
+
                         <TableRow
                             v-for="(project, index) in sortedProjects"
                             :key="project.id"
                             :class="[
-                                'group transition-all duration-200 relative',
-                                isDragging && draggedProject?.id === project.id
-                                    ? 'opacity-50 scale-95 bg-blue-50 shadow-lg border-2 border-blue-200'
-                                    : 'hover:bg-gray-50',
-                                dragOverIndex === index && draggedProject?.id !== project.id
-                                    ? 'bg-blue-50 border-l-4 border-blue-500 shadow-sm transform scale-[1.01]'
-                                    : '',
-                                isReordering ? 'pointer-events-none opacity-75' : 'cursor-move'
-                            ]"
+                    'group transition-all duration-200 relative',
+                    isDragging && draggedProject?.id === project.id
+                        ? 'opacity-50 scale-95 bg-blue-50 dark:bg-blue-900 shadow-lg border-2 border-blue-200 dark:border-blue-700'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800',
+                    dragOverIndex === index && draggedProject?.id !== project.id
+                        ? 'bg-blue-50 dark:bg-blue-900 border-l-4 border-blue-500 dark:border-blue-400 shadow-sm transform scale-[1.01]'
+                        : '',
+                    isReordering ? 'pointer-events-none opacity-75' : 'cursor-move'
+                ]"
                             draggable="true"
                             @dragstart="handleDragStart($event, project)"
                             @dragend="handleDragEnd"
@@ -423,8 +424,8 @@ function getStatusClass(status: string): string {
                                 <div
                                     class="flex items-center justify-center w-6 h-8 rounded transition-colors"
                                     :class="isDragging && draggedProject?.id === project.id
-                                        ? 'text-blue-600 bg-blue-100'
-                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 group-hover:bg-gray-100'"
+                            ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800'
+                            : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 group-hover:bg-gray-100 dark:group-hover:bg-gray-800'"
                                 >
                                     <GripVertical class="w-4 h-4" />
                                 </div>
@@ -440,7 +441,7 @@ function getStatusClass(status: string): string {
 
                             <TableCell class="p-3">
                                 <div
-                                    class="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                                    class="w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 shadow-sm"
                                     :style="`background-color: ${project.color || '#3B82F6'}`"
                                 ></div>
                             </TableCell>
@@ -449,7 +450,7 @@ function getStatusClass(status: string): string {
                             <TableCell class="font-medium">
                                 <Link
                                     :href="route('projects.show', project.id)"
-                                    class="text-blue-600 hover:text-blue-800 hover:underline font-semibold transition-colors"
+                                    class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-semibold transition-colors"
                                     @click.stop
                                 >
                                     {{ project.name }}
@@ -458,9 +459,9 @@ function getStatusClass(status: string): string {
 
                             <!-- Description -->
                             <TableCell class="max-w-xs">
-                                <span class="text-gray-600 line-clamp-2">
-                                    {{ project.description || 'No description' }}
-                                </span>
+                    <span class="text-gray-600 dark:text-gray-400 line-clamp-2">
+                        {{ project.description || 'No description' }}
+                    </span>
                             </TableCell>
 
                             <!-- Status -->
@@ -486,28 +487,28 @@ function getStatusClass(status: string): string {
                                             :model-value="project.completion_percentage"
                                             class="flex-1"
                                             :class="{
-                                                      'bg-red-200 [&>div]:bg-red-500': project.completion_percentage < 25,
-                                                      'bg-orange-200 [&>div]:bg-orange-500': project.completion_percentage >= 25 && project.completion_percentage < 50,
-                                                      'bg-yellow-200 [&>div]:bg-yellow-500': project.completion_percentage >= 50 && project.completion_percentage < 75,
-                                                      'bg-green-200 [&>div]:bg-green-500': project.completion_percentage >= 75
-                                                    }" />
-                                        <span class="text-xs text-gray-500 font-medium min-w-8 text-right">
-                                            {{ project.completion_percentage }}%
-                                          </span>
+                                    'bg-red-200 dark:bg-red-800 [&>div]:bg-red-500 dark:[&>div]:bg-red-400': project.completion_percentage < 25,
+                                    'bg-orange-200 dark:bg-orange-800 [&>div]:bg-orange-500 dark:[&>div]:bg-orange-400': project.completion_percentage >= 25 && project.completion_percentage < 50,
+                                    'bg-yellow-200 dark:bg-yellow-800 [&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-400': project.completion_percentage >= 50 && project.completion_percentage < 75,
+                                    'bg-green-200 dark:bg-green-800 [&>div]:bg-green-500 dark:[&>div]:bg-green-400': project.completion_percentage >= 75
+                                }" />
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 font-medium min-w-8 text-right">
+                                {{ project.completion_percentage }}%
+                            </span>
                                     </div>
                                 </div>
-                                <span v-else class="text-gray-400 text-sm">-</span>
+                                <span v-else class="text-gray-400 dark:text-gray-500 text-sm">-</span>
                             </TableCell>
 
                             <!-- Actions -->
                             <TableCell class="text-right">
                                 <div class="flex justify-end space-x-2">
-                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="transition-colors">
+                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="transition-colors text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
                                         <Edit class="w-4 h-4 mr-1" />
                                         Edit
                                     </Button>
                                     <Button asChild variant="outline" size="sm" class="transition-colors">
-                                        <Link :href="route('projects.show', project.id)" @click.stop>
+                                        <Link :href="route('projects.show', project.id)" @click.stop class="text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
                                             View
                                         </Link>
                                     </Button>
@@ -515,7 +516,7 @@ function getStatusClass(status: string): string {
                                         variant="ghost"
                                         size="sm"
                                         @click.stop="openDeleteDialog(project)"
-                                        class="text-red-600 hover:text-red-800 hover:bg-red-50 transition-colors"
+                                        class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900 transition-colors"
                                     >
                                         <Trash2 class="w-4 h-4 mr-1" />
                                         Delete

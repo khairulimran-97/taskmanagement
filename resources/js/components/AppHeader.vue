@@ -83,23 +83,16 @@ const mainNavItems: NavItem[] = [
         icon: LayoutDashboard,
     },
     {
-        title: 'Tasks',
-        href: '/tasks',
-        icon: CheckSquare,
+        title: 'Projects',
+        href: '/projects',
+        icon: Folder,
     },
     {
         title: 'Calendar',
         href: '/calendar',
         icon: Calendar,
     },
-    {
-        title: 'Projects',
-        href: '/projects',
-        icon: Folder,
-    },
 ];
-
-const rightNavItems: NavItem[] = [];
 </script>
 
 <template>

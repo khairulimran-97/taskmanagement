@@ -41,7 +41,7 @@ const getProjectPriorityClass = (priority: string): string => {
     <div class="mb-3 flex items-center justify-between">
         <div class="flex items-center space-x-3">
             <div class="h-3 w-3 rounded-full border border-white shadow-sm" :style="`background-color: ${project.color}`"></div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ project.name }}</h1>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ project.name }}</h1>
         </div>
 
         <div class="flex items-center space-x-2">

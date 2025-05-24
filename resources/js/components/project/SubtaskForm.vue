@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue';
-import { Calendar, Plus, X } from 'lucide-vue-next';
+import { Plus, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { DateFormatter, type DateValue, getLocalTimeZone, parseDate } from '@internationalized/date';
+import { DateFormatter, type DateValue, parseDate } from '@internationalized/date';
 
 const props = defineProps({
     isOpen: {
@@ -176,40 +174,45 @@ watch(subtaskDueDateValue, (newValue) => {
 </script>
 
 <template>
-    <div v-if="isOpen" class="mt-5 mb-4 rounded-lg border bg-gray-50 p-3">
-        <h5 class="mb-3 text-sm font-medium">{{ editingSubtask ? 'Edit Subtask' : 'Create Subtask' }}</h5>
+    <div
+        v-if="isOpen"
+        class="mt-5 mb-4 rounded-lg border bg-gray-50 p-3 dark:bg-gray-800 dark:border-gray-700"
+    >
+        <h5 class="mb-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+            {{ editingSubtask ? 'Edit Subtask' : 'Create Subtask' }}
+        </h5>
 
         <div class="space-y-3">
             <div>
-                <Label for="subtask-title" class="text-xs">Title *</Label>
+                <Label for="subtask-title" class="text-xs text-gray-700 dark:text-gray-300">Title *</Label>
                 <Input
                     id="subtask-title"
                     v-model="subtaskForm.title"
                     placeholder="Enter subtask title"
                     required
-                    class="h-8 text-xs"
+                    class="h-8 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600"
                 />
             </div>
 
             <div>
-                <Label for="subtask-description" class="text-xs">Description</Label>
+                <Label for="subtask-description" class="text-xs text-gray-700 dark:text-gray-300">Description</Label>
                 <Textarea
                     id="subtask-description"
                     v-model="subtaskForm.description"
                     placeholder="Enter subtask description"
                     rows="2"
-                    class="text-xs"
+                    class="text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600"
                 />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <Label class="text-xs">Status</Label>
+                <div class="w-full">
+                    <Label class="text-xs text-gray-700 dark:text-gray-300">Status</Label>
                     <Select v-model="subtaskForm.status">
-                        <SelectTrigger class="h-8 text-xs">
+                        <SelectTrigger class="h-8 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             <SelectItem value="todo">To Do</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
@@ -218,13 +221,13 @@ watch(subtaskDueDateValue, (newValue) => {
                     </Select>
                 </div>
 
-                <div>
-                    <Label class="text-xs">Priority</Label>
+                <div class="w-full">
+                    <Label class="text-xs text-gray-700 dark:text-gray-300">Priority</Label>
                     <Select v-model="subtaskForm.priority">
-                        <SelectTrigger class="h-8 text-xs">
+                        <SelectTrigger class="h-8 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             <SelectItem value="low">Low</SelectItem>
                             <SelectItem value="medium">Medium</SelectItem>
                             <SelectItem value="high">High</SelectItem>
@@ -234,51 +237,20 @@ watch(subtaskDueDateValue, (newValue) => {
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <Label class="text-xs">Start Date</Label>
-                    <Popover>
-                        <PopoverTrigger as-child>
-                            <Button variant="outline" class="h-8 w-full justify-start text-left text-xs font-normal">
-                                <Calendar class="mr-1 h-3 w-3" />
-                                {{
-                                    subtaskStartDateValue ? df.format(subtaskStartDateValue.toDate(getLocalTimeZone())) : 'Pick date'
-                                }}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent class="w-auto p-0">
-                            <CalendarComponent v-model="subtaskStartDateValue" />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-
-                <div>
-                    <Label class="text-xs">Due Date</Label>
-                    <Popover>
-                        <PopoverTrigger as-child>
-                            <Button variant="outline" class="h-8 w-full justify-start text-left text-xs font-normal">
-                                <Calendar class="mr-1 h-3 w-3" />
-                                {{ subtaskDueDateValue ? df.format(subtaskDueDateValue.toDate(getLocalTimeZone())) : 'Pick date' }}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent class="w-auto p-0">
-                            <CalendarComponent v-model="subtaskDueDateValue" />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-            </div>
-
             <!-- Tags Section -->
             <div class="space-y-2">
-                <Label class="text-xs">Tags</Label>
+                <Label class="text-xs text-gray-700 dark:text-gray-300">Tags</Label>
 
                 <!-- Selected Tags Display -->
-                <div v-if="subtaskForm.tag_ids.length > 0" class="flex flex-wrap gap-1 rounded-md border bg-white p-2">
+                <div
+                    v-if="subtaskForm.tag_ids.length > 0"
+                    class="flex flex-wrap gap-1 rounded-md border bg-white p-2 dark:bg-gray-700 dark:border-gray-600"
+                >
                     <Badge
                         v-for="tagId in subtaskForm.tag_ids"
                         :key="tagId"
                         variant="outline"
-                        class="cursor-pointer px-1.5 py-0.5 text-xs hover:bg-red-50 flex items-center"
+                        class="cursor-pointer px-1.5 py-0.5 text-xs hover:bg-red-50 dark:hover:bg-red-900 flex items-center"
                         :style="`border-color: ${props.availableTags.find((t) => t.id === tagId)?.color}; color: ${props.availableTags.find((t) => t.id === tagId)?.color}`"
                         @click="
                           () => {
@@ -296,12 +268,14 @@ watch(subtaskDueDateValue, (newValue) => {
 
                 <!-- Available Tags Selection -->
                 <div v-if="props.availableTags.length > 0">
-                    <div class="flex max-h-20 flex-wrap gap-1 overflow-y-auto rounded-md border bg-white p-2">
+                    <div
+                        class="flex max-h-20 flex-wrap gap-1 overflow-y-auto rounded-md border bg-white p-2 dark:bg-gray-700 dark:border-gray-600"
+                    >
                         <Badge
                             v-for="tag in props.availableTags.filter((t) => !subtaskForm.tag_ids.includes(t.id))"
                             :key="tag.id"
                             variant="outline"
-                            class="cursor-pointer px-1.5 py-0.5 text-xs transition-colors hover:bg-gray-50"
+                            class="cursor-pointer px-1.5 py-0.5 text-xs transition-colors hover:bg-gray-50 dark:hover:bg-gray-600"
                             @click="
                                 () => {
                                   if (!subtaskForm.tag_ids.includes(tag.id)) {
@@ -318,12 +292,12 @@ watch(subtaskDueDateValue, (newValue) => {
 
                 <!-- Create New Tag -->
                 <div class="mt-3 space-y-1">
-                    <Label class="text-xs font-medium text-gray-600">Create new tag</Label>
+                    <Label class="text-xs font-medium text-gray-600 dark:text-gray-400">Create new tag</Label>
                     <div class="flex items-center space-x-2">
                         <Input
                             v-model="newTagName"
                             placeholder="New tag name"
-                            class="h-7 flex-1 text-xs"
+                            class="h-7 flex-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600"
                             @keyup.enter="createTag"
                         />
                         <Button
@@ -332,26 +306,31 @@ watch(subtaskDueDateValue, (newValue) => {
                             size="sm"
                             @click="createTag"
                             :disabled="!newTagName.trim() || isCreatingTag"
-                            class="h-7 px-2 text-xs whitespace-nowrap"
+                            class="h-7 px-2 text-xs whitespace-nowrap dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600"
                         >
                             {{ isCreatingTag ? 'Creating...' : 'Create' }}
                         </Button>
                     </div>
-                    <p class="text-xs text-gray-500">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
                         New tag will appear in the selection list above
                     </p>
                 </div>
             </div>
 
             <div class="flex items-center space-x-2 pt-2">
-                <Button @click="handleSubmit" :disabled="isSubmitting" size="sm" class="h-7 px-3 text-xs">
+                <Button
+                    @click="handleSubmit"
+                    :disabled="isSubmitting"
+                    size="sm"
+                    class="h-7 px-3 text-xs dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                >
                     {{ isSubmitting ? 'Saving...' : editingSubtask ? 'Update' : 'Create' }}
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
                     @click="$emit('cancel')"
-                    class="h-7 px-3 text-xs"
+                    class="h-7 px-3 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                     Cancel
                 </Button>

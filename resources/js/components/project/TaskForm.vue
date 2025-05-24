@@ -74,7 +74,6 @@ const resetForm = () => {
     startDateValue.value = undefined;
     dueDateValue.value = undefined;
 
-    // Reset new tag field
     newTagName.value = '';
 };
 
@@ -228,39 +227,6 @@ const createTag = () => {
                                 <SelectItem value="urgent">Urgent</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
-                </div>
-
-                <!-- Dates -->
-                <div class="grid grid-cols-4 items-center gap-4">
-                    <Label class="text-right">Start Date</Label>
-                    <div class="col-span-1">
-                        <Popover>
-                            <PopoverTrigger as-child>
-                                <Button variant="outline" class="w-full justify-start text-left font-normal">
-                                    <Calendar class="mr-2 h-4 w-4" />
-                                    {{ startDateValue ? df.format(startDateValue.toDate(getLocalTimeZone())) : 'Pick date' }}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent class="w-auto p-0">
-                                <CalendarComponent v-model="startDateValue" />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-
-                    <Label class="text-right">Due Date</Label>
-                    <div class="col-span-1">
-                        <Popover>
-                            <PopoverTrigger as-child>
-                                <Button variant="outline" class="w-full justify-start text-left font-normal">
-                                    <Calendar class="mr-2 h-4 w-4" />
-                                    {{ dueDateValue ? df.format(dueDateValue.toDate(getLocalTimeZone())) : 'Pick date' }}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent class="w-auto p-0">
-                                <CalendarComponent v-model="dueDateValue" />
-                            </PopoverContent>
-                        </Popover>
                     </div>
                 </div>
 

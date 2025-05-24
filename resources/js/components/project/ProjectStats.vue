@@ -21,17 +21,20 @@ const formatDate = (date: string | null): string => {
 
 <template>
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <!-- Progress Card -->
         <Card>
             <CardHeader class="pb-2">
-                <CardTitle class="text-xs font-medium text-gray-600">Progress</CardTitle>
+                <CardTitle class="text-xs font-medium text-gray-600 dark:text-gray-300">Progress</CardTitle>
             </CardHeader>
             <CardContent class="pt-0">
                 <div class="space-y-2">
                     <div class="flex items-center justify-between">
-                        <span class="text-xl font-bold">{{ Math.round(completionPercentage || 0) }}%</span>
+            <span class="text-xl font-bold text-gray-900 dark:text-gray-100">
+              {{ Math.round(completionPercentage || 0) }}%
+            </span>
                         <CheckCircle2 class="h-4 w-4 text-green-600" />
                     </div>
-                    <div class="h-2 w-full rounded-full bg-gray-200">
+                    <div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
                         <div
                             class="h-2 rounded-full transition-all duration-300"
                             :class="{
@@ -47,31 +50,35 @@ const formatDate = (date: string | null): string => {
             </CardContent>
         </Card>
 
+        <!-- Timeline Card -->
         <Card>
             <CardHeader class="pb-2">
-                <CardTitle class="text-xs font-medium text-gray-600">Timeline</CardTitle>
+                <CardTitle class="text-xs font-medium text-gray-600 dark:text-gray-300">Timeline</CardTitle>
             </CardHeader>
             <CardContent class="space-y-1 pt-0">
                 <div class="flex items-center text-xs">
-                    <Calendar class="mr-2 h-3 w-3 text-gray-400" />
-                    <span class="text-gray-600">Start:</span>
-                    <span class="ml-1 font-medium">{{ formatDate(project.start_date) || 'Not set' }}</span>
+                    <Calendar class="mr-2 h-3 w-3 text-gray-400 dark:text-gray-500" />
+                    <span class="text-gray-600 dark:text-gray-300">Start:</span>
+                    <span class="ml-1 font-medium text-gray-900 dark:text-gray-100">{{ formatDate(project.start_date) }}</span>
                 </div>
                 <div class="flex items-center text-xs">
-                    <AlertCircle class="mr-2 h-3 w-3 text-gray-400" />
-                    <span class="text-gray-600">Due:</span>
-                    <span class="ml-1 font-medium">{{ formatDate(project.due_date) || 'Not set' }}</span>
+                    <AlertCircle class="mr-2 h-3 w-3 text-gray-400 dark:text-gray-500" />
+                    <span class="text-gray-600 dark:text-gray-300">Due:</span>
+                    <span class="ml-1 font-medium text-gray-900 dark:text-gray-100">{{ formatDate(project.due_date) }}</span>
                 </div>
             </CardContent>
         </Card>
 
+        <!-- Tasks Card -->
         <Card>
             <CardHeader class="pb-2">
-                <CardTitle class="text-xs font-medium text-gray-600">Tasks</CardTitle>
+                <CardTitle class="text-xs font-medium text-gray-600 dark:text-gray-300">Tasks</CardTitle>
             </CardHeader>
             <CardContent class="pt-0">
-                <div class="text-xl font-bold">{{ project.tasks?.length || 0 }}</div>
-                <div class="text-xs text-gray-600">
+                <div class="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    {{ project.tasks?.length || 0 }}
+                </div>
+                <div class="text-xs text-gray-600 dark:text-gray-400">
                     {{ project.tasks?.filter((t) => t.status === 'completed').length || 0 }} completed
                 </div>
             </CardContent>
