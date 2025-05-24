@@ -19,9 +19,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('projects', ProjectController::class);
     Route::post('/projects/reorder', [ProjectController::class, 'reorder'])->name('projects.reorder');
 
-    // Tasks
+    // Tasks - Standard CRUD
     Route::resource('tasks', TaskController::class)->except(['index', 'show', 'create', 'edit']);
+
+    // Task Quick Actions
+    Route::patch('/tasks/{task}/status', [TaskController::class, 'quickStatusUpdate'])->name('tasks.quick-status');
+    Route::post('/tasks/bulk-status', [TaskController::class, 'bulkStatusUpdate'])->name('tasks.bulk-status');
+    Route::patch('/tasks/{task}/toggle-completion', [TaskController::class, 'toggleCompletion'])->name('tasks.toggle-completion');
+    Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
+
+    // Task Data Endpoints
     Route::get('/projects/{project}/tasks', [TaskController::class, 'getProjectTasks'])->name('projects.tasks');
+    Route::get('/projects/{project}/task-stats', [TaskController::class, 'getProjectTaskStats'])->name('projects.task-stats');
+    Route::get('/tasks/overdue', [TaskController::class, 'getOverdueTasks'])->name('tasks.overdue');
+    Route::get('/tasks/due-soon', [TaskController::class, 'getTasksDueSoon'])->name('tasks.due-soon');
 
     // Tags
     Route::resource('tags', TagController::class)->except(['show', 'create', 'edit']);

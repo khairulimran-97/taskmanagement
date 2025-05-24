@@ -13,7 +13,10 @@ import {
     XCircle,
     ChevronDown,
     ChevronRight,
-    AlertCircle
+    AlertCircle,
+    Clock,
+    MoreHorizontal,
+    Loader2
 } from 'lucide-vue-next';
 
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -31,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { DateFormatter, type DateValue, getLocalTimeZone, parseDate } from '@internationalized/date';
 
 interface Props {
@@ -78,6 +82,7 @@ const isDeleteTaskDialogOpen = ref(false);
 const taskToDelete = ref<ExtendedTask | null>(null);
 const expandedTasks = ref<Set<number>>(new Set());
 const isSubmitting = ref(false);
+const updatingTasks = ref<Set<number>>(new Set());
 
 // Get page data for reactivity
 const page = usePage();
@@ -121,19 +126,43 @@ const getSubtasks = (parentId: number) => {
     return (props.project.tasks || []).filter(task => task.parent_task_id === parentId);
 };
 
-// Status configurations
+// Status configurations with enhanced styling
 const statusConfig = {
-    todo: { label: 'To Do', icon: Circle, class: 'bg-gray-100 text-gray-800' },
-    in_progress: { label: 'In Progress', icon: PlayCircle, class: 'bg-blue-100 text-blue-800' },
-    completed: { label: 'Completed', icon: CheckCircle2, class: 'bg-green-100 text-green-800' },
-    cancelled: { label: 'Cancelled', icon: XCircle, class: 'bg-red-100 text-red-800' }
+    todo: {
+        label: 'To Do',
+        icon: Circle,
+        class: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+        iconClass: 'text-slate-400 hover:text-slate-600',
+        bgClass: 'bg-slate-50'
+    },
+    in_progress: {
+        label: 'In Progress',
+        icon: PlayCircle,
+        class: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
+        iconClass: 'text-blue-500 hover:text-blue-700',
+        bgClass: 'bg-blue-50'
+    },
+    completed: {
+        label: 'Completed',
+        icon: CheckCircle2,
+        class: 'bg-green-100 text-green-800 hover:bg-green-200',
+        iconClass: 'text-green-500 hover:text-green-700',
+        bgClass: 'bg-green-50'
+    },
+    cancelled: {
+        label: 'Cancelled',
+        icon: XCircle,
+        class: 'bg-red-100 text-red-800 hover:bg-red-200',
+        iconClass: 'text-red-500 hover:text-red-700',
+        bgClass: 'bg-red-50'
+    }
 };
 
 const priorityConfig = {
-    low: { label: 'Low', class: 'bg-green-100 text-green-800' },
-    medium: { label: 'Medium', class: 'bg-yellow-100 text-yellow-800' },
-    high: { label: 'High', class: 'bg-orange-100 text-orange-800' },
-    urgent: { label: 'Urgent', class: 'bg-red-100 text-red-800' }
+    low: { label: 'Low', class: 'bg-green-100 text-green-800 border-green-200' },
+    medium: { label: 'Medium', class: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+    high: { label: 'High', class: 'bg-orange-100 text-orange-800 border-orange-200' },
+    urgent: { label: 'Urgent', class: 'bg-red-100 text-red-800 border-red-200' }
 };
 
 // Methods
@@ -157,6 +186,31 @@ const openEditTaskModal = (task: ExtendedTask) => {
     populateTaskForm(task);
     editingTask.value = task;
     isEditTaskModalOpen.value = true;
+};
+
+// Quick status update function
+const quickUpdateTaskStatus = (task: ExtendedTask, newStatus: string) => {
+    if (updatingTasks.value.has(task.id)) return;
+
+    updatingTasks.value.add(task.id);
+
+    router.put(route('tasks.update', task.id), {
+        status: newStatus
+    }, {
+        preserveScroll: true,
+        onError: (errors) => {
+            console.error('Failed to update task status:', errors);
+        },
+        onFinish: () => {
+            updatingTasks.value.delete(task.id);
+        }
+    });
+};
+
+// Quick toggle completion
+const toggleTaskCompletion = (task: ExtendedTask) => {
+    const newStatus = task.status === 'completed' ? 'todo' : 'completed';
+    quickUpdateTaskStatus(task, newStatus);
 };
 
 const resetTaskForm = () => {
@@ -244,11 +298,9 @@ const createNewTag = () => {
 
     isCreatingTag.value = true;
 
-    // Use router.post for proper Inertia handling
     router.post(route('tags.store'), newTagForm, {
         preserveScroll: true,
         onSuccess: () => {
-            // Reset new tag form
             newTagForm.name = '';
             newTagForm.color = '#6B7280';
             newTagForm.description = '';
@@ -282,6 +334,24 @@ const confirmDeleteTask = () => {
 const formatDate = (date: string | null): string => {
     if (!date) return '';
     return new Date(date).toLocaleDateString();
+};
+
+const isOverdue = (dueDate: string | null): boolean => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date() && !['completed', 'cancelled'].includes('todo');
+};
+
+const getDueDateClass = (task: ExtendedTask): string => {
+    if (!task.due_date || task.status === 'completed') return 'text-gray-500';
+
+    const due = new Date(task.due_date);
+    const now = new Date();
+    const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'text-red-600 font-medium'; // Overdue
+    if (diffDays <= 1) return 'text-orange-600 font-medium'; // Due soon
+    if (diffDays <= 3) return 'text-yellow-600'; // Due in a few days
+    return 'text-gray-500';
 };
 
 const getProjectStatusClass = (status: string): string => {
@@ -393,14 +463,14 @@ watch(() => page.props.flash, (flash: any) => {
             <div class="space-y-6">
                 <div class="flex items-center justify-between">
                     <h2 class="text-2xl font-semibold text-gray-900">Tasks</h2>
-                    <Button @click="openAddTaskModal()" class="flex items-center space-x-2">
+                    <Button @click="openAddTaskModal()" class="flex items-center space-x-2 shadow-sm">
                         <Plus class="w-4 h-4" />
                         <span>Add Task</span>
                     </Button>
                 </div>
 
                 <!-- Tasks List -->
-                <div class="space-y-4">
+                <div class="space-y-3">
                     <Card v-if="rootTasks.length === 0" class="text-center py-12">
                         <CardContent>
                             <div class="flex flex-col items-center space-y-4">
@@ -420,133 +490,280 @@ watch(() => page.props.flash, (flash: any) => {
                     </Card>
 
                     <!-- Root Tasks -->
-                    <Card v-for="task in rootTasks" :key="task.id" class="overflow-hidden">
-                        <CardContent class="p-4">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center space-x-3 mb-2">
+                    <Card
+                        v-for="task in rootTasks"
+                        :key="task.id"
+                        class="overflow-hidden transition-all duration-200 hover:shadow-md border"
+                        :class="[
+                            task.status === 'completed' ? 'bg-green-50/50 border-green-200' : 'hover:border-gray-300',
+                            updatingTasks.has(task.id) ? 'opacity-75' : ''
+                        ]"
+                    >
+                        <CardContent class="p-0">
+                            <!-- Main Task -->
+                            <div class="p-4 border-b border-gray-100 last:border-b-0">
+                                <div class="flex items-start space-x-3">
+                                    <!-- Expand/Status Section -->
+                                    <div class="flex items-center space-x-2 pt-1">
+                                        <!-- Expand Button -->
                                         <Button
                                             v-if="getSubtasks(task.id).length > 0"
                                             variant="ghost"
                                             size="sm"
                                             @click="toggleTaskExpansion(task.id)"
-                                            class="p-1 h-6 w-6"
+                                            class="p-1 h-6 w-6 hover:bg-gray-100"
                                         >
                                             <ChevronDown v-if="expandedTasks.has(task.id)" class="w-4 h-4" />
                                             <ChevronRight v-else class="w-4 h-4" />
                                         </Button>
                                         <div v-else class="w-6"></div>
 
-                                        <component
-                                            :is="statusConfig[task.status]?.icon || Circle"
-                                            class="w-5 h-5"
-                                            :class="task.status === 'completed' ? 'text-green-600' : 'text-gray-400'"
-                                        />
-
-                                        <h3 class="text-lg font-medium text-gray-900">{{ task.title }}</h3>
+                                        <!-- Quick Status Toggle -->
+                                        <button
+                                            @click="toggleTaskCompletion(task)"
+                                            :disabled="updatingTasks.has(task.id)"
+                                            class="flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 hover:scale-110"
+                                            :class="[
+                                                task.status === 'completed'
+                                                    ? 'bg-green-100 hover:bg-green-200'
+                                                    : 'bg-gray-100 hover:bg-gray-200'
+                                            ]"
+                                        >
+                                            <Loader2 v-if="updatingTasks.has(task.id)" class="w-4 h-4 animate-spin text-gray-500" />
+                                            <CheckCircle2
+                                                v-else-if="task.status === 'completed'"
+                                                class="w-4 h-4 text-green-600"
+                                            />
+                                            <Circle v-else class="w-4 h-4 text-gray-400" />
+                                        </button>
                                     </div>
 
-                                    <div v-if="task.description" class="ml-9 mb-3">
-                                        <p class="text-gray-600">{{ task.description }}</p>
-                                    </div>
+                                    <!-- Task Content -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-start justify-between">
+                                            <div class="flex-1">
+                                                <!-- Task Title -->
+                                                <h3
+                                                    class="text-lg font-medium transition-all duration-200"
+                                                    :class="[
+                                                        task.status === 'completed'
+                                                            ? 'text-gray-500 line-through'
+                                                            : 'text-gray-900'
+                                                    ]"
+                                                >
+                                                    {{ task.title }}
+                                                </h3>
 
-                                    <div class="ml-9 flex items-center space-x-4 text-sm text-gray-500">
-                                        <Badge :class="statusConfig[task.status]?.class || 'bg-gray-100 text-gray-800'">
-                                            {{ statusConfig[task.status]?.label || task.status }}
-                                        </Badge>
+                                                <!-- Task Description -->
+                                                <div v-if="task.description" class="mt-1">
+                                                    <p
+                                                        class="text-gray-600 line-clamp-2"
+                                                        :class="{ 'line-through opacity-75': task.status === 'completed' }"
+                                                    >
+                                                        {{ task.description }}
+                                                    </p>
+                                                </div>
 
-                                        <Badge :class="priorityConfig[task.priority || 'medium']?.class">
-                                            {{ priorityConfig[task.priority || 'medium']?.label }}
-                                        </Badge>
+                                                <!-- Task Meta Information -->
+                                                <div class="flex items-center flex-wrap gap-3 mt-3">
+                                                    <!-- Status Badge -->
+                                                    <Badge :class="statusConfig[task.status]?.class || 'bg-gray-100 text-gray-800'" class="font-medium">
+                                                        {{ statusConfig[task.status]?.label || task.status }}
+                                                    </Badge>
 
-                                        <div v-if="task.due_date" class="flex items-center">
-                                            <Calendar class="w-4 h-4 mr-1" />
-                                            {{ formatDate(task.due_date) }}
+                                                    <!-- Priority Badge -->
+                                                    <Badge
+                                                        variant="outline"
+                                                        :class="priorityConfig[task.priority || 'medium']?.class"
+                                                        class="font-medium border"
+                                                    >
+                                                        {{ priorityConfig[task.priority || 'medium']?.label }}
+                                                    </Badge>
+
+                                                    <!-- Due Date -->
+                                                    <div v-if="task.due_date" class="flex items-center text-sm" :class="getDueDateClass(task)">
+                                                        <Clock class="w-3 h-3 mr-1" />
+                                                        {{ formatDate(task.due_date) }}
+                                                    </div>
+
+                                                    <!-- Subtask Count -->
+                                                    <div v-if="getSubtasks(task.id).length > 0" class="flex items-center text-sm text-gray-500">
+                                                        <span class="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                                                            {{ getSubtasks(task.id).filter(st => st.status === 'completed').length }}/{{ getSubtasks(task.id).length }} subtasks
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Tags -->
+                                                <div v-if="task.tags && task.tags.length > 0" class="flex items-center space-x-2 mt-2">
+                                                    <TagIcon class="w-3 h-3 text-gray-400" />
+                                                    <div class="flex flex-wrap gap-1">
+                                                        <Badge
+                                                            v-for="tag in task.tags"
+                                                            :key="tag.id"
+                                                            variant="outline"
+                                                            class="text-xs px-2 py-0.5"
+                                                            :style="`border-color: ${tag.color}; color: ${tag.color}`"
+                                                        >
+                                                            {{ tag.name }}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Quick Actions Dropdown -->
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger as-child>
+                                                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0">
+                                                        <MoreHorizontal class="w-4 h-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" class="w-48">
+                                                    <DropdownMenuItem @click="openAddTaskModal(task.id)" class="cursor-pointer">
+                                                        <Plus class="w-4 h-4 mr-2" />
+                                                        Add Subtask
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem @click="openEditTaskModal(task)" class="cursor-pointer">
+                                                        <Edit class="w-4 h-4 mr-2" />
+                                                        Edit Task
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <!-- Quick Status Updates -->
+                                                    <DropdownMenuItem
+                                                        v-if="task.status !== 'todo'"
+                                                        @click="quickUpdateTaskStatus(task, 'todo')"
+                                                        class="cursor-pointer"
+                                                    >
+                                                        <Circle class="w-4 h-4 mr-2" />
+                                                        Mark as To Do
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        v-if="task.status !== 'in_progress'"
+                                                        @click="quickUpdateTaskStatus(task, 'in_progress')"
+                                                        class="cursor-pointer"
+                                                    >
+                                                        <PlayCircle class="w-4 h-4 mr-2" />
+                                                        Mark as In Progress
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        v-if="task.status !== 'completed'"
+                                                        @click="quickUpdateTaskStatus(task, 'completed')"
+                                                        class="cursor-pointer"
+                                                    >
+                                                        <CheckCircle2 class="w-4 h-4 mr-2" />
+                                                        Mark as Completed
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem @click="deleteTask(task)" class="cursor-pointer text-red-600 focus:text-red-600">
+                                                        <Trash2 class="w-4 h-4 mr-2" />
+                                                        Delete Task
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </div>
-
-                                    <div v-if="task.tags && task.tags.length > 0" class="ml-9 mt-2 flex items-center space-x-2">
-                                        <TagIcon class="w-4 h-4 text-gray-400" />
-                                        <div class="flex flex-wrap gap-1">
-                                            <Badge
-                                                v-for="tag in task.tags"
-                                                :key="tag.id"
-                                                variant="outline"
-                                                class="text-xs"
-                                                :style="`border-color: ${tag.color}; color: ${tag.color}`"
-                                            >
-                                                {{ tag.name }}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center space-x-2 ml-4">
-                                    <Button variant="ghost" size="sm" @click="openAddTaskModal(task.id)">
-                                        <Plus class="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" @click="openEditTaskModal(task)">
-                                        <Edit class="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" @click="deleteTask(task)" class="text-red-600 hover:text-red-800">
-                                        <Trash2 class="w-4 h-4" />
-                                    </Button>
                                 </div>
                             </div>
 
                             <!-- Subtasks -->
-                            <div v-if="expandedTasks.has(task.id) && getSubtasks(task.id).length > 0" class="ml-9 mt-4 space-y-3">
+                            <div v-if="expandedTasks.has(task.id) && getSubtasks(task.id).length > 0" class="bg-gray-50/50">
                                 <div
-                                    v-for="subtask in getSubtasks(task.id)"
+                                    v-for="(subtask, index) in getSubtasks(task.id)"
                                     :key="subtask.id"
-                                    class="border-l-2 border-gray-200 pl-4 py-2"
+                                    class="border-l-2 border-l-gray-200 ml-6 pl-4 py-3"
+                                    :class="[
+                                        index !== getSubtasks(task.id).length - 1 ? 'border-b border-gray-100' : '',
+                                        subtask.status === 'completed' ? 'opacity-75' : ''
+                                    ]"
                                 >
-                                    <div class="flex items-start justify-between">
-                                        <div class="flex-1">
-                                            <div class="flex items-center space-x-3 mb-1">
-                                                <component
-                                                    :is="statusConfig[subtask.status]?.icon || Circle"
-                                                    class="w-4 h-4"
-                                                    :class="subtask.status === 'completed' ? 'text-green-600' : 'text-gray-400'"
-                                                />
-                                                <h4 class="font-medium text-gray-900">{{ subtask.title }}</h4>
-                                            </div>
+                                    <div class="flex items-start space-x-3">
+                                        <!-- Subtask Status Toggle -->
+                                        <button
+                                            @click="toggleTaskCompletion(subtask)"
+                                            :disabled="updatingTasks.has(subtask.id)"
+                                            class="flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 hover:scale-110 mt-0.5"
+                                            :class="[
+                                                subtask.status === 'completed'
+                                                    ? 'bg-green-100 hover:bg-green-200'
+                                                    : 'bg-gray-100 hover:bg-gray-200'
+                                            ]"
+                                        >
+                                            <Loader2 v-if="updatingTasks.has(subtask.id)" class="w-3 h-3 animate-spin text-gray-500" />
+                                            <CheckCircle2
+                                                v-else-if="subtask.status === 'completed'"
+                                                class="w-3 h-3 text-green-600"
+                                            />
+                                            <Circle v-else class="w-3 h-3 text-gray-400" />
+                                        </button>
 
-                                            <div v-if="subtask.description" class="ml-7 mb-2">
-                                                <p class="text-sm text-gray-600">{{ subtask.description }}</p>
-                                            </div>
+                                        <!-- Subtask Content -->
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-start justify-between">
+                                                <div class="flex-1">
+                                                    <h4
+                                                        class="font-medium transition-all duration-200"
+                                                        :class="[
+                                                            subtask.status === 'completed'
+                                                                ? 'text-gray-500 line-through'
+                                                                : 'text-gray-900'
+                                                        ]"
+                                                    >
+                                                        {{ subtask.title }}
+                                                    </h4>
 
-                                            <div class="ml-7 flex items-center space-x-3 text-xs text-gray-500">
-                                                <Badge :class="statusConfig[subtask.status]?.class || 'bg-gray-100 text-gray-800'" class="text-xs">
-                                                    {{ statusConfig[subtask.status]?.label || subtask.status }}
-                                                </Badge>
+                                                    <div v-if="subtask.description" class="mt-1">
+                                                        <p
+                                                            class="text-sm text-gray-600"
+                                                            :class="{ 'line-through opacity-75': subtask.status === 'completed' }"
+                                                        >
+                                                            {{ subtask.description }}
+                                                        </p>
+                                                    </div>
 
-                                                <div v-if="subtask.due_date" class="flex items-center">
-                                                    <Calendar class="w-3 h-3 mr-1" />
-                                                    {{ formatDate(subtask.due_date) }}
+                                                    <div class="flex items-center flex-wrap gap-2 mt-2">
+                                                        <Badge :class="statusConfig[subtask.status]?.class || 'bg-gray-100 text-gray-800'" class="text-xs">
+                                                            {{ statusConfig[subtask.status]?.label || subtask.status }}
+                                                        </Badge>
+
+                                                        <div v-if="subtask.due_date" class="flex items-center text-xs" :class="getDueDateClass(subtask)">
+                                                            <Clock class="w-3 h-3 mr-1" />
+                                                            {{ formatDate(subtask.due_date) }}
+                                                        </div>
+                                                    </div>
+
+                                                    <div v-if="subtask.tags && subtask.tags.length > 0" class="flex flex-wrap gap-1 mt-1">
+                                                        <Badge
+                                                            v-for="tag in subtask.tags"
+                                                            :key="tag.id"
+                                                            variant="outline"
+                                                            class="text-xs px-1.5 py-0.5"
+                                                            :style="`border-color: ${tag.color}; color: ${tag.color}`"
+                                                        >
+                                                            {{ tag.name }}
+                                                        </Badge>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div v-if="subtask.tags && subtask.tags.length > 0" class="ml-7 mt-1 flex flex-wrap gap-1">
-                                                <Badge
-                                                    v-for="tag in subtask.tags"
-                                                    :key="tag.id"
-                                                    variant="outline"
-                                                    class="text-xs"
-                                                    :style="`border-color: ${tag.color}; color: ${tag.color}`"
-                                                >
-                                                    {{ tag.name }}
-                                                </Badge>
+                                                <!-- Subtask Actions -->
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger as-child>
+                                                        <Button variant="ghost" size="sm" class="h-6 w-6 p-0">
+                                                            <MoreHorizontal class="w-3 h-3" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" class="w-44">
+                                                        <DropdownMenuItem @click="openEditTaskModal(subtask)" class="cursor-pointer">
+                                                            <Edit class="w-3 h-3 mr-2" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem @click="deleteTask(subtask)" class="cursor-pointer text-red-600 focus:text-red-600">
+                                                            <Trash2 class="w-3 h-3 mr-2" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
-                                        </div>
-
-                                        <div class="flex items-center space-x-1 ml-2">
-                                            <Button variant="ghost" size="sm" @click="openEditTaskModal(subtask)" class="h-6 w-6 p-0">
-                                                <Edit class="w-3 h-3" />
-                                            </Button>
-                                            <Button variant="ghost" size="sm" @click="deleteTask(subtask)" class="h-6 w-6 p-0 text-red-600 hover:text-red-800">
-                                                <Trash2 class="w-3 h-3" />
-                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -660,8 +877,6 @@ watch(() => page.props.flash, (flash: any) => {
                             </Popover>
                         </div>
                     </div>
-
-
 
                     <!-- Tags -->
                     <div class="grid grid-cols-4 items-start gap-4">

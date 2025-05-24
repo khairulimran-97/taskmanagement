@@ -9,8 +9,10 @@ use App\Models\Project;
 use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
 {
@@ -64,6 +66,11 @@ class TaskController extends Controller
         $task = Task::where('user_id', Auth::id())->findOrFail($id);
         $validated = $request->validated();
 
+        // Handle status change logic
+        if (isset($validated['status'])) {
+            $this->handleStatusChange($task, $validated['status']);
+        }
+
         // Remove tags from validated data before updating
         $taskData = collect($validated)->except(['tag_ids'])->toArray();
         $task->update($taskData);
@@ -77,14 +84,134 @@ class TaskController extends Controller
     }
 
     /**
+     * Quick status update for tasks (AJAX endpoint)
+     */
+    public function quickStatusUpdate(Request $request, string $id): JsonResponse
+    {
+        $task = Task::where('user_id', Auth::id())->findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => [
+                'required',
+                'string',
+                Rule::in(['todo', 'in_progress', 'completed', 'cancelled'])
+            ]
+        ]);
+
+        $oldStatus = $task->status;
+        $newStatus = $validated['status'];
+
+        // Handle status change
+        $this->handleStatusChange($task, $newStatus);
+
+        $task->update(['status' => $newStatus]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task status updated successfully',
+            'task' => [
+                'id' => $task->id,
+                'status' => $task->status,
+                'completed_at' => $task->completed_at,
+                'old_status' => $oldStatus
+            ]
+        ]);
+    }
+
+    /**
+     * Bulk status update for multiple tasks
+     */
+    public function bulkStatusUpdate(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'task_ids' => 'required|array',
+            'task_ids.*' => 'exists:tasks,id',
+            'status' => [
+                'required',
+                'string',
+                Rule::in(['todo', 'in_progress', 'completed', 'cancelled'])
+            ]
+        ]);
+
+        $tasks = Task::where('user_id', Auth::id())
+            ->whereIn('id', $validated['task_ids'])
+            ->get();
+
+        $updatedTasks = [];
+        foreach ($tasks as $task) {
+            $oldStatus = $task->status;
+            $this->handleStatusChange($task, $validated['status']);
+            $task->update(['status' => $validated['status']]);
+
+            $updatedTasks[] = [
+                'id' => $task->id,
+                'status' => $task->status,
+                'completed_at' => $task->completed_at,
+                'old_status' => $oldStatus
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => count($updatedTasks) . ' tasks updated successfully',
+            'tasks' => $updatedTasks
+        ]);
+    }
+
+    /**
+     * Toggle task completion status
+     */
+    public function toggleCompletion(string $id): JsonResponse
+    {
+        $task = Task::where('user_id', Auth::id())->findOrFail($id);
+
+        $newStatus = $task->status === 'completed' ? 'todo' : 'completed';
+        $oldStatus = $task->status;
+
+        $this->handleStatusChange($task, $newStatus);
+        $task->update(['status' => $newStatus]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task completion toggled successfully',
+            'task' => [
+                'id' => $task->id,
+                'status' => $task->status,
+                'completed_at' => $task->completed_at,
+                'old_status' => $oldStatus
+            ]
+        ]);
+    }
+
+    /**
+     * Handle status change logic (completed_at field, etc.)
+     */
+    private function handleStatusChange(Task $task, string $newStatus): void
+    {
+        if ($newStatus === 'completed' && $task->status !== 'completed') {
+            $task->completed_at = now();
+        } elseif ($newStatus !== 'completed' && $task->status === 'completed') {
+            $task->completed_at = null;
+        }
+    }
+
+    /**
      * Remove the specified task from storage.
      */
     public function destroy(string $id): RedirectResponse
     {
         $task = Task::where('user_id', Auth::id())->findOrFail($id);
+
+        // Get subtasks count for feedback
+        $subtasksCount = $task->subtasks()->count();
+
         $task->delete();
 
-        return redirect()->back()->with('success', 'Task deleted successfully.');
+        $message = $subtasksCount > 0
+            ? "Task and {$subtasksCount} subtask(s) deleted successfully."
+            : 'Task deleted successfully.';
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**
@@ -100,5 +227,84 @@ class TaskController extends Controller
             ->get();
 
         return response()->json($tasks);
+    }
+
+    /**
+     * Get task statistics for a project
+     */
+    public function getProjectTaskStats(string $projectId): JsonResponse
+    {
+        $project = Project::where('user_id', Auth::id())->findOrFail($projectId);
+
+        $stats = [
+            'total' => Task::where('project_id', $projectId)->count(),
+            'completed' => Task::where('project_id', $projectId)->where('status', 'completed')->count(),
+            'in_progress' => Task::where('project_id', $projectId)->where('status', 'in_progress')->count(),
+            'todo' => Task::where('project_id', $projectId)->where('status', 'todo')->count(),
+            'cancelled' => Task::where('project_id', $projectId)->where('status', 'cancelled')->count(),
+            'overdue' => Task::where('project_id', $projectId)
+                ->where('due_date', '<', now())
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->count(),
+        ];
+
+        $stats['completion_percentage'] = $stats['total'] > 0
+            ? round(($stats['completed'] / $stats['total']) * 100, 2)
+            : 0;
+
+        return response()->json($stats);
+    }
+
+    /**
+     * Reorder tasks within a project
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'updates' => 'required|array',
+            'updates.*.id' => 'required|exists:tasks,id',
+            'updates.*.sort_order' => 'required|integer|min:0'
+        ]);
+
+        foreach ($validated['updates'] as $update) {
+            Task::where('id', $update['id'])
+                ->where('user_id', Auth::id())
+                ->update(['sort_order' => $update['sort_order']]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tasks reordered successfully'
+        ]);
+    }
+
+    /**
+     * Get overdue tasks for the authenticated user
+     */
+    public function getOverdueTasks(): JsonResponse
+    {
+        $overdueTasks = Task::where('user_id', Auth::id())
+            ->where('due_date', '<', now())
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->with(['project', 'tags'])
+            ->orderBy('due_date', 'asc')
+            ->get();
+
+        return response()->json($overdueTasks);
+    }
+
+    /**
+     * Get tasks due soon (within next 7 days)
+     */
+    public function getTasksDueSoon(): JsonResponse
+    {
+        $tasksDueSoon = Task::where('user_id', Auth::id())
+            ->whereBetween('due_date', [now(), now()->addDays(7)])
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->with(['project', 'tags'])
+            ->orderBy('due_date', 'asc')
+            ->get();
+
+        return response()->json($tasksDueSoon);
     }
 }
