@@ -13,24 +13,62 @@ import {
     navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { getInitials } from '@/composables/useInitials';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
-import { computed } from 'vue';
+import {
+    LayoutDashboard,
+    CheckSquare,
+    Calendar,
+    Menu,
+    Plus,
+    Bell,
+    Folder,
+    Sun,
+    Moon
+} from 'lucide-vue-next';
+import { computed, ref, onMounted } from 'vue';
 
 interface Props {
     breadcrumbs?: BreadcrumbItem[];
+    notifications?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
+    notifications: 0,
 });
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
+
+// Dark mode functionality
+const isDark = ref(false);
+
+onMounted(() => {
+    // Check for saved theme preference or default to 'light'
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    isDark.value = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
+    updateTheme();
+});
+
+const toggleTheme = () => {
+    isDark.value = !isDark.value;
+    updateTheme();
+    localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
+};
+
+const updateTheme = () => {
+    if (isDark.value) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+};
 
 const isCurrentRoute = computed(() => (url: string) => page.url === url);
 
@@ -42,27 +80,31 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
-        icon: LayoutGrid,
+        icon: LayoutDashboard,
+    },
+    {
+        title: 'Tasks',
+        href: '/tasks',
+        icon: CheckSquare,
+    },
+    {
+        title: 'Calendar',
+        href: '/calendar',
+        icon: Calendar,
+    },
+    {
+        title: 'Projects',
+        href: '/projects',
+        icon: Folder,
     },
 ];
 
-const rightNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
+const rightNavItems: NavItem[] = [];
 </script>
 
 <template>
     <div>
-        <div class="border-b border-sidebar-border/80">
+        <div class="border-b border-sidebar-border/80 bg-white dark:bg-neutral-900">
             <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                 <!-- Mobile Menu -->
                 <div class="lg:hidden">
@@ -83,7 +125,7 @@ const rightNavItems: NavItem[] = [
                                         v-for="item in mainNavItems"
                                         :key="item.title"
                                         :href="item.href"
-                                        class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
+                                        class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
                                         :class="activeItemStyles(item.href)"
                                     >
                                         <component v-if="item.icon" :is="item.icon" class="h-5 w-5" />
@@ -91,17 +133,19 @@ const rightNavItems: NavItem[] = [
                                     </Link>
                                 </nav>
                                 <div class="flex flex-col space-y-4">
-                                    <a
-                                        v-for="item in rightNavItems"
-                                        :key="item.title"
-                                        :href="item.href"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="flex items-center space-x-2 text-sm font-medium"
-                                    >
-                                        <component v-if="item.icon" :is="item.icon" class="h-5 w-5" />
-                                        <span>{{ item.title }}</span>
-                                    </a>
+                                    <div class="border-t pt-4">
+                                        <Button class="w-full" size="sm">
+                                            <Plus class="mr-2 h-4 w-4" />
+                                            New Task
+                                        </Button>
+                                    </div>
+                                    <div class="flex items-center justify-between border-t pt-4">
+                                        <span class="text-sm font-medium">Theme</span>
+                                        <Button variant="ghost" size="icon" class="h-8 w-8" @click="toggleTheme">
+                                            <Sun v-if="isDark" class="h-4 w-4" />
+                                            <Moon v-else class="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </SheetContent>
@@ -115,19 +159,21 @@ const rightNavItems: NavItem[] = [
                 <!-- Desktop Menu -->
                 <div class="hidden h-full lg:flex lg:flex-1">
                     <NavigationMenu class="ml-10 flex h-full items-stretch">
-                        <NavigationMenuList class="flex h-full items-stretch space-x-2">
+                        <NavigationMenuList class="flex h-full items-stretch space-x-1">
                             <NavigationMenuItem v-for="(item, index) in mainNavItems" :key="index" class="relative flex h-full items-center">
                                 <Link :href="item.href">
                                     <NavigationMenuLink
                                         :class="[navigationMenuTriggerStyle(), activeItemStyles(item.href), 'h-9 cursor-pointer px-3']"
                                     >
-                                        <component v-if="item.icon" :is="item.icon" class="mr-2 h-4 w-4" />
-                                        {{ item.title }}
+                                        <div class="flex items-center gap-2">
+                                            <component v-if="item.icon" :is="item.icon" class="h-4 w-4" />
+                                            <span>{{ item.title }}</span>
+                                        </div>
                                     </NavigationMenuLink>
                                 </Link>
                                 <div
                                     v-if="isCurrentRoute(item.href)"
-                                    class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"
+                                    class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-primary"
                                 ></div>
                             </NavigationMenuItem>
                         </NavigationMenuList>
@@ -135,38 +181,41 @@ const rightNavItems: NavItem[] = [
                 </div>
 
                 <div class="ml-auto flex items-center space-x-2">
-                    <div class="relative flex items-center space-x-1">
-                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer">
-                            <Search class="size-5 opacity-80 group-hover:opacity-100" />
+                    <!-- Quick Actions -->
+                    <div class="hidden items-center space-x-2 md:flex">
+                        <Button size="sm" class="h-9">
+                            <Plus class="mr-2 h-4 w-4" />
+                            New Task
                         </Button>
-
-                        <div class="hidden space-x-1 lg:flex">
-                            <template v-for="item in rightNavItems" :key="item.title">
-                                <TooltipProvider :delay-duration="0">
-                                    <Tooltip>
-                                        <TooltipTrigger>
-                                            <Button variant="ghost" size="icon" as-child class="group h-9 w-9 cursor-pointer">
-                                                <a :href="item.href" target="_blank" rel="noopener noreferrer">
-                                                    <span class="sr-only">{{ item.title }}</span>
-                                                    <component :is="item.icon" class="size-5 opacity-80 group-hover:opacity-100" />
-                                                </a>
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{{ item.title }}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            </template>
-                        </div>
                     </div>
 
+                    <!-- Action Buttons -->
+                    <div class="flex items-center space-x-1">
+                        <!-- Theme Toggle -->
+                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer" @click="toggleTheme">
+                            <Sun v-if="isDark" class="size-5 opacity-80 transition-opacity group-hover:opacity-100" />
+                            <Moon v-else class="size-5 opacity-80 transition-opacity group-hover:opacity-100" />
+                        </Button>
+
+                        <!-- Notifications -->
+                        <Button variant="ghost" size="icon" class="group relative h-9 w-9 cursor-pointer">
+                            <Bell class="size-5 opacity-80 transition-opacity group-hover:opacity-100" />
+                            <Badge
+                                v-if="props.notifications > 0"
+                                class="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
+                            >
+                                {{ props.notifications > 9 ? '9+' : props.notifications }}
+                            </Badge>
+                        </Button>
+                    </div>
+
+                    <!-- User Menu -->
                     <DropdownMenu>
                         <DropdownMenuTrigger :as-child="true">
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                class="relative size-10 w-auto rounded-full p-1 focus-within:ring-2 focus-within:ring-primary"
+                                class="relative size-10 w-auto rounded-full p-1 transition-all focus-within:ring-2 focus-within:ring-primary hover:bg-accent"
                             >
                                 <Avatar class="size-8 overflow-hidden rounded-full">
                                     <AvatarImage v-if="auth.user.avatar" :src="auth.user.avatar" :alt="auth.user.name" />
@@ -184,7 +233,7 @@ const rightNavItems: NavItem[] = [
             </div>
         </div>
 
-        <div v-if="props.breadcrumbs.length > 1" class="flex w-full border-b border-sidebar-border/70">
+        <div v-if="props.breadcrumbs.length > 1" class="flex w-full border-b border-sidebar-border/70 bg-neutral-50/50 dark:bg-neutral-900/50">
             <div class="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </div>
