@@ -13,7 +13,10 @@ import {
     Clock,
     AlertTriangle,
     TrendingUp,
+    Calendar,
+    Target,
     Activity,
+    Users,
     Plus,
     ArrowRight,
     ExternalLink
@@ -57,7 +60,6 @@ interface Props {
     };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -214,7 +216,16 @@ const getPriorityClass = (priority: string): string => {
                                 <span class="text-sm text-gray-600 dark:text-gray-400">Overall Completion</span>
                                 <span class="text-sm font-medium">{{ completionRates.projects }}%</span>
                             </div>
-                            <Progress :value="completionRates.projects" class="h-2" />
+                            <Progress
+                                :model-value="completionRates.projects"
+                                class="h-2"
+                                :class="{
+                                    'bg-red-200 dark:bg-red-800 [&>div]:bg-red-500 dark:[&>div]:bg-red-400': completionRates.projects < 25,
+                                    'bg-orange-200 dark:bg-orange-800 [&>div]:bg-orange-500 dark:[&>div]:bg-orange-400': completionRates.projects >= 25 && completionRates.projects < 50,
+                                    'bg-yellow-200 dark:bg-yellow-800 [&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-400': completionRates.projects >= 50 && completionRates.projects < 75,
+                                    'bg-green-200 dark:bg-green-800 [&>div]:bg-green-500 dark:[&>div]:bg-green-400': completionRates.projects >= 75
+                                }"
+                            />
                         </div>
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div class="flex items-center">
@@ -249,7 +260,16 @@ const getPriorityClass = (priority: string): string => {
                                 <span class="text-sm text-gray-600 dark:text-gray-400">Overall Completion</span>
                                 <span class="text-sm font-medium">{{ completionRates.tasks }}%</span>
                             </div>
-                            <Progress :value="completionRates.tasks" class="h-2" />
+                            <Progress
+                                :model-value="completionRates.tasks"
+                                class="h-2"
+                                :class="{
+                                    'bg-red-200 dark:bg-red-800 [&>div]:bg-red-500 dark:[&>div]:bg-red-400': completionRates.tasks < 25,
+                                    'bg-orange-200 dark:bg-orange-800 [&>div]:bg-orange-500 dark:[&>div]:bg-orange-400': completionRates.tasks >= 25 && completionRates.tasks < 50,
+                                    'bg-yellow-200 dark:bg-yellow-800 [&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-400': completionRates.tasks >= 50 && completionRates.tasks < 75,
+                                    'bg-green-200 dark:bg-green-800 [&>div]:bg-green-500 dark:[&>div]:bg-green-400': completionRates.tasks >= 75
+                                }"
+                            />
                         </div>
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div class="flex items-center">

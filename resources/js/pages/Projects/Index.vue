@@ -182,7 +182,7 @@ const handleDrop = (event: DragEvent, targetProject: Project, targetIndex: numbe
     updateProjectOrderOptimistic(sourceProject, targetProject, sourceIndex, targetIndex);
 
     // Then send to server
-    updateProjectOrderServer(sourceProject, targetProject, sourceIndex, targetIndex);
+    updateProjectOrderServer();
 };
 
 const updateProjectOrderOptimistic = (sourceProject: Project, targetProject: Project, sourceIndex: number, targetIndex: number) => {
@@ -214,7 +214,7 @@ const updateProjectOrderOptimistic = (sourceProject: Project, targetProject: Pro
     optimisticProjects.value = newProjects;
 };
 
-const updateProjectOrderServer = (sourceProject: Project, targetProject: Project, sourceIndex: number, targetIndex: number) => {
+const updateProjectOrderServer = () => {
     isReordering.value = true;
 
     // Get the current optimistic state for calculation
