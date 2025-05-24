@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TagController;
@@ -35,6 +36,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Tags
     Route::resource('tags', TagController::class)->except(['show', 'create', 'edit']);
+
+    // Calendar - Main Inertia routes
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('/calendar', [CalendarController::class, 'store'])->name('calendar.store');
+    Route::put('/calendar/{calendar_event}', [CalendarController::class, 'update'])->name('calendar.update');
+    Route::delete('/calendar/{calendar_event}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
+    Route::patch('/calendar/{calendar_event}/dates', [CalendarController::class, 'updateDates'])->name('calendar.update-dates');
+
+    // Calendar - JSON API endpoints (for AJAX calls only)
+    Route::get('/api/calendar/events', [CalendarController::class, 'getEvents'])->name('calendar.api.events');
+    Route::get('/api/calendar/events/{calendar_event}', [CalendarController::class, 'show'])->name('calendar.api.show');
+    Route::get('/api/calendar/events-for-date', [CalendarController::class, 'getEventsForDate'])->name('calendar.api.events-for-date');
+    Route::get('/api/calendar/upcoming', [CalendarController::class, 'getUpcomingEvents'])->name('calendar.api.upcoming');
 });
 
 require __DIR__.'/settings.php';

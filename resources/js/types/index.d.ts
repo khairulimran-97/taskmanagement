@@ -112,3 +112,41 @@ export interface ExtendedTask extends Task {
 export interface ExtendedProject extends Project {
     tasks?: ExtendedTask[];
 }
+
+export interface CalendarEvent {
+    id: number;
+    title: string;
+    description?: string | null;
+    start_date: string;
+    end_date?: string | null;
+    color: string;
+    all_day: boolean;
+    user_id: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CalendarEventForm {
+    title: string;
+    description?: string;
+    start_date: string;
+    end_date?: string;
+    color: string;
+    all_day: boolean;
+}
+
+export interface FullCalendarEvent {
+    id: string | number;
+    title: string;
+    start: string;
+    end?: string;
+    allDay: boolean;
+    backgroundColor: string;
+    borderColor?: string;
+    textColor?: string;
+    extendedProps?: {
+        description?: string;
+        user_id?: number;
+        [key: string]: any;
+    };
+}
