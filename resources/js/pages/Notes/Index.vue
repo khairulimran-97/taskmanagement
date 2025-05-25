@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, Link } from '@inertiajs/vue3';
+import { Head, router, Link, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
@@ -20,7 +20,9 @@ import {
     Trash2,
     Clock,
     Edit3,
-    Hash
+    Hash,
+    Save,
+    Loader2
 } from 'lucide-vue-next';
 
 interface Props {
@@ -30,6 +32,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const page = usePage();
 
 // Define breadcrumbs
 const breadcrumbs = ref<BreadcrumbItem[]>([
@@ -41,9 +44,11 @@ const breadcrumbs = ref<BreadcrumbItem[]>([
 const searchQuery = ref(props.search || '');
 const filteredNotes = ref<Note[]>(props.notes || []);
 const currentNote = ref<Note | null>(props.selectedNote || null);
-const isEditing = ref(false);
+const isTitleEditing = ref(false);
 const isSaving = ref(false);
+const isAutoSaving = ref(false);
 const autoSaveTimeout = ref<number | null>(null);
+const searchTimeout = ref<number | null>(null);
 
 // Form data for editing
 const noteForm = ref({
@@ -56,16 +61,66 @@ const noteForm = ref({
 // Refs for auto-focus
 const titleInput = ref<HTMLInputElement>();
 
-// Helper function to strip HTML tags for preview
-const stripHtml = (html: string): string => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-};
-
 // Computed
 const hasNotes = computed(() => filteredNotes.value.length > 0);
 const hasSelectedNote = computed(() => currentNote.value !== null);
+
+// Watch for flash messages and handle updates
+watch(() => page.props.flash, (flash: any) => {
+    if (flash) {
+        // Handle auto-save success
+        if (flash.auto_save_success && flash.updated_note) {
+            const updatedNote = flash.updated_note;
+
+            // Update current note
+            if (currentNote.value && currentNote.value.id === updatedNote.id) {
+                currentNote.value.updated_at = updatedNote.updated_at;
+                currentNote.value.word_count = updatedNote.word_count;
+            }
+
+            // Update note in the list
+            const noteIndex = filteredNotes.value.findIndex(n => n.id === updatedNote.id);
+            if (noteIndex !== -1) {
+                filteredNotes.value[noteIndex].updated_at = updatedNote.updated_at;
+                filteredNotes.value[noteIndex].word_count = updatedNote.word_count;
+            }
+        }
+
+        // Handle manual save success
+        if (flash.success && flash.updated_note) {
+            const updatedNote = flash.updated_note;
+
+            // Update current note
+            if (currentNote.value && currentNote.value.id === updatedNote.id) {
+                Object.assign(currentNote.value, updatedNote);
+                initializeForm();
+            }
+
+            // Update note in the list
+            const noteIndex = filteredNotes.value.findIndex(n => n.id === updatedNote.id);
+            if (noteIndex !== -1) {
+                Object.assign(filteredNotes.value[noteIndex], updatedNote);
+            }
+        }
+
+        // Handle pin toggle
+        if (flash.pin_updated) {
+            const { id, is_pinned } = flash.pin_updated;
+
+            // Update current note
+            if (currentNote.value && currentNote.value.id === id) {
+                currentNote.value.is_pinned = is_pinned;
+                noteForm.value.is_pinned = is_pinned;
+            }
+
+            // Update note in the list
+            const noteIndex = filteredNotes.value.findIndex(n => n.id === id);
+            if (noteIndex !== -1) {
+                filteredNotes.value[noteIndex].is_pinned = is_pinned;
+            }
+        }
+    }
+}, { deep: true });
 
 // Initialize form when selectedNote changes
 const initializeForm = () => {
@@ -83,7 +138,7 @@ const initializeForm = () => {
 watch(() => props.selectedNote, (newNote) => {
     currentNote.value = newNote;
     initializeForm();
-    isEditing.value = false;
+    isTitleEditing.value = false; // Only reset title editing
 }, { immediate: true });
 
 // Watch for notes changes
@@ -91,7 +146,7 @@ watch(() => props.notes, (newNotes) => {
     filteredNotes.value = newNotes;
 }, { immediate: true });
 
-// Search functionality - Keep as simple API call
+// Search functionality - Keep as API call for real-time search
 const performSearch = async () => {
     if (searchQuery.value.trim() === '') {
         filteredNotes.value = props.notes;
@@ -99,7 +154,6 @@ const performSearch = async () => {
     }
 
     try {
-        // Use a simple GET request for search - no CSRF needed
         const url = new URL(route('notes.api.search'));
         url.searchParams.append('q', searchQuery.value);
 
@@ -124,8 +178,8 @@ const performSearch = async () => {
 
 // Debounced search
 watch(searchQuery, () => {
-    clearTimeout(autoSaveTimeout.value);
-    autoSaveTimeout.value = setTimeout(performSearch, 300);
+    clearTimeout(searchTimeout.value);
+    searchTimeout.value = setTimeout(performSearch, 300);
 });
 
 // Select a note
@@ -145,107 +199,79 @@ const createNewNote = () => {
     });
 };
 
-// Toggle edit mode
-const toggleEdit = async () => {
+// Toggle title edit mode
+const toggleTitleEdit = async () => {
     if (!currentNote.value) return;
 
-    isEditing.value = !isEditing.value;
+    isTitleEditing.value = !isTitleEditing.value;
 
-    if (isEditing.value) {
+    if (isTitleEditing.value) {
         await nextTick();
-        // Optional: Focus on title input
         setTimeout(() => {
             try {
                 const titleEl = titleInput.value;
                 if (titleEl) {
-                    // Handle Shadcn Input component - it might have an $el property
                     const inputElement = titleEl.$el?.querySelector('input') || titleEl;
                     if (inputElement && typeof inputElement.focus === 'function') {
                         inputElement.focus();
                     }
                 }
             } catch (error) {
-                // Silently handle focus errors - not critical for functionality
                 console.debug('Title input focus not available');
             }
         }, 100);
     }
 };
 
-// Auto-save functionality - Use API endpoint for better performance
+// Auto-save functionality using Inertia - No more CSRF issues!
 const autoSave = async () => {
-    if (!currentNote.value || !isEditing.value) return;
+    if (!currentNote.value || isAutoSaving.value) return;
 
-    isSaving.value = true;
+    isAutoSaving.value = true;
 
-    try {
-        const response = await fetch(route('notes.api.auto-save', currentNote.value.id), {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify({
-                title: noteForm.value.title,
-                content: noteForm.value.content,
-            })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            // Update the current note's updated_at timestamp
-            if (currentNote.value && data.updated_at) {
-                currentNote.value.updated_at = data.updated_at;
-            }
-        } else if (response.status === 419) {
-            // CSRF token expired, reload the page
-            console.warn('CSRF token expired, reloading page...');
-            window.location.reload();
-        } else {
-            console.error('Auto-save failed with status:', response.status);
+    router.put(route('notes.update', currentNote.value.id), {
+        title: noteForm.value.title,
+        content: noteForm.value.content,
+        is_auto_save: true
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        only: [], // Don't reload props, just handle flash messages
+        onSuccess: () => {
+            // Flash messages are handled by the watcher above
+        },
+        onError: (errors) => {
+            console.error('Auto-save failed:', errors);
+        },
+        onFinish: () => {
+            isAutoSaving.value = false;
         }
-    } catch (error) {
-        console.error('Auto-save failed:', error);
-    } finally {
-        isSaving.value = false;
-    }
+    });
 };
 
 // Watch for form changes to trigger auto-save
 watch([() => noteForm.value.title, () => noteForm.value.content], () => {
-    if (!isEditing.value || !currentNote.value) return;
+    if (!currentNote.value) return;
 
     clearTimeout(autoSaveTimeout.value);
-    autoSaveTimeout.value = setTimeout(autoSave, 1000);
+    autoSaveTimeout.value = setTimeout(autoSave, 2000); // Auto-save after 2 seconds of inactivity
 });
 
-// Save note - Use router.visit for better CSRF handling
+// Manual save
 const saveNote = async () => {
     if (!currentNote.value) return;
 
     isSaving.value = true;
 
-    // Use Inertia's visit method with method: 'put'
-    router.visit(route('notes.update', currentNote.value.id), {
-        method: 'put',
-        data: noteForm.value,
+    router.put(route('notes.update', currentNote.value.id), {
+        ...noteForm.value,
+        is_auto_save: false
+    }, {
         preserveState: true,
         preserveScroll: true,
-        onSuccess: (page) => {
-            isEditing.value = false;
-
-            // Update current note from flash data if available
-            if (page.props.flash?.note) {
-                Object.assign(currentNote.value, page.props.flash.note);
-            }
-
-            // Update the note in the list
-            const noteIndex = filteredNotes.value.findIndex(n => n.id === currentNote.value?.id);
-            if (noteIndex !== -1 && page.props.flash?.note) {
-                filteredNotes.value[noteIndex] = { ...filteredNotes.value[noteIndex], ...page.props.flash.note };
-            }
+        onSuccess: () => {
+            isTitleEditing.value = false; // Only close title editing
+            // Flash messages are handled by the watcher above
         },
         onError: (errors) => {
             console.error('Save failed:', errors);
@@ -256,26 +282,12 @@ const saveNote = async () => {
     });
 };
 
-// Toggle pin - Use router.visit for better CSRF handling
+// Toggle pin using Inertia
 const togglePin = async (note: Note) => {
-    // Use Inertia's visit method with method: 'patch'
-    router.visit(route('notes.toggle-pin', note.id), {
-        method: 'patch',
+    router.patch(route('notes.toggle-pin', note.id), {}, {
         preserveState: true,
         preserveScroll: true,
         only: [], // Don't reload props
-        onSuccess: (page) => {
-            // Update note in list from flash data
-            const noteIndex = filteredNotes.value.findIndex(n => n.id === note.id);
-            if (noteIndex !== -1 && page.props.flash?.is_pinned !== undefined) {
-                filteredNotes.value[noteIndex].is_pinned = page.props.flash.is_pinned;
-            }
-            // Update current note if it's the same
-            if (currentNote.value?.id === note.id && page.props.flash?.is_pinned !== undefined) {
-                currentNote.value.is_pinned = page.props.flash.is_pinned;
-                noteForm.value.is_pinned = page.props.flash.is_pinned;
-            }
-        },
         onError: (errors) => {
             console.error('Toggle pin failed:', errors);
         }
@@ -286,7 +298,10 @@ const togglePin = async (note: Note) => {
 const deleteNote = (noteId: number) => {
     router.delete(route('notes.destroy', noteId), {
         onSuccess: () => {
-            // Will redirect to notes index
+            // Note deleted successfully
+        },
+        onError: () => {
+            console.error('Failed to delete note');
         }
     });
 };
@@ -317,10 +332,13 @@ const formatDate = (dateString: string): string => {
     }
 };
 
-// Cancel editing
-const cancelEdit = () => {
-    isEditing.value = false;
-    initializeForm();
+// Cancel title editing
+const cancelTitleEdit = () => {
+    isTitleEditing.value = false;
+    // Reset title to original value
+    if (currentNote.value) {
+        noteForm.value.title = currentNote.value.title || 'Untitled';
+    }
 };
 
 onMounted(() => {
@@ -449,13 +467,17 @@ onMounted(() => {
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
                                 <Input
-                                    v-if="isEditing"
+                                    v-if="isTitleEditing"
                                     ref="titleInput"
                                     v-model="noteForm.title"
                                     class="text-lg font-semibold border-none p-0 h-auto bg-transparent"
                                     placeholder="Untitled"
                                 />
-                                <h1 v-else class="text-lg font-semibold">
+                                <h1
+                                    v-else
+                                    @click="toggleTitleEdit"
+                                    class="text-lg font-semibold cursor-pointer hover:bg-accent/20 px-2 py-1 -mx-2 -my-1 rounded transition-colors"
+                                >
                                     {{ currentNote.title || 'Untitled' }}
                                 </h1>
                             </div>
@@ -473,27 +495,22 @@ onMounted(() => {
                                     <PinOff v-else class="h-4 w-4" />
                                 </Button>
 
-                                <!-- Edit/Save Button -->
+                                <!-- Save Button (always visible) -->
                                 <Button
-                                    v-if="!isEditing"
-                                    @click="toggleEdit"
-                                    variant="ghost"
-                                    size="icon"
-                                    class="h-8 w-8"
+                                    @click="saveNote"
+                                    size="sm"
+                                    :disabled="isSaving"
+                                    variant="default"
                                 >
-                                    <Edit3 class="h-4 w-4" />
+                                    <Loader2 v-if="isSaving" class="h-4 w-4 mr-2 animate-spin" />
+                                    <Save v-else class="h-4 w-4 mr-2" />
+                                    {{ isSaving ? 'Saving...' : 'Save' }}
                                 </Button>
 
-                                <template v-else>
+                                <!-- Title Edit Controls (only when editing title) -->
+                                <template v-if="isTitleEditing">
                                     <Button
-                                        @click="saveNote"
-                                        size="sm"
-                                        :disabled="isSaving"
-                                    >
-                                        {{ isSaving ? 'Saving...' : 'Save' }}
-                                    </Button>
-                                    <Button
-                                        @click="cancelEdit"
+                                        @click="cancelTitleEdit"
                                         variant="outline"
                                         size="sm"
                                     >
@@ -530,13 +547,18 @@ onMounted(() => {
                         </div>
 
                         <!-- Meta Information -->
-                        <div class="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
-                            <div class="flex items-center space-x-1">
-                                <Clock class="h-3 w-3" />
-                                <span>Updated {{ formatDate(currentNote.updated_at) }}</span>
+                        <div class="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center space-x-1">
+                                    <Clock class="h-3 w-3" />
+                                    <span>Updated {{ formatDate(currentNote.updated_at) }}</span>
+                                </div>
+                                <span v-if="currentNote.word_count > 0">{{ currentNote.word_count }} words</span>
                             </div>
-                            <span v-if="currentNote.word_count > 0">{{ currentNote.word_count }} words</span>
-                            <span v-if="isSaving" class="text-blue-500">Auto-saving...</span>
+                            <div v-if="isAutoSaving" class="flex items-center space-x-1 text-blue-500">
+                                <Loader2 class="h-3 w-3 animate-spin" />
+                                <span>Auto-saving...</span>
+                            </div>
                         </div>
 
                         <!-- Tags -->
@@ -553,25 +575,18 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <!-- Note Content -->
+                    <!-- Note Content - Always Editable -->
                     <div class="flex-1 p-4">
                         <TipTapEditor
-                            v-if="isEditing"
                             v-model="noteForm.content"
                             :editable="true"
                             placeholder="Start writing your note... (Type '/' for commands)"
                             class="w-full h-full"
                             @update:modelValue="(value) => noteForm.content = value"
                         />
-                        <div
-                            v-else
-                            @click="toggleEdit"
-                            class="w-full h-full cursor-text p-4 rounded hover:bg-accent/20 transition-colors prose prose-sm max-w-none"
-                            v-html="currentNote.content || '<p class=&quot;text-muted-foreground&quot;>Click to start writing...</p>'"
-                        />
 
                         <!-- Helper text for slash commands -->
-                        <div v-if="isEditing" class="mt-2 px-4 pb-2">
+                        <div class="mt-2 px-4 pb-2">
                             <p class="text-xs text-muted-foreground">
                                 💡 <strong>Tip:</strong> Type <code class="px-1 py-0.5 bg-muted rounded text-xs">/</code> to insert blocks like headings, lists, tables, and more
                             </p>

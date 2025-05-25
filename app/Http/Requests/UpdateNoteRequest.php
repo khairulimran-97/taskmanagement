@@ -7,6 +7,11 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * @property mixed $is_pinned
+ * @property mixed $is_auto_save
+ * @property mixed $tags
+ */
 class UpdateNoteRequest extends FormRequest
 {
     /**
@@ -35,6 +40,7 @@ class UpdateNoteRequest extends FormRequest
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
             'is_pinned' => 'nullable|boolean',
+            'is_auto_save' => 'nullable|boolean',
         ];
     }
 
@@ -79,6 +85,13 @@ class UpdateNoteRequest extends FormRequest
             ]);
         }
 
+        // Convert is_auto_save to boolean if present
+        if ($this->has('is_auto_save')) {
+            $this->merge([
+                'is_auto_save' => filter_var($this->is_auto_save, FILTER_VALIDATE_BOOLEAN),
+            ]);
+        }
+
         // Clean up tags array if present
         if ($this->has('tags') && is_array($this->tags)) {
             $cleanTags = array_filter(
@@ -92,5 +105,13 @@ class UpdateNoteRequest extends FormRequest
                 'tags' => array_values($cleanTags),
             ]);
         }
+    }
+
+    /**
+     * Check if this is an auto-save request
+     */
+    public function isAutoSave(): bool
+    {
+        return $this->boolean('is_auto_save', false);
     }
 }

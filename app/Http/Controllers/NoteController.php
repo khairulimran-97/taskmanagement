@@ -119,7 +119,7 @@ class NoteController extends Controller
     }
 
     /**
-     * Update the specified note
+     * Update the specified note - Enhanced for Inertia auto-save
      */
     public function update(UpdateNoteRequest $request, string $id): RedirectResponse
     {
@@ -133,10 +133,27 @@ class NoteController extends Controller
 
         $note->update($validated);
 
-        // Always return Inertia response with flash data
+        // Check if this is an auto-save request
+        $isAutoSave = $request->boolean('is_auto_save', false);
+
+        if ($isAutoSave) {
+            // For auto-save, return minimal response with just the updated data
+            return redirect()->back()->with([
+                'auto_save_success' => true,
+                'updated_note' => [
+                    'id' => $note->id,
+                    'title' => $note->generateAutoTitle(),
+                    'content' => $note->content,
+                    'updated_at' => $note->updated_at->toISOString(),
+                    'word_count' => $note->word_count,
+                ]
+            ]);
+        }
+
+        // For manual save, return full success message
         return redirect()->back()->with([
             'success' => 'Note updated successfully',
-            'note' => [
+            'updated_note' => [
                 'id' => $note->id,
                 'title' => $note->generateAutoTitle(),
                 'content' => $note->content,
@@ -169,57 +186,17 @@ class NoteController extends Controller
         $note = Note::forUser(Auth::id())->findOrFail($id);
         $note->update(['is_pinned' => !$note->is_pinned]);
 
-        // Always return Inertia response with flash data
         return redirect()->back()->with([
             'success' => $note->is_pinned ? 'Note pinned' : 'Note unpinned',
-            'is_pinned' => $note->is_pinned,
+            'pin_updated' => [
+                'id' => $note->id,
+                'is_pinned' => $note->is_pinned,
+            ]
         ]);
     }
 
     /**
-     * Auto-save note content (API endpoint - always returns JSON)
-     */
-    public function autoSaveApi(Request $request, string $id): JsonResponse
-    {
-        $note = Note::forUser(Auth::id())->findOrFail($id);
-
-        $validated = $request->validate([
-            'content' => 'nullable|string',
-            'title' => 'sometimes|string|max:255',
-        ]);
-
-        $note->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Note auto-saved',
-            'updated_at' => $note->updated_at->toISOString(),
-        ]);
-    }
-
-    /**
-     * Auto-save note content (Inertia endpoint - returns redirect)
-     */
-    public function autoSave(Request $request, string $id): RedirectResponse
-    {
-        $note = Note::forUser(Auth::id())->findOrFail($id);
-
-        $validated = $request->validate([
-            'content' => 'nullable|string',
-            'title' => 'sometimes|string|max:255',
-        ]);
-
-        $note->update($validated);
-
-        // Always return Inertia response with flash data
-        return redirect()->back()->with([
-            'success' => 'Note auto-saved',
-            'updated_at' => $note->updated_at->toISOString(),
-        ]);
-    }
-
-    /**
-     * Search notes
+     * Search notes - Keep as JSON API for real-time search
      */
     public function search(Request $request): JsonResponse
     {
@@ -263,5 +240,29 @@ class NoteController extends Controller
 
         return redirect()->route('notes.show', $note->id)
             ->with('success', 'New note created');
+    }
+
+    /**
+     * Bulk update notes (for reordering, bulk operations)
+     */
+    public function bulkUpdate(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'updates' => 'required|array',
+            'updates.*.id' => 'required|integer|exists:notes,id',
+            'updates.*.sort_order' => 'sometimes|integer',
+            'updates.*.is_pinned' => 'sometimes|boolean',
+        ]);
+
+        foreach ($validated['updates'] as $update) {
+            $note = Note::forUser(Auth::id())->find($update['id']);
+            if ($note) {
+                $note->update(collect($update)->except('id')->toArray());
+            }
+        }
+
+        return redirect()->back()->with([
+            'success' => 'Notes updated successfully'
+        ]);
     }
 }

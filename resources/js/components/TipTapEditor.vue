@@ -14,7 +14,7 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
-import { ref, watch, onBeforeUnmount, createApp } from 'vue'
+import { ref, watch, onBeforeUnmount } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -37,8 +37,7 @@ import {
     Highlighter,
     CheckSquare,
     Undo,
-    Redo,
-    FileText
+    Redo
 } from 'lucide-vue-next'
 
 interface Props {
@@ -206,7 +205,7 @@ const editor = useEditor({
                     return {
                         onStart: (props) => {
                             popup = document.createElement('div')
-                            popup.className = 'z-50 min-w-[16rem] max-w-[20rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg'
+                            popup.className = 'tiptap-slash-menu'
 
                             const renderMenu = () => {
                                 const items = props.items
@@ -214,21 +213,21 @@ const editor = useEditor({
 
                                 const updateMenu = () => {
                                     popup.innerHTML = `
-                                        <div class="max-h-[300px] overflow-y-auto">
+                                        <div class="menu-content">
                                             ${items.map((item, index) => `
-                                                <div class="relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground ${index === selectedIndex ? 'bg-accent text-accent-foreground' : ''}" data-index="${index}">
-                                                    <div class="mr-3 h-4 w-4 flex-shrink-0">
+                                                <div class="menu-item ${index === selectedIndex ? 'selected' : ''}" data-index="${index}">
+                                                    <div class="menu-item-icon">
                                                         ${getIconSvg(item.title)}
                                                     </div>
-                                                    <div class="flex flex-col flex-1 min-w-0">
-                                                        <span class="font-medium truncate">${item.title}</span>
-                                                        <span class="text-xs text-muted-foreground truncate">${item.description}</span>
+                                                    <div class="menu-item-content">
+                                                        <span class="menu-item-title">${item.title}</span>
+                                                        <span class="menu-item-description">${item.description}</span>
                                                     </div>
                                                 </div>
                                             `).join('')}
                                         </div>
-                                        <div class="border-t p-2 text-xs text-muted-foreground">
-                                            <div class="flex items-center justify-between">
+                                        <div class="menu-footer">
+                                            <div class="menu-footer-content">
                                                 <span>↑↓ to navigate</span>
                                                 <span>↵ to select</span>
                                             </div>
@@ -338,7 +337,7 @@ const editor = useEditor({
     ],
     editorProps: {
         attributes: {
-            class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto max-w-none focus:outline-none p-4',
+            class: 'tiptap-prose focus:outline-none p-4',
         },
     },
     onUpdate: ({ editor }) => {
@@ -615,152 +614,3 @@ const canRedo = () => editor.value?.can().redo() || false
         </div>
     </div>
 </template>
-
-<style scoped>
-:deep(.ProseMirror) {
-    outline: none;
-    min-height: 200px;
-}
-
-:deep(.ProseMirror p.is-editor-empty:first-child::before) {
-    color: #adb5bd;
-    content: attr(data-placeholder);
-    float: left;
-    height: 0;
-    pointer-events: none;
-}
-
-:deep(.ProseMirror h1) {
-    font-size: 2em;
-    font-weight: bold;
-    margin: 1em 0 0.5em 0;
-}
-
-:deep(.ProseMirror h2) {
-    font-size: 1.5em;
-    font-weight: bold;
-    margin: 1em 0 0.5em 0;
-}
-
-:deep(.ProseMirror h3) {
-    font-size: 1.25em;
-    font-weight: bold;
-    margin: 1em 0 0.5em 0;
-}
-
-:deep(.ProseMirror ul) {
-    list-style: disc;
-    margin-left: 1.5em;
-    padding-left: 0;
-}
-
-:deep(.ProseMirror ol) {
-    list-style: decimal;
-    margin-left: 1.5em;
-    padding-left: 0;
-}
-
-:deep(.ProseMirror blockquote) {
-    border-left: 4px solid #e5e7eb;
-    padding-left: 1em;
-    margin: 1em 0;
-    font-style: italic;
-}
-
-:deep(.ProseMirror code) {
-    background-color: #f3f4f6;
-    border-radius: 0.25em;
-    padding: 0.125em 0.25em;
-    font-family: 'Courier New', Courier, monospace;
-}
-
-:deep(.ProseMirror pre) {
-    background-color: #f3f4f6;
-    border-radius: 0.5em;
-    padding: 1em;
-    overflow-x: auto;
-}
-
-:deep(.ProseMirror mark) {
-    background-color: #fef08a;
-    padding: 0.125em 0.25em;
-    border-radius: 0.25em;
-}
-
-:deep(.ProseMirror hr) {
-    border: none;
-    border-top: 2px solid #e5e7eb;
-    margin: 2em 0;
-}
-
-:deep(.ProseMirror table) {
-    border-collapse: collapse;
-    margin: 1em 0;
-    overflow: hidden;
-    table-layout: fixed;
-    width: 100%;
-}
-
-:deep(.ProseMirror table td, .ProseMirror table th) {
-    border: 1px solid #e5e7eb;
-    padding: 0.5em;
-    position: relative;
-    vertical-align: top;
-}
-
-:deep(.ProseMirror table th) {
-    background-color: #f3f4f6;
-    font-weight: bold;
-}
-
-:deep(.ProseMirror .tableWrapper) {
-    overflow-x: auto;
-}
-
-:deep(.ProseMirror ul[data-type="taskList"]) {
-    list-style: none;
-    margin-left: 0;
-    padding-left: 0;
-}
-
-:deep(.ProseMirror ul[data-type="taskList"] li) {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-}
-
-:deep(.ProseMirror ul[data-type="taskList"] li > label) {
-    flex: 0 0 auto;
-    margin-right: 0.5em;
-    user-select: none;
-}
-
-:deep(.ProseMirror ul[data-type="taskList"] li > div) {
-    flex: 1 1 auto;
-}
-
-/* Dark mode styles */
-.dark :deep(.ProseMirror blockquote) {
-    border-left-color: #374151;
-}
-
-.dark :deep(.ProseMirror code) {
-    background-color: #1f2937;
-}
-
-.dark :deep(.ProseMirror pre) {
-    background-color: #1f2937;
-}
-
-.dark :deep(.ProseMirror hr) {
-    border-top-color: #374151;
-}
-
-.dark :deep(.ProseMirror table td, .ProseMirror table th) {
-    border-color: #374151;
-}
-
-.dark :deep(.ProseMirror table th) {
-    background-color: #1f2937;
-}
-</style>

@@ -19,6 +19,7 @@ use Carbon\Carbon;
  * @property Carbon $updated_at
  * @method static forUser(int|string|null $id)
  * @method static create(mixed $validated)
+ * @method static find(\Illuminate\Routing\Route|object|string|null $route)
  */
 class Note extends Model
 {

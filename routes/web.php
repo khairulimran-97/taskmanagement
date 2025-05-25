@@ -51,21 +51,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/calendar/events-for-date', [CalendarController::class, 'getEventsForDate'])->name('calendar.api.events-for-date');
     Route::get('/api/calendar/upcoming', [CalendarController::class, 'getUpcomingEvents'])->name('calendar.api.upcoming');
 
-    // Notes - Main Inertia routes
+    // Notes - Main Inertia routes (fully using Inertia now)
     Route::get('/notes', [NoteController::class, 'index'])->name('notes.index');
     Route::get('/notes/{note}', [NoteController::class, 'show'])->name('notes.show');
     Route::post('/notes', [NoteController::class, 'store'])->name('notes.store');
     Route::put('/notes/{note}', [NoteController::class, 'update'])->name('notes.update');
     Route::delete('/notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
 
-    // Notes - Additional actions
+    // Notes - Additional Inertia actions
     Route::post('/notes/create-empty', [NoteController::class, 'createEmpty'])->name('notes.create-empty');
     Route::patch('/notes/{note}/toggle-pin', [NoteController::class, 'togglePin'])->name('notes.toggle-pin');
-    Route::patch('/notes/{note}/auto-save', [NoteController::class, 'autoSave'])->name('notes.auto-save');
+    Route::patch('/notes/bulk-update', [NoteController::class, 'bulkUpdate'])->name('notes.bulk-update');
 
-    // Notes - API endpoints for AJAX
+    // Notes - Minimal API endpoints (only for real-time features that can't use Inertia)
     Route::get('/api/notes/search', [NoteController::class, 'search'])->name('notes.api.search');
-    Route::patch('/api/notes/{note}/auto-save', [NoteController::class, 'autoSaveApi'])->name('notes.api.auto-save');
 });
 
 require __DIR__.'/settings.php';
