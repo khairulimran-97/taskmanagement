@@ -196,7 +196,7 @@ class NoteController extends Controller
     }
 
     /**
-     * Search notes - Keep as JSON API for real-time search
+     * Search notes
      */
     public function search(Request $request): JsonResponse
     {

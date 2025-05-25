@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { Head, router, Link, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
 import { BreadcrumbItem, Note } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import {
     Search,
@@ -19,7 +18,6 @@ import {
     PinOff,
     Trash2,
     Clock,
-    Edit3,
     Hash,
     Save,
     Loader2
@@ -58,7 +56,7 @@ const noteForm = ref({
     is_pinned: false
 });
 
-// Refs for auto-focus
+// Refs for autofocus
 const titleInput = ref<HTMLInputElement>();
 
 // Computed
@@ -223,7 +221,7 @@ const toggleTitleEdit = async () => {
     }
 };
 
-// Auto-save functionality using Inertia - No more CSRF issues!
+// Auto-save functionality using Inertia
 const autoSave = async () => {
     if (!currentNote.value || isAutoSaving.value) return;
 
@@ -254,7 +252,7 @@ watch([() => noteForm.value.title, () => noteForm.value.content], () => {
     if (!currentNote.value) return;
 
     clearTimeout(autoSaveTimeout.value);
-    autoSaveTimeout.value = setTimeout(autoSave, 2000); // Auto-save after 2 seconds of inactivity
+    autoSaveTimeout.value = setTimeout(autoSave, 5000); // Auto-save after 2 seconds of inactivity
 });
 
 // Manual save
@@ -350,11 +348,11 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Notes" />
 
-        <div class="flex h-[calc(100vh-8rem)] bg-background">
+        <div class="flex bg-background">
             <!-- Sidebar -->
-            <div class="w-80 border-r border-border bg-card">
+            <div class="w-80 border-r border-l border-border bg-card">
                 <!-- Header -->
-                <div class="p-4 border-b border-border">
+                <div class="p-4 border-b-0 border-l border-border">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center space-x-2">
                             <FileText class="h-5 w-5 text-primary" />
@@ -378,7 +376,7 @@ onMounted(() => {
 
                 <!-- Notes List -->
                 <ScrollArea class="flex-1 h-[calc(100%-120px)]">
-                    <div class="p-2">
+                    <div class="p-0">
                         <div v-if="!hasNotes" class="p-4 text-center text-muted-foreground">
                             <FileText class="h-12 w-12 mx-auto mb-2 opacity-50" />
                             <p class="text-sm">No notes found</p>
@@ -387,12 +385,12 @@ onMounted(() => {
                             </Button>
                         </div>
 
-                        <div v-else class="space-y-1">
+                        <div v-else class="">
                             <Card
                                 v-for="note in filteredNotes"
                                 :key="note.id"
                                 @click="selectNote(note)"
-                                class="cursor-pointer transition-colors hover:bg-accent/50 p-3"
+                                class="cursor-pointer border-t-1 gap-2 border-b-0 border-r-0 rounded-none transition-colors hover:bg-accent/50 p-3"
                                 :class="{ 'bg-accent': currentNote?.id === note.id }"
                             >
                                 <div class="flex items-start justify-between mb-2">
@@ -411,10 +409,6 @@ onMounted(() => {
                                         </Button>
                                     </div>
                                 </div>
-
-                                <p class="text-xs text-muted-foreground line-clamp-2 mb-2">
-                                    {{ note.content_preview || 'No content' }}
-                                </p>
 
                                 <div class="flex items-center justify-between text-xs text-muted-foreground">
                                     <div class="flex items-center space-x-2">
