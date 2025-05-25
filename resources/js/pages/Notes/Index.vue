@@ -581,7 +581,7 @@ onMounted(() => {
                             v-model="noteForm.content"
                             :editable="true"
                             placeholder="Start writing your note... (Type '/' for commands)"
-                            class="w-full h-screen rounded-none"
+                            class="w-full h-full rounded-none"
                             @update:modelValue="(value) => noteForm.content = value"
                             @save="handleEditorSave"
                         />
