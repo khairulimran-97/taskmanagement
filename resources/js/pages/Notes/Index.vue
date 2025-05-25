@@ -530,11 +530,11 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Notes" />
 
-        <div class="flex bg-background h-screen">
-            <!-- Sidebar -->
-            <div class="w-80 border-r border-l border-b border-border bg-card">
+        <div class="flex bg-background relative">
+            <!-- Sidebar (Fixed/Sticky) -->
+            <div class="w-80 border-r border-l border-b border-border bg-card h-screen sticky top-0 flex flex-col">
                 <!-- Header -->
-                <div class="p-4 border-b-0 border-l border-border">
+                <div class="p-4 border-b border-border shrink-0">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center space-x-2">
                             <FileText class="h-5 w-5 text-primary" />
@@ -557,7 +557,7 @@ onMounted(() => {
                 </div>
 
                 <!-- Notes List -->
-                <ScrollArea class="flex-1 h-[calc(100%-120px)]">
+                <ScrollArea class="flex-1 overflow-y-auto">
                     <div class="p-0">
                         <div v-if="!hasNotes" class="p-4 text-center text-muted-foreground">
                             <FileText class="h-12 w-12 mx-auto mb-2 opacity-50" />
@@ -572,7 +572,7 @@ onMounted(() => {
                                 v-for="note in filteredNotes"
                                 :key="note.id"
                                 @click="selectNote(note)"
-                                class="cursor-pointer border-t-1 gap-2 border-b-0 border-r-0 rounded-none transition-colors hover:bg-accent/50 p-3"
+                                class="cursor-pointer border-t border-b-0 border-r-0 border-l-0 rounded-none transition-colors hover:bg-accent/50 p-3"
                                 :class="{ 'bg-accent': currentNote?.id === note.id }"
                             >
                                 <div class="flex items-start justify-between mb-2">

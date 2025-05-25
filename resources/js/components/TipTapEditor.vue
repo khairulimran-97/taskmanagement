@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { useEditor, EditorContent } from '@tiptap/vue-3'
-import { Extension } from '@tiptap/core'
-import Suggestion from '@tiptap/suggestion'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Typography from '@tiptap/extension-typography'
@@ -86,80 +84,6 @@ const emit = defineEmits<{
 const showContextMenu = ref(false)
 const contextMenuPosition = ref({ x: 0, y: 0 })
 const contextMenuType = ref<'text' | 'table'>('text')
-
-// Command items for the slash menu
-const commandItems = [
-    {
-        title: 'Heading 1',
-        description: 'Big section heading',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).setHeading({ level: 1 }).run()
-        },
-    },
-    {
-        title: 'Heading 2',
-        description: 'Medium section heading',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).setHeading({ level: 2 }).run()
-        },
-    },
-    {
-        title: 'Heading 3',
-        description: 'Small section heading',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).setHeading({ level: 3 }).run()
-        },
-    },
-    {
-        title: 'Bullet List',
-        description: 'Create a simple bullet list',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).toggleBulletList().run()
-        },
-    },
-    {
-        title: 'Numbered List',
-        description: 'Create a list with numbering',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).toggleOrderedList().run()
-        },
-    },
-    {
-        title: 'Task List',
-        description: 'Track tasks with a checklist',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).toggleTaskList().run()
-        },
-    },
-    {
-        title: 'Quote',
-        description: 'Capture a quote',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).toggleBlockquote().run()
-        },
-    },
-    {
-        title: 'Code Block',
-        description: 'Capture a code snippet',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).toggleCodeBlock().run()
-        },
-    },
-    {
-        title: 'Table',
-        description: 'Insert a table',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-        },
-    },
-    {
-        title: 'Divider',
-        description: 'Visually divide blocks',
-        command: ({ editor, range }) => {
-            editor.chain().focus().deleteRange(range).setHorizontalRule().run()
-        },
-    },
-]
 
 const editor = useEditor({
     content: props.modelValue,
@@ -843,8 +767,10 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
         </div>
 
         <!-- Editor Content with Context Menu -->
-        <div class="min-h-[200px] relative">
-            <EditorContent :editor="editor" />
+        <div class="relative h-screen">
+            <EditorContent
+                :editor="editor"
+                class="overflow-auto h-full"/>
 
             <!-- Custom Context Menu -->
             <Teleport to="body">
