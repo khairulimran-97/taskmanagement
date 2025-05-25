@@ -348,7 +348,7 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Notes" />
 
-        <div class="flex bg-background">
+        <div class="flex bg-background h-screen">
             <!-- Sidebar -->
             <div class="w-80 border-r border-l border-b border-border bg-card">
                 <!-- Header -->
@@ -443,7 +443,7 @@ onMounted(() => {
 
             <!-- Main Content -->
             <div class="flex-1 flex flex-col">
-                <div v-if="!hasSelectedNote" class="flex-1 flex items-center justify-center">
+                <div v-if="!hasSelectedNote" class="flex-1 flex items-center justify-center border-b border-r">
                     <div class="text-center text-muted-foreground">
                         <FileText class="h-24 w-24 mx-auto mb-4 opacity-30" />
                         <h3 class="text-lg font-medium mb-2">No note selected</h3>
