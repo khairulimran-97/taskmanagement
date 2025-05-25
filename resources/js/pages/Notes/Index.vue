@@ -350,7 +350,7 @@ onMounted(() => {
 
         <div class="flex bg-background">
             <!-- Sidebar -->
-            <div class="w-80 border-r border-l border-border bg-card">
+            <div class="w-80 border-r border-l border-b border-border bg-card">
                 <!-- Header -->
                 <div class="p-4 border-b-0 border-l border-border">
                     <div class="flex items-center justify-between mb-4">
@@ -457,7 +457,7 @@ onMounted(() => {
 
                 <div v-else class="flex-1 flex flex-col">
                     <!-- Note Header -->
-                    <div class="p-4 border-b border-border bg-card">
+                    <div class="p-4 border-r border-border bg-card">
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
                                 <Input
@@ -570,21 +570,14 @@ onMounted(() => {
                     </div>
 
                     <!-- Note Content - Always Editable -->
-                    <div class="flex-1 p-4">
+                    <div class="flex-1 rounded-none border-l-0">
                         <TipTapEditor
                             v-model="noteForm.content"
                             :editable="true"
                             placeholder="Start writing your note... (Type '/' for commands)"
-                            class="w-full h-full"
+                            class="w-full h-screen rounded-none"
                             @update:modelValue="(value) => noteForm.content = value"
                         />
-
-                        <!-- Helper text for slash commands -->
-                        <div class="mt-2 px-4 pb-2">
-                            <p class="text-xs text-muted-foreground">
-                                💡 <strong>Tip:</strong> Type <code class="px-1 py-0.5 bg-muted rounded text-xs">/</code> to insert blocks like headings, lists, tables, and more
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>
