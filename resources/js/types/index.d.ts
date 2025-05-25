@@ -150,3 +150,36 @@ export interface FullCalendarEvent {
         [key: string]: any;
     };
 }
+
+// Note types
+export interface Note {
+    id: number;
+    title: string;
+    content: string | null;
+    tags: string[];
+    is_pinned: boolean;
+    word_count: number;
+    content_preview?: string;
+    user_id: number;
+    created_at: string;
+    updated_at: string;
+    last_accessed_at: string | null;
+}
+
+export interface NoteForm {
+    title: string;
+    content: string;
+    tags: string[];
+    is_pinned: boolean;
+}
+
+export interface NoteSearchResult {
+    id: number;
+    title: string;
+    content_preview: string;
+    tags: string[];
+    is_pinned: boolean;
+    word_count: number;
+    created_at: string;
+    updated_at: string;
+}

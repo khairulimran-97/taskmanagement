@@ -27,7 +27,7 @@ import {
     Bell,
     Folder,
     Sun,
-    Moon
+    Moon, FileText
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 
@@ -86,6 +86,11 @@ const mainNavItems: NavItem[] = [
         title: 'Projects',
         href: '/projects',
         icon: Folder,
+    },
+    {
+        title: 'Notes',
+        href: '/notes',
+        icon: FileText,
     },
     {
         title: 'Calendar',

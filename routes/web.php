@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
@@ -49,6 +50,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/calendar/events/{calendar_event}', [CalendarController::class, 'show'])->name('calendar.api.show');
     Route::get('/api/calendar/events-for-date', [CalendarController::class, 'getEventsForDate'])->name('calendar.api.events-for-date');
     Route::get('/api/calendar/upcoming', [CalendarController::class, 'getUpcomingEvents'])->name('calendar.api.upcoming');
+
+    // Notes - Main Inertia routes
+    Route::get('/notes', [NoteController::class, 'index'])->name('notes.index');
+    Route::get('/notes/{note}', [NoteController::class, 'show'])->name('notes.show');
+    Route::post('/notes', [NoteController::class, 'store'])->name('notes.store');
+    Route::put('/notes/{note}', [NoteController::class, 'update'])->name('notes.update');
+    Route::delete('/notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
+
+    // Notes - Additional actions
+    Route::post('/notes/create-empty', [NoteController::class, 'createEmpty'])->name('notes.create-empty');
+    Route::patch('/notes/{note}/toggle-pin', [NoteController::class, 'togglePin'])->name('notes.toggle-pin');
+    Route::patch('/notes/{note}/auto-save', [NoteController::class, 'autoSave'])->name('notes.auto-save');
+
+    // Notes - API endpoints for AJAX
+    Route::get('/api/notes/search', [NoteController::class, 'search'])->name('notes.api.search');
+    Route::patch('/api/notes/{note}/auto-save', [NoteController::class, 'autoSaveApi'])->name('notes.api.auto-save');
 });
 
 require __DIR__.'/settings.php';
