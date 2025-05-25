@@ -57,7 +57,9 @@ import {
     ChevronRight,
     Copy,
     MoveVertical,
-    MoveHorizontal
+    MoveHorizontal,
+    Scissors,
+    Clipboard
 } from 'lucide-vue-next'
 
 interface Props {
@@ -77,6 +79,7 @@ const emit = defineEmits<{
     'update:modelValue': [value: string]
     'focus': []
     'blur': []
+    'save': []
 }>()
 
 // Context menu state
@@ -422,12 +425,23 @@ onMounted(() => {
         showContextMenu.value = false
     }
 
+    // Handle keyboard shortcuts
+    const handleKeydown = (event: KeyboardEvent) => {
+        // Ctrl+S or Cmd+S to save
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault()
+            emit('save')
+        }
+    }
+
     document.addEventListener('click', hideContextMenu)
     document.addEventListener('scroll', hideContextMenu)
+    document.addEventListener('keydown', handleKeydown)
 
     return () => {
         document.removeEventListener('click', hideContextMenu)
         document.removeEventListener('scroll', hideContextMenu)
+        document.removeEventListener('keydown', handleKeydown)
     }
 })
 
@@ -532,18 +546,85 @@ const undo = () => editor.value?.chain().focus().undo().run()
 const redo = () => editor.value?.chain().focus().redo().run()
 
 // Copy/Cut/Paste functions for context menu
-const copyText = () => {
-    document.execCommand('copy')
+const copyText = async () => {
+    try {
+        // Get selected text from editor
+        const { from, to } = editor.value.state.selection
+        const selectedText = editor.value.state.doc.textBetween(from, to, ' ')
+
+        if (selectedText) {
+            await navigator.clipboard.writeText(selectedText)
+        } else {
+            // Fallback to document.execCommand for older browsers
+            document.execCommand('copy')
+        }
+    } catch (error) {
+        // Fallback to document.execCommand
+        document.execCommand('copy')
+    }
     showContextMenu.value = false
 }
 
-const cutText = () => {
-    document.execCommand('cut')
+const cutText = async () => {
+    try {
+        // Get selected text from editor
+        const { from, to } = editor.value.state.selection
+        const selectedText = editor.value.state.doc.textBetween(from, to, ' ')
+
+        if (selectedText) {
+            await navigator.clipboard.writeText(selectedText)
+            // Delete the selected content
+            editor.value.chain().focus().deleteSelection().run()
+        } else {
+            // Fallback to document.execCommand for older browsers
+            document.execCommand('cut')
+        }
+    } catch (error) {
+        // Fallback to document.execCommand
+        document.execCommand('cut')
+    }
     showContextMenu.value = false
 }
 
-const pasteText = () => {
-    document.execCommand('paste')
+const pasteText = async () => {
+    try {
+        // Use modern Clipboard API
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText()
+            if (text) {
+                // Insert the text at current cursor position
+                editor.value.chain().focus().insertContent(text).run()
+            }
+        } else {
+            // Fallback: Focus editor and let browser handle paste
+            editor.value.chain().focus().run()
+            // Create a temporary textarea to handle paste
+            const textarea = document.createElement('textarea')
+            textarea.style.position = 'fixed'
+            textarea.style.left = '-9999px'
+            textarea.style.top = '-9999px'
+            document.body.appendChild(textarea)
+            textarea.focus()
+
+            // Listen for paste event
+            const handlePaste = (e) => {
+                e.preventDefault()
+                const pastedText = e.clipboardData?.getData('text/plain')
+                if (pastedText) {
+                    editor.value.chain().focus().insertContent(pastedText).run()
+                }
+                document.body.removeChild(textarea)
+                textarea.removeEventListener('paste', handlePaste)
+            }
+
+            textarea.addEventListener('paste', handlePaste)
+            document.execCommand('paste')
+        }
+    } catch (error) {
+        console.warn('Paste failed:', error)
+        // Final fallback - just focus the editor
+        editor.value.chain().focus().run()
+    }
     showContextMenu.value = false
 }
 
@@ -959,12 +1040,12 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                         </button>
 
                         <button @click="cutText" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm">
-                            <Cut class="h-4 w-4 mr-2" />
+                            <Scissors class="h-4 w-4 mr-2" />
                             Cut
                         </button>
 
                         <button @click="pasteText" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm">
-                            <Paste class="h-4 w-4 mr-2" />
+                            <Clipboard class="h-4 w-4 mr-2" />
                             Paste
                         </button>
 

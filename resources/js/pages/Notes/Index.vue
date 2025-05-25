@@ -252,7 +252,7 @@ watch([() => noteForm.value.title, () => noteForm.value.content], () => {
     if (!currentNote.value) return;
 
     clearTimeout(autoSaveTimeout.value);
-    autoSaveTimeout.value = setTimeout(autoSave, 5000); // Auto-save after 2 seconds of inactivity
+    autoSaveTimeout.value = setTimeout(autoSave, 5000); // Auto-save after 5 seconds of inactivity
 });
 
 // Manual save
@@ -278,6 +278,11 @@ const saveNote = async () => {
             isSaving.value = false;
         }
     });
+};
+
+// Handle save from TipTap editor (Ctrl+S)
+const handleEditorSave = () => {
+    saveNote();
 };
 
 // Toggle pin using Inertia
@@ -495,6 +500,7 @@ onMounted(() => {
                                     size="sm"
                                     :disabled="isSaving"
                                     variant="default"
+                                    title="Save (Ctrl+S)"
                                 >
                                     <Loader2 v-if="isSaving" class="h-4 w-4 mr-2 animate-spin" />
                                     <Save v-else class="h-4 w-4 mr-2" />
@@ -575,8 +581,9 @@ onMounted(() => {
                             v-model="noteForm.content"
                             :editable="true"
                             placeholder="Start writing your note... (Type '/' for commands)"
-                            class="w-full h-full rounded-none"
+                            class="w-full h-screen rounded-none"
                             @update:modelValue="(value) => noteForm.content = value"
+                            @save="handleEditorSave"
                         />
                     </div>
                 </div>
