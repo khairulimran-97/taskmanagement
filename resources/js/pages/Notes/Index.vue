@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
 import { BreadcrumbItem, Note } from '@/types';
@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from 'vue-sonner'
 import {
     Search,
     Plus,
@@ -20,7 +21,10 @@ import {
     Clock,
     Hash,
     Save,
-    Loader2
+    Loader2,
+    CheckCircle2,
+    CloudOff,
+    AlertCircle
 } from 'lucide-vue-next';
 
 interface Props {
@@ -47,6 +51,13 @@ const isSaving = ref(false);
 const isAutoSaving = ref(false);
 const autoSaveTimeout = ref<number | null>(null);
 const searchTimeout = ref<number | null>(null);
+const lastSavedContent = ref('');
+const lastSavedTitle = ref('');
+const hasUnsavedChanges = ref(false);
+const isOnline = ref(navigator.onLine);
+const autoSaveError = ref(false);
+const lastSaveTime = ref<Date | null>(null);
+const saveRetryCount = ref(0);
 
 // Form data for editing
 const noteForm = ref({
@@ -62,6 +73,73 @@ const titleInput = ref<HTMLInputElement>();
 // Computed
 const hasNotes = computed(() => filteredNotes.value.length > 0);
 const hasSelectedNote = computed(() => currentNote.value !== null);
+
+// Check if content has changed
+const contentChanged = computed(() => {
+    return noteForm.value.content !== lastSavedContent.value ||
+        noteForm.value.title !== lastSavedTitle.value;
+});
+
+// Auto-save status message
+const autoSaveStatus = computed(() => {
+    if (!isOnline.value) return { text: 'Offline', icon: CloudOff, class: 'text-orange-500' };
+    if (autoSaveError.value) return { text: 'Save failed', icon: AlertCircle, class: 'text-red-500' };
+    if (isAutoSaving.value) return { text: 'Saving...', icon: Loader2, class: 'text-blue-500' };
+    if (hasUnsavedChanges.value) return { text: 'Unsaved changes', icon: AlertCircle, class: 'text-yellow-500' };
+    if (lastSaveTime.value) {
+        const timeSince = getTimeSince(lastSaveTime.value);
+        return { text: `Saved ${timeSince}`, icon: CheckCircle2, class: 'text-green-500' };
+    }
+    return { text: 'All changes saved', icon: CheckCircle2, class: 'text-green-500' };
+});
+
+// Get time since last save
+const getTimeSince = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    if (seconds < 5) return 'just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+};
+
+// Online/offline detection
+onMounted(() => {
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Check online status periodically
+    const onlineCheckInterval = setInterval(() => {
+        isOnline.value = navigator.onLine;
+    }, 5000);
+
+    onUnmounted(() => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        clearInterval(onlineCheckInterval);
+    });
+});
+
+const handleOnline = () => {
+    isOnline.value = true;
+    toast.success('Back online', {
+        description: 'Your connection has been restored. Auto-save will resume.',
+        duration: 3000,
+    });
+    // Immediately save any pending changes
+    if (hasUnsavedChanges.value) {
+        autoSave();
+    }
+};
+
+const handleOffline = () => {
+    isOnline.value = false;
+    toast.error('You\'re offline', {
+        description: 'Changes will be saved when you\'re back online.',
+        duration: 5000,
+    });
+};
 
 // Watch for flash messages and handle updates
 watch(() => page.props.flash, (flash: any) => {
@@ -82,6 +160,14 @@ watch(() => page.props.flash, (flash: any) => {
                 filteredNotes.value[noteIndex].updated_at = updatedNote.updated_at;
                 filteredNotes.value[noteIndex].word_count = updatedNote.word_count;
             }
+
+            // Reset save state
+            lastSavedContent.value = noteForm.value.content;
+            lastSavedTitle.value = noteForm.value.title;
+            hasUnsavedChanges.value = false;
+            autoSaveError.value = false;
+            lastSaveTime.value = new Date();
+            saveRetryCount.value = 0;
         }
 
         // Handle manual save success
@@ -99,6 +185,12 @@ watch(() => page.props.flash, (flash: any) => {
             if (noteIndex !== -1) {
                 Object.assign(filteredNotes.value[noteIndex], updatedNote);
             }
+
+            // Show success toast
+            toast.success('Note saved', {
+                description: 'Your note has been saved successfully.',
+                duration: 2000,
+            });
         }
 
         // Handle pin toggle
@@ -129,14 +221,26 @@ const initializeForm = () => {
             tags: [...(currentNote.value.tags || [])],
             is_pinned: currentNote.value.is_pinned || false
         };
+        lastSavedContent.value = noteForm.value.content;
+        lastSavedTitle.value = noteForm.value.title;
+        hasUnsavedChanges.value = false;
+        autoSaveError.value = false;
+        lastSaveTime.value = null;
+        saveRetryCount.value = 0;
     }
 };
 
 // Watch for selectedNote changes
 watch(() => props.selectedNote, (newNote) => {
+    // Check for unsaved changes before switching
+    if (currentNote.value && hasUnsavedChanges.value) {
+        // Force a save before switching
+        autoSave();
+    }
+
     currentNote.value = newNote;
     initializeForm();
-    isTitleEditing.value = false; // Only reset title editing
+    isTitleEditing.value = false;
 }, { immediate: true });
 
 // Watch for notes changes
@@ -144,7 +248,7 @@ watch(() => props.notes, (newNotes) => {
     filteredNotes.value = newNotes;
 }, { immediate: true });
 
-// Search functionality - Keep as API call for real-time search
+// Search functionality
 const performSearch = async () => {
     if (searchQuery.value.trim() === '') {
         filteredNotes.value = props.notes;
@@ -182,6 +286,11 @@ watch(searchQuery, () => {
 
 // Select a note
 const selectNote = (note: Note) => {
+    // Save current note if has unsaved changes
+    if (hasUnsavedChanges.value) {
+        autoSave();
+    }
+
     router.get(route('notes.show', note.id), {}, {
         preserveState: true,
         preserveScroll: true
@@ -190,6 +299,11 @@ const selectNote = (note: Note) => {
 
 // Create new note
 const createNewNote = () => {
+    // Save current note if has unsaved changes
+    if (hasUnsavedChanges.value) {
+        autoSave();
+    }
+
     router.post(route('notes.create-empty'), {}, {
         onSuccess: () => {
             // Note will be created and user redirected to it
@@ -223,9 +337,11 @@ const toggleTitleEdit = async () => {
 
 // Auto-save functionality using Inertia
 const autoSave = async () => {
-    if (!currentNote.value || isAutoSaving.value) return;
+    if (!currentNote.value || isAutoSaving.value || !isOnline.value) return;
+    if (!contentChanged.value) return;
 
     isAutoSaving.value = true;
+    hasUnsavedChanges.value = true;
 
     router.put(route('notes.update', currentNote.value.id), {
         title: noteForm.value.title,
@@ -234,12 +350,26 @@ const autoSave = async () => {
     }, {
         preserveState: true,
         preserveScroll: true,
-        only: [], // Don't reload props, just handle flash messages
+        only: [],
         onSuccess: () => {
-            // Flash messages are handled by the watcher above
+            autoSaveError.value = false;
+            saveRetryCount.value = 0;
         },
         onError: (errors) => {
             console.error('Auto-save failed:', errors);
+            autoSaveError.value = true;
+            saveRetryCount.value += 1;
+
+            // Retry auto-save with exponential backoff
+            if (saveRetryCount.value < 3) {
+                const retryDelay = Math.pow(2, saveRetryCount.value) * 1000;
+                setTimeout(autoSave, retryDelay);
+            } else {
+                toast.error('Auto-save failed', {
+                    description: 'Unable to save your changes. Please try saving manually.',
+                    duration: 5000,
+                });
+            }
         },
         onFinish: () => {
             isAutoSaving.value = false;
@@ -251,13 +381,21 @@ const autoSave = async () => {
 watch([() => noteForm.value.title, () => noteForm.value.content], () => {
     if (!currentNote.value) return;
 
+    hasUnsavedChanges.value = contentChanged.value;
+
     clearTimeout(autoSaveTimeout.value);
-    autoSaveTimeout.value = setTimeout(autoSave, 5000); // Auto-save after 5 seconds of inactivity
+    autoSaveTimeout.value = setTimeout(autoSave, 5000);
 });
 
 // Manual save
 const saveNote = async () => {
-    if (!currentNote.value) return;
+    if (!currentNote.value || !contentChanged.value) {
+        toast.info('No changes to save', {
+            description: 'Your note is already up to date.',
+            duration: 2000,
+        });
+        return;
+    }
 
     isSaving.value = true;
 
@@ -268,11 +406,20 @@ const saveNote = async () => {
         preserveState: true,
         preserveScroll: true,
         onSuccess: () => {
-            isTitleEditing.value = false; // Only close title editing
-            // Flash messages are handled by the watcher above
+            isTitleEditing.value = false;
+            lastSavedContent.value = noteForm.value.content;
+            lastSavedTitle.value = noteForm.value.title;
+            hasUnsavedChanges.value = false;
+            autoSaveError.value = false;
+            lastSaveTime.value = new Date();
+            saveRetryCount.value = 0;
         },
         onError: (errors) => {
             console.error('Save failed:', errors);
+            toast.error('Save failed', {
+                description: 'Unable to save your note. Please try again.',
+                duration: 3000,
+            });
         },
         onFinish: () => {
             isSaving.value = false;
@@ -290,9 +437,13 @@ const togglePin = async (note: Note) => {
     router.patch(route('notes.toggle-pin', note.id), {}, {
         preserveState: true,
         preserveScroll: true,
-        only: [], // Don't reload props
+        only: [],
         onError: (errors) => {
             console.error('Toggle pin failed:', errors);
+            toast.error('Failed to update pin status', {
+                description: 'Please try again.',
+                duration: 3000,
+            });
         }
     });
 };
@@ -301,10 +452,17 @@ const togglePin = async (note: Note) => {
 const deleteNote = (noteId: number) => {
     router.delete(route('notes.destroy', noteId), {
         onSuccess: () => {
-            // Note deleted successfully
+            toast.success('Note deleted', {
+                description: 'Your note has been deleted successfully.',
+                duration: 3000,
+            });
         },
         onError: () => {
             console.error('Failed to delete note');
+            toast.error('Failed to delete note', {
+                description: 'Please try again.',
+                duration: 3000,
+            });
         }
     });
 };
@@ -344,8 +502,27 @@ const cancelTitleEdit = () => {
     }
 };
 
+// Handle before unload to warn about unsaved changes
 onMounted(() => {
     initializeForm();
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (hasUnsavedChanges.value) {
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    onUnmounted(() => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        // Save any pending changes
+        if (hasUnsavedChanges.value) {
+            autoSave();
+        }
+    });
 });
 </script>
 
@@ -494,17 +671,17 @@ onMounted(() => {
                                     <PinOff v-else class="h-4 w-4" />
                                 </Button>
 
-                                <!-- Save Button (always visible) -->
+                                <!-- Save Button (shows state) -->
                                 <Button
                                     @click="saveNote"
                                     size="sm"
-                                    :disabled="isSaving"
-                                    variant="default"
+                                    :disabled="isSaving || !contentChanged"
+                                    :variant="hasUnsavedChanges ? 'default' : 'outline'"
                                     title="Save (Ctrl+S)"
                                 >
                                     <Loader2 v-if="isSaving" class="h-4 w-4 mr-2 animate-spin" />
                                     <Save v-else class="h-4 w-4 mr-2" />
-                                    {{ isSaving ? 'Saving...' : 'Save' }}
+                                    {{ isSaving ? 'Saving...' : (contentChanged ? 'Save' : 'Saved') }}
                                 </Button>
 
                                 <!-- Title Edit Controls (only when editing title) -->
@@ -546,7 +723,7 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <!-- Meta Information -->
+                        <!-- Meta Information with Auto-save Status -->
                         <div class="flex items-center justify-between text-xs text-muted-foreground mt-2">
                             <div class="flex items-center space-x-4">
                                 <div class="flex items-center space-x-1">
@@ -555,9 +732,13 @@ onMounted(() => {
                                 </div>
                                 <span v-if="currentNote.word_count > 0">{{ currentNote.word_count }} words</span>
                             </div>
-                            <div v-if="isAutoSaving" class="flex items-center space-x-1 text-blue-500">
-                                <Loader2 class="h-3 w-3 animate-spin" />
-                                <span>Auto-saving...</span>
+                            <div class="flex items-center space-x-1" :class="autoSaveStatus.class">
+                                <component
+                                    :is="autoSaveStatus.icon"
+                                    class="h-3 w-3"
+                                    :class="{ 'animate-spin': autoSaveStatus.icon === Loader2 }"
+                                />
+                                <span>{{ autoSaveStatus.text }}</span>
                             </div>
                         </div>
 
