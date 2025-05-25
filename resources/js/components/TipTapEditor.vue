@@ -13,6 +13,8 @@ import TableHeader from '@tiptap/extension-table-header'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
 import { ref, watch, onBeforeUnmount, computed, nextTick, onMounted } from 'vue'
+import ImageUploadDialog from '@/components/ImageUploadDialog.vue'
+import TipTapImage from '@/extensions/TipTapImageExtension'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -57,6 +59,7 @@ import {
     MoveVertical,
     MoveHorizontal,
     Scissors,
+    ImageIcon,
     Clipboard
 } from 'lucide-vue-next'
 
@@ -67,10 +70,31 @@ interface Props {
     class?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const imageDialogOpen = ref(false)
+
+const showImageDialog = () => {
+    imageDialogOpen.value = true
+}
+
+const handleImageSelected = (url: string, alt?: string) => {
+    editor.value?.chain().focus().setImage({
+        src: url,
+        alt: alt || '',
+        title: alt || ''
+    }).run()
+}
+
+const props = withDefaults(defineProps<{
+    modelValue: string
+    placeholder?: string
+    editable?: boolean
+    class?: string
+    noteId?: number | null
+}>(), {
     placeholder: 'Start writing your note...',
     editable: true,
-    class: ''
+    class: '',
+    noteId: null
 })
 
 const emit = defineEmits<{
@@ -79,6 +103,7 @@ const emit = defineEmits<{
     'blur': []
     'save': []
 }>()
+
 
 // Context menu state
 const showContextMenu = ref(false)
@@ -118,6 +143,11 @@ const editor = useEditor({
             types: ['heading', 'paragraph'],
         }),
         Underline,
+        TipTapImage.configure({
+            HTMLAttributes: {
+                class: 'max-w-full',
+            },
+        }),
     ],
     editorProps: {
         attributes: {
@@ -764,6 +794,17 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+
+            <Button
+                @click="showImageDialog"
+                variant="ghost"
+                size="sm"
+                class="h-8 w-8 p-0"
+                title="Insert Image"
+            >
+                <ImageIcon class="h-4 w-4" />
+            </Button>
+
         </div>
 
         <!-- Editor Content with Context Menu -->
@@ -923,5 +964,11 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                 </div>
             </Teleport>
         </div>
+
+        <ImageUploadDialog
+            v-model:open="imageDialogOpen"
+            :noteId="props.noteId"
+            @image-selected="handleImageSelected"
+        />
     </div>
 </template>

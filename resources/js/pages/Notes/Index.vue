@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
@@ -26,6 +26,7 @@ import {
     CloudOff,
     AlertCircle
 } from 'lucide-vue-next';
+import Image from '@/extensions/TipTapImageExtension';
 
 interface Props {
     notes: Note[];
@@ -761,6 +762,7 @@ onMounted(() => {
                         <TipTapEditor
                             v-model="noteForm.content"
                             :editable="true"
+                            :noteId="currentNote?.id"
                             placeholder="Start writing your note... (Type '/' for commands)"
                             class="w-full h-full rounded-none"
                             @update:modelValue="(value) => noteForm.content = value"

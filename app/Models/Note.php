@@ -149,4 +149,12 @@ class Note extends Model
 
         return $firstLine ?: 'Untitled Note';
     }
+
+    /**
+     * Get the images associated with the note
+     */
+    public function images()
+    {
+        return $this->hasMany(NoteImage::class);
+    }
 }

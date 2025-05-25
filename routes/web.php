@@ -3,6 +3,7 @@
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\NoteImageController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
@@ -65,6 +66,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Notes - Minimal API endpoints (only for real-time features that can't use Inertia)
     Route::get('/api/notes/search', [NoteController::class, 'search'])->name('notes.api.search');
+
+    // Note Images - Inertia routes
+    Route::get('/notes/{note}/images', [NoteImageController::class, 'index'])->name('notes.images.index');
+    Route::post('/notes/images', [NoteImageController::class, 'store'])->name('notes.images.store');
+    Route::delete('/notes/images/{image}', [NoteImageController::class, 'destroy'])->name('notes.images.destroy');
+
+    // Note Images - API endpoints for editor integration
+    Route::post('/api/notes/images/upload', [NoteImageController::class, 'apiStore'])->name('notes.images.api.store');
+    Route::get('/api/notes/{note}/images', [NoteImageController::class, 'apiIndex'])->name('notes.images.api.index');
+    Route::delete('/api/notes/images/{image}', [NoteImageController::class, 'apiDestroy'])->name('notes.images.api.destroy');
+    Route::get('/images/api', [NoteImageController::class, 'apiAllImages'])
+        ->middleware('auth')
+        ->name('images.api.index');
+
 });
 
 require __DIR__.'/settings.php';

@@ -164,6 +164,7 @@ export interface Note {
     created_at: string;
     updated_at: string;
     last_accessed_at: string | null;
+    images?: NoteImage[];
 }
 
 export interface NoteForm {
@@ -182,4 +183,13 @@ export interface NoteSearchResult {
     word_count: number;
     created_at: string;
     updated_at: string;
+}
+
+export interface NoteImage {
+    id: number;
+    url: string;
+    filename: string;
+    mime_type: string;
+    size?: number;
+    created_at?: string;
 }
