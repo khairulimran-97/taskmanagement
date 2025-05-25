@@ -91,9 +91,84 @@ class NoteImageController extends Controller
     }
 
     /**
-     * Store an image through an API endpoint (for editor direct uploads)
+     * Store an image through Inertia (for editor direct uploads)
+     * Fixed to return proper response with flash data accessible to Inertia
      */
     public function apiStore(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|max:10240', // 10MB max
+            'note_id' => 'required|integer|exists:notes,id'
+        ]);
+
+        // Verify the note belongs to the current user
+        $note = Note::findOrFail($request->note_id);
+        if ($note->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Process and store the image
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $originalFilename = $file->getClientOriginalName();
+            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('note-images/' . $note->id, $filename, 'public');
+
+            // Create image record
+            $image = NoteImage::create([
+                'note_id' => $note->id,
+                'path' => $path,
+                'filename' => $filename,
+                'original_filename' => $originalFilename,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize()
+            ]);
+
+            // Store flash data in session for Inertia to access
+            session()->flash('success', 'Image uploaded successfully');
+            session()->flash('image', [
+                'id' => $image->id,
+                'url' => $image->url,
+                'filename' => $image->original_filename,
+                'mime_type' => $image->mime_type,
+                'size' => $image->size
+            ]);
+
+            // Return success response (Inertia will handle the flash data)
+            return response('', 200);
+        }
+
+        return response()->json(['errors' => ['image' => ['No image uploaded']]], 422);
+    }
+
+    /**
+     * Get all images for a note (API endpoint for the editor)
+     */
+    public function apiIndex(Note $note)
+    {
+        // Verify the note belongs to the current user
+        if ($note->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $images = $note->images->map(function ($image) {
+            return [
+                'id' => $image->id,
+                'url' => $image->url,
+                'filename' => $image->original_filename,
+                'mime_type' => $image->mime_type,
+                'size' => $image->size
+            ];
+        });
+
+        return response()->json(['images' => $images]);
+    }
+
+    /**
+     * Pure JSON API endpoint for fetch() requests (not Inertia)
+     * This is for cases where you want to use regular fetch() instead of Inertia
+     */
+    public function pureApiStore(Request $request)
     {
         $request->validate([
             'image' => 'required|image|max:10240', // 10MB max
@@ -129,34 +204,13 @@ class NoteImageController extends Controller
                     'id' => $image->id,
                     'url' => $image->url,
                     'filename' => $image->original_filename,
-                    'mime_type' => $image->mime_type
+                    'mime_type' => $image->mime_type,
+                    'size' => $image->size
                 ]
             ]);
         }
 
         return response()->json(['error' => 'No image uploaded'], 400);
-    }
-
-    /**
-     * Get all images for a note (API endpoint for the editor)
-     */
-    public function apiIndex(Note $note)
-    {
-        // Verify the note belongs to the current user
-        if ($note->user_id !== Auth::id()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $images = $note->images->map(function ($image) {
-            return [
-                'id' => $image->id,
-                'url' => $image->url,
-                'filename' => $image->original_filename,
-                'mime_type' => $image->mime_type
-            ];
-        });
-
-        return response()->json(['images' => $images]);
     }
 
     /**
@@ -214,10 +268,11 @@ class NoteImageController extends Controller
                 'url' => $image->url,
                 'filename' => $image->original_filename,
                 'mime_type' => $image->mime_type,
+                'size' => $image->size,
+                'created_at' => $image->created_at
             ];
         });
 
         return response()->json(['images' => $images]);
     }
-
 }

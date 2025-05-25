@@ -72,13 +72,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notes/images', [NoteImageController::class, 'store'])->name('notes.images.store');
     Route::delete('/notes/images/{image}', [NoteImageController::class, 'destroy'])->name('notes.images.destroy');
 
-    // Note Images - API endpoints for editor integration
-    Route::post('/api/notes/images/upload', [NoteImageController::class, 'apiStore'])->name('notes.images.api.store');
-    Route::get('/api/notes/{note}/images', [NoteImageController::class, 'apiIndex'])->name('notes.images.api.index');
-    Route::delete('/api/notes/images/{image}', [NoteImageController::class, 'apiDestroy'])->name('notes.images.api.destroy');
-    Route::get('/images/api', [NoteImageController::class, 'apiAllImages'])
-        ->middleware('auth')
-        ->name('images.api.index');
+    // Note Images - Inertia endpoints for editor integration (using Inertia responses)
+    Route::post('/notes/images/upload', [NoteImageController::class, 'apiStore'])->name('notes.images.api.store');
+    Route::get('/notes/{note}/images/api', [NoteImageController::class, 'apiIndex'])->name('notes.images.api.index');
+    Route::delete('/notes/images/{image}/api', [NoteImageController::class, 'apiDestroy'])->name('notes.images.api.destroy');
+
+    // Note Images - Pure JSON API endpoints (for fetch() requests, not Inertia)
+    Route::post('/api/notes/images/upload', [NoteImageController::class, 'pureApiStore'])->name('notes.images.pure-api.store');
+    Route::get('/api/images', [NoteImageController::class, 'apiAllImages'])->name('images.api.index');
 
 });
 

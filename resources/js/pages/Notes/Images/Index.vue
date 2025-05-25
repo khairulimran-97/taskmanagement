@@ -5,7 +5,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { BreadcrumbItem, NoteImage } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'vue-sonner';
 import {
@@ -14,9 +13,7 @@ import {
     Trash2,
     ArrowLeft,
     Download,
-    MoreHorizontal,
     Search,
-    XCircle,
     Copy,
     SortAsc,
     SortDesc,

@@ -17,9 +17,11 @@ use Carbon\Carbon;
  * @property Carbon|null $last_accessed_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
+ * @property mixed $images
  * @method static forUser(int|string|null $id)
  * @method static create(mixed $validated)
  * @method static find(\Illuminate\Routing\Route|object|string|null $route)
+ * @method static findOrFail(mixed $note_id)
  */
 class Note extends Model
 {

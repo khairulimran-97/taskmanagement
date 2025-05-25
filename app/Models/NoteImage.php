@@ -5,6 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @method static create(array $array)
+ * @method static whereHas(string $string, \Closure $param)
+ * @property mixed $note
+ */
 class NoteImage extends Model
 {
     protected $fillable = [
