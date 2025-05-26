@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\Note;
+use App\Models\CalendarEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -38,6 +40,26 @@ class DashboardController extends Controller
             'due_soon' => Task::where('user_id', $userId)
                 ->whereBetween('due_date', [now(), now()->addDays(7)])
                 ->whereNotIn('status', ['completed', 'cancelled'])
+                ->count(),
+        ];
+
+        // Note Statistics
+        $noteStats = [
+            'total' => Note::where('user_id', $userId)->count(),
+            'pinned' => Note::where('user_id', $userId)->where('is_pinned', true)->count(),
+            'recent' => Note::where('user_id', $userId)
+                ->where('created_at', '>=', now()->subDays(7))
+                ->count(),
+        ];
+
+        // Calendar Statistics
+        $calendarStats = [
+            'total' => CalendarEvent::where('user_id', $userId)->count(),
+            'today' => CalendarEvent::where('user_id', $userId)
+                ->whereDate('start_date', today())
+                ->count(),
+            'this_week' => CalendarEvent::where('user_id', $userId)
+                ->whereBetween('start_date', [now()->startOfWeek(), now()->endOfWeek()])
                 ->count(),
         ];
 
@@ -85,6 +107,46 @@ class DashboardController extends Controller
                             'color' => $tag->color,
                         ];
                     }),
+                ];
+            });
+
+        // Latest Notes (latest 5)
+        $latestNotes = Note::where('user_id', $userId)
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($note) {
+                return [
+                    'id' => $note->id,
+                    'title' => $note->title,
+                    'content_preview' => $note->content_preview,
+                    'tags_array' => $note->tags_array,
+                    'is_pinned' => $note->is_pinned,
+                    'word_count' => $note->word_count,
+                    'created_at' => $note->created_at,
+                    'updated_at' => $note->updated_at,
+                    'last_accessed_at' => $note->last_accessed_at?->toISOString(),
+                ];
+            });
+
+        // Upcoming Calendar Events (next 5)
+        $upcomingEvents = CalendarEvent::where('user_id', $userId)
+            ->where('start_date', '>=', now())
+            ->orderBy('start_date', 'asc')
+            ->limit(5)
+            ->get()
+            ->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'title' => $event->title,
+                    'description' => $event->description,
+                    'start_date' => $event->start_date->toISOString(),
+                    'end_date' => $event->end_date?->toISOString(),
+                    'color' => $event->color,
+                    'all_day' => $event->all_day,
+                    'formatted_start_date' => $event->formatted_start_date,
+                    'formatted_end_date' => $event->formatted_end_date,
+                    'days_until_event' => now()->diffInDays($event->start_date, false),
                 ];
             });
 
@@ -161,16 +223,29 @@ class DashboardController extends Controller
                 : 0,
         ];
 
+        // Calculate total notifications
+        $notifications = [
+            'total' => $taskStats['overdue'] + $taskStats['due_soon'] + $calendarStats['today'],
+            'overdue_tasks' => $taskStats['overdue'],
+            'due_soon_tasks' => $taskStats['due_soon'],
+            'today_events' => $calendarStats['today'],
+        ];
+
         return Inertia::render('Dashboard', [
             'projectStats' => $projectStats,
             'taskStats' => $taskStats,
+            'noteStats' => $noteStats,
+            'calendarStats' => $calendarStats,
             'recentProjects' => $recentProjects,
             'recentTasks' => $recentTasks,
+            'latestNotes' => $latestNotes,
+            'upcomingEvents' => $upcomingEvents,
             'overdueTasks' => $overdueTasks,
             'tasksDueSoon' => $tasksDueSoon,
             'projectPriorityDistribution' => $projectPriorityDistribution,
             'taskPriorityDistribution' => $taskPriorityDistribution,
             'completionRates' => $completionRates,
+            'notifications' => $notifications,
         ]);
     }
 }

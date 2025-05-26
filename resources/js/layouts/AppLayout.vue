@@ -1,18 +1,30 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/app/AppHeaderLayout.vue';
+import AppHeaderLayout from '@/layouts/app/AppHeaderLayout.vue';
 import type { BreadcrumbItemType } from '@/types';
 
 interface Props {
     breadcrumbs?: BreadcrumbItemType[];
+    notifications?: {
+        total: number;
+        overdue_tasks: number;
+        due_soon_tasks: number;
+        today_events: number;
+    };
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
+    notifications: () => ({
+        total: 0,
+        overdue_tasks: 0,
+        due_soon_tasks: 0,
+        today_events: 0,
+    }),
 });
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppHeaderLayout :breadcrumbs="breadcrumbs" :notifications="notifications">
         <slot />
-    </AppLayout>
+    </AppHeaderLayout>
 </template>

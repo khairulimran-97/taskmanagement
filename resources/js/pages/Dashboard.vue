@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItemType } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
     FolderOpen,
@@ -19,7 +18,13 @@ import {
     Users,
     Plus,
     ArrowRight,
-    ExternalLink
+    ExternalLink,
+    FileText,
+    Pin,
+    CalendarDays,
+    Eye,
+    BookOpen,
+    Zap
 } from 'lucide-vue-next';
 
 interface Props {
@@ -39,8 +44,20 @@ interface Props {
         overdue: number;
         due_soon: number;
     };
+    noteStats: {
+        total: number;
+        pinned: number;
+        recent: number;
+    };
+    calendarStats: {
+        total: number;
+        today: number;
+        this_week: number;
+    };
     recentProjects: any[];
     recentTasks: any[];
+    latestNotes: any[];
+    upcomingEvents: any[];
     overdueTasks: any[];
     tasksDueSoon: any[];
     projectPriorityDistribution: {
@@ -58,11 +75,17 @@ interface Props {
         projects: number;
         tasks: number;
     };
+    notifications: {
+        total: number;
+        overdue_tasks: number;
+        due_soon_tasks: number;
+        today_events: number;
+    };
 }
 
 const props = defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItem[] = [
+const breadcrumbs: BreadcrumbItemType[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
@@ -124,17 +147,33 @@ const getPriorityClass = (priority: string): string => {
         default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600';
     }
 };
+
+const formatEventDate = (dateString: string, allDay: boolean = false): string => {
+    const date = new Date(dateString);
+    if (allDay) {
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+        });
+    }
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+};
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppLayout :breadcrumbs="breadcrumbs" :notifications="notifications">
         <Head title="Dashboard" />
 
         <div class="container mx-auto px-4 py-6 max-w-7xl">
             <!-- Welcome Header -->
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Dashboard</h1>
-                <p class="text-gray-600 dark:text-gray-400">Welcome back! Here's an overview of your projects and tasks.</p>
+                <p class="text-gray-600 dark:text-gray-400">Welcome back! Here's an overview of your projects, tasks, notes, and calendar.</p>
             </div>
 
             <!-- Stats Overview -->
@@ -142,15 +181,13 @@ const getPriorityClass = (priority: string): string => {
                 <!-- Total Projects -->
                 <Card class="hover:shadow-md transition-shadow">
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Total Projects</CardTitle>
+                        <CardTitle class="text-sm font-medium">Projects</CardTitle>
                         <FolderOpen class="h-4 w-4 text-blue-600" />
                     </CardHeader>
                     <CardContent>
                         <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ projectStats.total }}</div>
                         <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
                             <span class="text-green-600 dark:text-green-400">{{ projectStats.active }} active</span>
-                            <span class="mx-1">•</span>
-                            <span>{{ projectStats.completed }} completed</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -158,136 +195,41 @@ const getPriorityClass = (priority: string): string => {
                 <!-- Total Tasks -->
                 <Card class="hover:shadow-md transition-shadow">
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Total Tasks</CardTitle>
+                        <CardTitle class="text-sm font-medium">Tasks</CardTitle>
                         <CheckCircle2 class="h-4 w-4 text-green-600" />
                     </CardHeader>
                     <CardContent>
                         <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ taskStats.total }}</div>
                         <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            <span class="text-blue-600 dark:text-blue-400">{{ taskStats.in_progress }} in progress</span>
-                            <span class="mx-1">•</span>
-                            <span>{{ taskStats.completed }} done</span>
+                            <span class="text-blue-600 dark:text-blue-400">{{ taskStats.in_progress }} active</span>
                         </div>
                     </CardContent>
                 </Card>
 
-                <!-- Overdue Tasks -->
-                <Card class="hover:shadow-md transition-shadow" :class="taskStats.overdue > 0 ? 'border-red-200 dark:border-red-800' : ''">
-                    <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Overdue Tasks</CardTitle>
-                        <AlertTriangle class="h-4 w-4" :class="taskStats.overdue > 0 ? 'text-red-600' : 'text-gray-400'" />
-                    </CardHeader>
-                    <CardContent>
-                        <div class="text-2xl font-bold" :class="taskStats.overdue > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'">
-                            {{ taskStats.overdue }}
-                        </div>
-                        <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {{ taskStats.due_soon }} due this week
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <!-- Completion Rate -->
+                <!-- Total Notes -->
                 <Card class="hover:shadow-md transition-shadow">
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Completion Rate</CardTitle>
-                        <TrendingUp class="h-4 w-4 text-purple-600" />
+                        <CardTitle class="text-sm font-medium">Notes</CardTitle>
+                        <FileText class="h-4 w-4 text-purple-600" />
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ completionRates.tasks }}%</div>
-                        <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            Projects: {{ completionRates.projects }}%
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <!-- Progress Bars -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <!-- Project Progress -->
-                <Card>
-                    <CardHeader>
-                        <CardTitle class="text-base">Project Progress</CardTitle>
-                        <CardDescription>Overview of all your projects</CardDescription>
-                    </CardHeader>
-                    <CardContent class="space-y-4">
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Overall Completion</span>
-                                <span class="text-sm font-medium">{{ completionRates.projects }}%</span>
-                            </div>
-                            <Progress
-                                :model-value="completionRates.projects"
-                                class="h-2"
-                                :class="{
-                                    'bg-red-200 dark:bg-red-800 [&>div]:bg-red-500 dark:[&>div]:bg-red-400': completionRates.projects < 25,
-                                    'bg-orange-200 dark:bg-orange-800 [&>div]:bg-orange-500 dark:[&>div]:bg-orange-400': completionRates.projects >= 25 && completionRates.projects < 50,
-                                    'bg-yellow-200 dark:bg-yellow-800 [&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-400': completionRates.projects >= 50 && completionRates.projects < 75,
-                                    'bg-green-200 dark:bg-green-800 [&>div]:bg-green-500 dark:[&>div]:bg-green-400': completionRates.projects >= 75
-                                }"
-                            />
-                        </div>
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                                <span>Active: {{ projectStats.active }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                                <span>Completed: {{ projectStats.completed }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
-                                <span>Paused: {{ projectStats.paused }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
-                                <span>Archived: {{ projectStats.archived }}</span>
-                            </div>
+                        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ noteStats.total }}</div>
+                        <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            <span class="text-purple-600 dark:text-purple-400">{{ noteStats.pinned }} pinned</span>
                         </div>
                     </CardContent>
                 </Card>
 
-                <!-- Task Progress -->
-                <Card>
-                    <CardHeader>
-                        <CardTitle class="text-base">Task Progress</CardTitle>
-                        <CardDescription>Breakdown of task statuses</CardDescription>
+                <!-- Events -->
+                <Card class="hover:shadow-md transition-shadow">
+                    <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle class="text-sm font-medium">Events</CardTitle>
+                        <CalendarDays class="h-4 w-4 text-indigo-600" />
                     </CardHeader>
-                    <CardContent class="space-y-4">
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Overall Completion</span>
-                                <span class="text-sm font-medium">{{ completionRates.tasks }}%</span>
-                            </div>
-                            <Progress
-                                :model-value="completionRates.tasks"
-                                class="h-2"
-                                :class="{
-                                    'bg-red-200 dark:bg-red-800 [&>div]:bg-red-500 dark:[&>div]:bg-red-400': completionRates.tasks < 25,
-                                    'bg-orange-200 dark:bg-orange-800 [&>div]:bg-orange-500 dark:[&>div]:bg-orange-400': completionRates.tasks >= 25 && completionRates.tasks < 50,
-                                    'bg-yellow-200 dark:bg-yellow-800 [&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-400': completionRates.tasks >= 50 && completionRates.tasks < 75,
-                                    'bg-green-200 dark:bg-green-800 [&>div]:bg-green-500 dark:[&>div]:bg-green-400': completionRates.tasks >= 75
-                                }"
-                            />
-                        </div>
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-slate-500 rounded-full mr-2"></div>
-                                <span>To Do: {{ taskStats.todo }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                                <span>In Progress: {{ taskStats.in_progress }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                                <span>Completed: {{ taskStats.completed }}</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                                <span>Cancelled: {{ taskStats.cancelled }}</span>
-                            </div>
+                    <CardContent>
+                        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ calendarStats.total }}</div>
+                        <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            <span class="text-indigo-600 dark:text-indigo-400">{{ calendarStats.today }} today</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -362,11 +304,11 @@ const getPriorityClass = (priority: string): string => {
                 </Card>
             </div>
 
-            <!-- Main Content -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <!-- Recent Projects -->
-                <Card class="lg:col-span-1">
-                    <CardHeader>
+                <Card class="flex flex-col h-full">
+                    <CardHeader class="flex-shrink-0">
                         <div class="flex items-center justify-between">
                             <CardTitle class="text-base">Recent Projects</CardTitle>
                             <Button variant="ghost" size="sm" asChild>
@@ -378,8 +320,8 @@ const getPriorityClass = (priority: string): string => {
                         </div>
                         <CardDescription>Your latest projects</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div v-if="recentProjects.length > 0" class="space-y-4">
+                    <CardContent class="flex-1 flex flex-col">
+                        <div v-if="recentProjects.length > 0" class="space-y-4 flex-1">
                             <div v-for="project in recentProjects" :key="project.id" class="flex items-center space-x-3">
                                 <div class="w-3 h-3 rounded-full" :style="`background-color: ${project.color}`"></div>
                                 <div class="flex-1 min-w-0">
@@ -398,7 +340,7 @@ const getPriorityClass = (priority: string): string => {
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">
+                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
                             <FolderOpen class="h-8 w-8 mx-auto mb-2 opacity-50" />
                             <p class="text-sm">No projects yet</p>
                             <Button variant="outline" size="sm" asChild class="mt-2">
@@ -411,70 +353,154 @@ const getPriorityClass = (priority: string): string => {
                     </CardContent>
                 </Card>
 
-                <!-- Recent Tasks -->
-                <Card class="lg:col-span-2">
-                    <CardHeader>
+                <!-- Latest Notes -->
+                <Card class="flex flex-col h-full">
+                    <CardHeader class="flex-shrink-0">
                         <div class="flex items-center justify-between">
-                            <CardTitle class="text-base">Recent Tasks</CardTitle>
+                            <CardTitle class="text-base">Latest Notes</CardTitle>
                             <Button variant="ghost" size="sm" asChild>
-                                <Link :href="route('projects.index')" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                                <Link :href="route('notes.index')" class="text-sm text-purple-600 dark:text-purple-400 hover:underline">
                                     View all
                                     <ArrowRight class="h-3 w-3 ml-1" />
                                 </Link>
                             </Button>
                         </div>
-                        <CardDescription>Your latest task activity</CardDescription>
+                        <CardDescription>Recent note activity</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div v-if="recentTasks.length > 0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead class="w-[40%]">Task</TableHead>
-                                        <TableHead class="w-[20%]">Project</TableHead>
-                                        <TableHead class="w-[15%]">Status</TableHead>
-                                        <TableHead class="w-[15%]">Priority</TableHead>
-                                        <TableHead class="w-[10%] text-right">Due</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    <TableRow v-for="task in recentTasks" :key="task.id" class="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                        <TableCell class="font-medium">
-                                            <div class="truncate">{{ task.title }}</div>
-                                            <div v-if="task.tags && task.tags.length > 0" class="flex flex-wrap gap-1 mt-1">
-                                                <Badge v-for="tag in task.tags.slice(0, 2)" :key="tag.id" variant="outline" class="text-xs px-1 py-0" :style="`border-color: ${tag.color}; color: ${tag.color}`">
-                                                    {{ tag.name }}
-                                                </Badge>
-                                                <Badge v-if="task.tags.length > 2" variant="outline" class="text-xs px-1 py-0">
-                                                    +{{ task.tags.length - 2 }}
-                                                </Badge>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div v-if="task.project" class="flex items-center space-x-2">
-                                                <div class="w-2 h-2 rounded-full" :style="`background-color: ${task.project.color}`"></div>
-                                                <span class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ task.project.name }}</span>
-                                            </div>
-                                            <span v-else class="text-xs text-gray-400">-</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge :class="getStatusClass(task.status, 'task')" class="text-xs px-1.5 py-0.5">
+                    <CardContent class="flex-1 flex flex-col">
+                        <div v-if="latestNotes.length > 0" class="space-y-4 flex-1">
+                            <div v-for="note in latestNotes" :key="note.id" class="space-y-2">
+                                <div class="flex items-start space-x-2">
+                                    <Pin v-if="note.is_pinned" class="h-3 w-3 text-purple-600 dark:text-purple-400 mt-1 flex-shrink-0" />
+                                    <div class="flex-1 min-w-0">
+                                        <Link :href="route('notes.show', note.id)" class="text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline block truncate">
+                                            {{ note.title }}
+                                        </Link>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                            {{ note.content_preview }}
+                                        </p>
+                                        <div class="flex items-center space-x-2 mt-1">
+                                            <span class="text-xs text-gray-400">{{ note.word_count }} words</span>
+                                            <span class="text-xs text-gray-400">•</span>
+                                            <span class="text-xs text-gray-400">{{ getRelativeTime(note.updated_at) }}</span>
+                                        </div>
+                                        <div v-if="note.tags_array.length > 0" class="flex flex-wrap gap-1 mt-1">
+                                            <Badge v-for="tag in note.tags_array.slice(0, 2)" :key="tag" variant="outline" class="text-xs px-1 py-0">
+                                                {{ tag }}
+                                            </Badge>
+                                            <Badge v-if="note.tags_array.length > 2" variant="outline" class="text-xs px-1 py-0">
+                                                +{{ note.tags_array.length - 2 }}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
+                            <FileText class="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p class="text-sm">No notes yet</p>
+                            <Button variant="outline" size="sm" asChild class="mt-2">
+                                <Link :href="route('notes.index')">
+                                    <Plus class="h-3 w-3 mr-1" />
+                                    Create Note
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Upcoming Events -->
+                <Card class="flex flex-col h-full">
+                    <CardHeader class="flex-shrink-0">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-base">Upcoming Events</CardTitle>
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link :href="route('calendar.index')" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+                                    View all
+                                    <ArrowRight class="h-3 w-3 ml-1" />
+                                </Link>
+                            </Button>
+                        </div>
+                        <CardDescription>Your upcoming calendar events</CardDescription>
+                    </CardHeader>
+                    <CardContent class="flex-1 flex flex-col">
+                        <div v-if="upcomingEvents.length > 0" class="space-y-4 flex-1">
+                            <div v-for="event in upcomingEvents" :key="event.id" class="flex items-start space-x-3">
+                                <div class="w-3 h-3 rounded-full mt-1 flex-shrink-0" :style="`background-color: ${event.color}`"></div>
+                                <div class="flex-1 min-w-0">
+                                    <Link :href="route('calendar.index')" class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline block truncate">
+                                        {{ event.title }}
+                                    </Link>
+                                    <p v-if="event.description" class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                                        {{ event.description }}
+                                    </p>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <span class="text-xs text-gray-400">{{ formatEventDate(event.start_date, event.all_day) }}</span>
+                                        <span v-if="event.days_until_event >= 0" class="text-xs text-indigo-600 dark:text-indigo-400">
+                                            • {{ event.days_until_event === 0 ? 'Today' : `In ${event.days_until_event} day${event.days_until_event > 1 ? 's' : ''}` }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
+                            <CalendarDays class="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p class="text-sm">No upcoming events</p>
+                            <Button variant="outline" size="sm" asChild class="mt-2">
+                                <Link :href="route('calendar.index')">
+                                    <Plus class="h-3 w-3 mr-1" />
+                                    Add Event
+                                </Link>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Recent Tasks -->
+                <Card class="flex flex-col h-full">
+                    <CardHeader class="flex-shrink-0">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-base">Recent Tasks</CardTitle>
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link :href="route('projects.index')" class="text-sm text-green-600 dark:text-green-400 hover:underline">
+                                    View all
+                                    <ArrowRight class="h-3 w-3 ml-1" />
+                                </Link>
+                            </Button>
+                        </div>
+                        <CardDescription>Latest task activity</CardDescription>
+                    </CardHeader>
+                    <CardContent class="flex-1 flex flex-col">
+                        <div v-if="recentTasks.length > 0" class="space-y-4 flex-1">
+                            <div v-for="task in recentTasks.slice(0, 5)" :key="task.id" class="space-y-2">
+                                <div class="flex items-start space-x-2">
+                                    <div v-if="task.project" class="w-2 h-2 rounded-full mt-2" :style="`background-color: ${task.project.color}`"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium truncate">{{ task.title }}</span>
+                                            <Badge :class="getStatusClass(task.status, 'task')" class="text-xs px-1.5 py-0.5 ml-2">
                                                 {{ task.status.replace('_', ' ') }}
                                             </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge :class="getPriorityClass(task.priority)" variant="outline" class="text-xs px-1.5 py-0.5">
+                                        </div>
+                                        <div class="flex items-center space-x-2 mt-1">
+                                            <span v-if="task.project" class="text-xs text-gray-500 dark:text-gray-400">{{ task.project.name }}</span>
+                                            <Badge v-if="task.priority" :class="getPriorityClass(task.priority)" variant="outline" class="text-xs px-1 py-0">
                                                 {{ task.priority }}
                                             </Badge>
-                                        </TableCell>
-                                        <TableCell class="text-right text-xs text-gray-500 dark:text-gray-400">
-                                            {{ formatDate(task.due_date) }}
-                                        </TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
+                                        </div>
+                                        <div v-if="task.tags && task.tags.length > 0" class="flex flex-wrap gap-1 mt-1">
+                                            <Badge v-for="tag in task.tags.slice(0, 2)" :key="tag.id" variant="outline" class="text-xs px-1 py-0" :style="`border-color: ${tag.color}; color: ${tag.color}`">
+                                                {{ tag.name }}
+                                            </Badge>
+                                            <Badge v-if="task.tags.length > 2" variant="outline" class="text-xs px-1 py-0">
+                                                +{{ task.tags.length - 2 }}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">
+                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
                             <Activity class="h-8 w-8 mx-auto mb-2 opacity-50" />
                             <p class="text-sm">No recent tasks</p>
                         </div>
