@@ -353,6 +353,57 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                     </CardContent>
                 </Card>
 
+                <!-- Recent Tasks -->
+                <Card class="flex flex-col h-full">
+                    <CardHeader class="flex-shrink-0">
+                        <div class="flex items-center justify-between">
+                            <CardTitle class="text-base">Recent Tasks</CardTitle>
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link :href="route('projects.index')" class="text-sm text-green-600 dark:text-green-400 hover:underline">
+                                    View all
+                                    <ArrowRight class="h-3 w-3 ml-1" />
+                                </Link>
+                            </Button>
+                        </div>
+                        <CardDescription>Latest task activity</CardDescription>
+                    </CardHeader>
+                    <CardContent class="flex-1 flex flex-col">
+                        <div v-if="recentTasks.length > 0" class="space-y-4 flex-1">
+                            <div v-for="task in recentTasks.slice(0, 5)" :key="task.id" class="space-y-2">
+                                <div class="flex items-start space-x-2">
+                                    <div v-if="task.project" class="w-2 h-2 rounded-full mt-2" :style="`background-color: ${task.project.color}`"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium truncate">{{ task.title }}</span>
+                                            <Badge :class="getStatusClass(task.status, 'task')" class="text-xs px-1.5 py-0.5 ml-2">
+                                                {{ task.status.replace('_', ' ') }}
+                                            </Badge>
+                                        </div>
+                                        <div class="flex items-center space-x-2 mt-1">
+                                            <span v-if="task.project" class="text-xs text-gray-500 dark:text-gray-400">{{ task.project.name }}</span>
+                                            <Badge v-if="task.priority" :class="getPriorityClass(task.priority)" variant="outline" class="text-xs px-1 py-0">
+                                                {{ task.priority }}
+                                            </Badge>
+                                        </div>
+                                        <div v-if="task.tags && task.tags.length > 0" class="flex flex-wrap gap-1 mt-1">
+                                            <Badge v-for="tag in task.tags.slice(0, 2)" :key="tag.id" variant="outline" class="text-xs px-1 py-0" :style="`border-color: ${tag.color}; color: ${tag.color}`">
+                                                {{ tag.name }}
+                                            </Badge>
+                                            <Badge v-if="task.tags.length > 2" variant="outline" class="text-xs px-1 py-0">
+                                                +{{ task.tags.length - 2 }}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
+                            <Activity class="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p class="text-sm">No recent tasks</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <!-- Latest Notes -->
                 <Card class="flex flex-col h-full">
                     <CardHeader class="flex-shrink-0">
@@ -452,57 +503,6 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                     Add Event
                                 </Link>
                             </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <!-- Recent Tasks -->
-                <Card class="flex flex-col h-full">
-                    <CardHeader class="flex-shrink-0">
-                        <div class="flex items-center justify-between">
-                            <CardTitle class="text-base">Recent Tasks</CardTitle>
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link :href="route('projects.index')" class="text-sm text-green-600 dark:text-green-400 hover:underline">
-                                    View all
-                                    <ArrowRight class="h-3 w-3 ml-1" />
-                                </Link>
-                            </Button>
-                        </div>
-                        <CardDescription>Latest task activity</CardDescription>
-                    </CardHeader>
-                    <CardContent class="flex-1 flex flex-col">
-                        <div v-if="recentTasks.length > 0" class="space-y-4 flex-1">
-                            <div v-for="task in recentTasks.slice(0, 5)" :key="task.id" class="space-y-2">
-                                <div class="flex items-start space-x-2">
-                                    <div v-if="task.project" class="w-2 h-2 rounded-full mt-2" :style="`background-color: ${task.project.color}`"></div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-sm font-medium truncate">{{ task.title }}</span>
-                                            <Badge :class="getStatusClass(task.status, 'task')" class="text-xs px-1.5 py-0.5 ml-2">
-                                                {{ task.status.replace('_', ' ') }}
-                                            </Badge>
-                                        </div>
-                                        <div class="flex items-center space-x-2 mt-1">
-                                            <span v-if="task.project" class="text-xs text-gray-500 dark:text-gray-400">{{ task.project.name }}</span>
-                                            <Badge v-if="task.priority" :class="getPriorityClass(task.priority)" variant="outline" class="text-xs px-1 py-0">
-                                                {{ task.priority }}
-                                            </Badge>
-                                        </div>
-                                        <div v-if="task.tags && task.tags.length > 0" class="flex flex-wrap gap-1 mt-1">
-                                            <Badge v-for="tag in task.tags.slice(0, 2)" :key="tag.id" variant="outline" class="text-xs px-1 py-0" :style="`border-color: ${tag.color}; color: ${tag.color}`">
-                                                {{ tag.name }}
-                                            </Badge>
-                                            <Badge v-if="task.tags.length > 2" variant="outline" class="text-xs px-1 py-0">
-                                                +{{ task.tags.length - 2 }}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
-                            <Activity class="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p class="text-sm">No recent tasks</p>
                         </div>
                     </CardContent>
                 </Card>
