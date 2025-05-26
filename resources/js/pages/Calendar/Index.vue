@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { BreadcrumbItem, CalendarEvent, FullCalendarEvent } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Plus, Calendar as CalendarIcon, RefreshCw } from 'lucide-vue-next';
 
 // FullCalendar imports
 import FullCalendar from '@fullcalendar/vue3';
@@ -32,8 +32,6 @@ const breadcrumbs = ref<BreadcrumbItem[]>([
 
 // Calendar ref and state
 const calendarRef = ref();
-const currentView = ref('dayGridMonth');
-const currentDate = ref(new Date());
 
 // Modal states
 const isEventDialogOpen = ref(false);
@@ -42,26 +40,33 @@ const editingEvent = ref<FullCalendarEvent | null>(null);
 const selectedEvent = ref<FullCalendarEvent | null>(null);
 const selectedDate = ref<any>(null);
 const isSubmitting = ref(false);
+const isLoadingEvents = ref(false);
 
-// Convert Laravel events to FullCalendar format
-const calendarEvents = computed(() => {
-    return (props.events || []).map((event: CalendarEvent): FullCalendarEvent => ({
-        id: event.id,
-        title: event.title,
-        start: event.start_date,
-        end: event.end_date || undefined,
-        allDay: event.all_day,
-        backgroundColor: event.color,
-        borderColor: event.color,
-        textColor: '#ffffff',
-        extendedProps: {
-            description: event.description,
-            user_id: event.user_id,
+// Dynamic event loading function
+const loadEvents = async (fetchInfo: any, successCallback: Function, failureCallback: Function) => {
+    isLoadingEvents.value = true;
+
+    try {
+        const url = new URL(route('calendar.api.events'), window.location.origin);
+        url.searchParams.append('start', fetchInfo.startStr);
+        url.searchParams.append('end', fetchInfo.endStr);
+
+        const response = await fetch(url.toString());
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    }));
-});
 
-// Calendar options
+        const events = await response.json();
+        successCallback(events);
+    } catch (error) {
+        failureCallback(error);
+    } finally {
+        isLoadingEvents.value = false;
+    }
+};
+
+// Calendar options with dynamic event loading
 const calendarOptions = computed(() => ({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
     headerToolbar: {
@@ -78,7 +83,14 @@ const calendarOptions = computed(() => ({
     editable: true,
     eventResizableFromStart: true,
     eventDurationEditable: true,
-    events: calendarEvents.value,
+
+    // Use dynamic event loading
+    events: loadEvents,
+
+    // Loading state
+    loading: (isLoading: boolean) => {
+        isLoadingEvents.value = isLoading;
+    },
 
     // Event handlers
     select: handleDateSelect,
@@ -108,14 +120,18 @@ const calendarOptions = computed(() => ({
     }
 }));
 
-// Handle date selection (clicking on calendar)
+// Date selection handler
 function handleDateSelect(selectInfo: any) {
-    selectedDate.value = selectInfo;
+    selectedDate.value = {
+        start: selectInfo.start,
+        end: selectInfo.end,
+        allDay: selectInfo.allDay
+    };
     editingEvent.value = null;
     isEventDialogOpen.value = true;
 }
 
-// Handle event click
+// Event click handler
 function handleEventClick(clickInfo: any) {
     selectedEvent.value = {
         id: clickInfo.event.id,
@@ -131,72 +147,104 @@ function handleEventClick(clickInfo: any) {
     isEventDetailDialogOpen.value = true;
 }
 
-const toLocalDateString = (date: Date) => {
+// Date formatting functions
+const formatDateTimeForServer = (date: Date, allDay: boolean = false): string => {
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
 
-const toLocalDateTimeString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
+    if (allDay) {
+        return `${year}-${month}-${day}T00:00:00`;
+    }
+
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     const seconds = date.getSeconds().toString().padStart(2, '0');
+
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-}
+};
 
-
-// Handle event drag and drop
+// Event drag and drop handler
 function handleEventDrop(dropInfo: any) {
     const event = dropInfo.event;
     const updateData: any = {
         all_day: event.allDay,
     };
 
-    if (event.allDay) {
-        const startDate = new Date(event.start);
-        updateData.start_date = toLocalDateString(startDate) + 'T00:00:00';
+    try {
+        if (event.allDay) {
+            updateData.start_date = formatDateTimeForServer(event.start, true);
+            if (event.end) {
+                const endDate = new Date(event.end);
+                endDate.setDate(endDate.getDate() - 1);
+                updateData.end_date = `${endDate.getFullYear()}-${(endDate.getMonth() + 1).toString().padStart(2, '0')}-${endDate.getDate().toString().padStart(2, '0')}T23:59:59`;
+            }
+        } else {
+            updateData.start_date = formatDateTimeForServer(event.start);
+            if (event.end) {
+                updateData.end_date = formatDateTimeForServer(event.end);
+            }
+        }
 
-        if (event.end) {
-            const endDate = new Date(event.end);
-            endDate.setDate(endDate.getDate() - 1);
-            updateData.end_date = toLocalDateString(endDate) + 'T23:59:59';
-        }
-    } else {
-        updateData.start_date = toLocalDateTimeString(new Date(event.start));
-        if (event.end) {
-            updateData.end_date = toLocalDateTimeString(new Date(event.end));
-        }
+        router.patch(route('calendar.update-dates', event.id), updateData, {
+            preserveScroll: true,
+            onError: () => {
+                dropInfo.revert();
+            },
+            onSuccess: () => {
+                refreshCalendar();
+            }
+        });
+    } catch (error) {
+        dropInfo.revert();
     }
-
-    router.patch(route('calendar.update-dates', event.id), updateData, {
-        preserveScroll: true,
-        onError: () => {
-            dropInfo.revert();
-        }
-    });
 }
 
-// Handle event resize
+// Event resize handler
 function handleEventResize(resizeInfo: any) {
     const event = resizeInfo.event;
 
-    const updateData = {
-        start_date: toLocalDateString(event.start),
-        end_date: event.end ? toLocalDateString(event.end) : null,
-        all_day: event.allDay,
-    };
+    try {
+        const updateData: any = {
+            all_day: event.allDay,
+        };
 
-    router.patch(route('calendar.update-dates', event.id), updateData, {
-        preserveScroll: true,
-        onError: () => {
-            resizeInfo.revert();
+        if (event.allDay) {
+            updateData.start_date = formatDateTimeForServer(event.start, true);
+            if (event.end) {
+                const endDate = new Date(event.end);
+                endDate.setDate(endDate.getDate() - 1);
+                updateData.end_date = `${endDate.getFullYear()}-${(endDate.getMonth() + 1).toString().padStart(2, '0')}-${endDate.getDate().toString().padStart(2, '0')}T23:59:59`;
+            }
+        } else {
+            updateData.start_date = formatDateTimeForServer(event.start);
+            if (event.end) {
+                updateData.end_date = formatDateTimeForServer(event.end);
+            }
         }
-    });
+
+        router.patch(route('calendar.update-dates', event.id), updateData, {
+            preserveScroll: true,
+            onError: () => {
+                resizeInfo.revert();
+            },
+            onSuccess: () => {
+                refreshCalendar();
+            }
+        });
+    } catch (error) {
+        resizeInfo.revert();
+    }
 }
+
+// Refresh calendar function
+const refreshCalendar = async () => {
+    await nextTick();
+    if (calendarRef.value) {
+        const calendarApi = calendarRef.value.getApi();
+        calendarApi.refetchEvents();
+    }
+};
 
 // Create new event
 const createEvent = (eventData: any) => {
@@ -204,13 +252,22 @@ const createEvent = (eventData: any) => {
 
     router.post(route('calendar.store'), eventData, {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: async () => {
             isEventDialogOpen.value = false;
             selectedDate.value = null;
             resetForm();
+            await refreshCalendar();
         },
         onError: (errors) => {
-            console.error('Validation errors:', errors);
+            // Handle validation errors
+            const errorMessages = [];
+            if (errors.start_date) errorMessages.push(`Start date: ${errors.start_date}`);
+            if (errors.end_date) errorMessages.push(`End date: ${errors.end_date}`);
+            if (errors.title) errorMessages.push(`Title: ${errors.title}`);
+
+            if (errorMessages.length > 0) {
+                alert('Please fix the following errors:\n' + errorMessages.join('\n'));
+            }
         },
         onFinish: () => {
             isSubmitting.value = false;
@@ -218,20 +275,29 @@ const createEvent = (eventData: any) => {
     });
 };
 
-// Update event
+// Update existing event
 const updateEvent = (eventId: string, eventData: any) => {
     isSubmitting.value = true;
 
     router.put(route('calendar.update', eventId), eventData, {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: async () => {
             isEventDialogOpen.value = false;
             isEventDetailDialogOpen.value = false;
             editingEvent.value = null;
             resetForm();
+            await refreshCalendar();
         },
         onError: (errors) => {
-            console.error('Validation errors:', errors);
+            // Handle validation errors
+            const errorMessages = [];
+            if (errors.start_date) errorMessages.push(`Start date: ${errors.start_date}`);
+            if (errors.end_date) errorMessages.push(`End date: ${errors.end_date}`);
+            if (errors.title) errorMessages.push(`Title: ${errors.title}`);
+
+            if (errorMessages.length > 0) {
+                alert('Please fix the following errors:\n' + errorMessages.join('\n'));
+            }
         },
         onFinish: () => {
             isSubmitting.value = false;
@@ -243,12 +309,10 @@ const updateEvent = (eventId: string, eventData: any) => {
 const deleteEvent = (eventId: string) => {
     router.delete(route('calendar.destroy', eventId), {
         preserveScroll: true,
-        onSuccess: () => {
+        onSuccess: async () => {
             isEventDetailDialogOpen.value = false;
             selectedEvent.value = null;
-        },
-        onError: (errors) => {
-            console.error('Delete error:', errors);
+            await refreshCalendar();
         }
     });
 };
@@ -267,35 +331,6 @@ const resetForm = () => {
     selectedEvent.value = null;
 };
 
-// Format current date for display
-computed(() => {
-    if (currentView.value === 'dayGridMonth') {
-        return currentDate.value.toLocaleDateString('en-US', {
-            month: 'long',
-            year: 'numeric'
-        });
-    } else if (currentView.value.includes('Week')) {
-        const startOfWeek = new Date(currentDate.value);
-        const endOfWeek = new Date(currentDate.value);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-        return `${startOfWeek.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric'
-        })} - ${endOfWeek.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        })}`;
-    } else {
-        return currentDate.value.toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    }
-});
 // Open new event dialog
 const openNewEventDialog = () => {
     resetForm();
@@ -315,25 +350,51 @@ const openNewEventDialog = () => {
                         <CalendarIcon class="h-8 w-8 text-blue-600" />
                         <div>
                             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Calendar</h1>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">Manage your personal events and appointments</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Manage your personal events and appointments
+                            </p>
                         </div>
                     </div>
-                    <Button @click="openNewEventDialog" class="flex items-center space-x-2">
-                        <Plus class="h-4 w-4" />
-                        <span>New Event</span>
-                    </Button>
+                    <div class="flex items-center space-x-2">
+                        <Button
+                            @click="refreshCalendar"
+                            variant="outline"
+                            size="sm"
+                            :disabled="isLoadingEvents"
+                            class="flex items-center space-x-2"
+                        >
+                            <RefreshCw :class="['h-4 w-4', { 'animate-spin': isLoadingEvents }]" />
+                            <span>{{ isLoadingEvents ? 'Loading...' : 'Refresh' }}</span>
+                        </Button>
+                        <Button @click="openNewEventDialog" class="flex items-center space-x-2">
+                            <Plus class="h-4 w-4" />
+                            <span>New Event</span>
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             <!-- Calendar -->
             <Card>
                 <CardContent class="p-6">
-                    <FullCalendar
-                        title=""
-                        ref="calendarRef"
-                        :options="calendarOptions"
-                        class="calendar-container"
-                    />
+                    <div class="relative">
+                        <!-- Loading overlay -->
+                        <div
+                            v-if="isLoadingEvents"
+                            class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center z-10 rounded-lg"
+                        >
+                            <div class="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                                <RefreshCw class="h-5 w-5 animate-spin" />
+                                <span>Loading events...</span>
+                            </div>
+                        </div>
+
+                        <FullCalendar
+                            ref="calendarRef"
+                            :options="calendarOptions"
+                            class="calendar-container"
+                        />
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -361,8 +422,8 @@ const openNewEventDialog = () => {
     </AppLayout>
 </template>
 
-<style>
-/* Calendar styling */
+<style scoped>
+/* Calendar container styles */
 .calendar-container {
     --fc-border-color: #e5e7eb;
     --fc-button-text-color: #374151;
@@ -375,6 +436,7 @@ const openNewEventDialog = () => {
     --fc-event-text-color: #ffffff;
 }
 
+/* Dark mode styles */
 .dark .calendar-container {
     --fc-border-color: #374151;
     --fc-button-text-color: #d1d5db;
@@ -388,90 +450,135 @@ const openNewEventDialog = () => {
     --fc-neutral-bg-color: #1f2937;
 }
 
-.fc {
+/* FullCalendar component styles */
+:deep(.fc) {
     font-family: inherit;
 }
 
-.fc-toolbar {
+:deep(.fc-toolbar) {
     margin-bottom: 1rem;
 }
 
-.fc-toolbar-title {
+:deep(.fc-toolbar-title) {
     font-size: 1.25rem;
     font-weight: 600;
     color: #111827;
 }
 
-.dark .fc-toolbar-title {
+.dark :deep(.fc-toolbar-title) {
     color: #f9fafb;
 }
 
-.fc-button {
+:deep(.fc-button) {
     border-radius: 0.375rem;
     font-weight: 500;
     font-size: 0.875rem;
     padding: 0.5rem 0.75rem;
 }
 
-.fc-event {
+:deep(.fc-event) {
     border: none;
     border-radius: 0.25rem;
     font-size: 0.75rem;
     font-weight: 500;
     padding: 0.125rem 0.25rem;
+    cursor: pointer;
 }
 
-.fc-daygrid-event {
+:deep(.fc-daygrid-event) {
     margin-top: 1px;
     margin-bottom: 1px;
 }
 
-.fc-timegrid-event {
+:deep(.fc-timegrid-event) {
     border-radius: 0.25rem;
 }
 
-.fc-day-today {
+:deep(.fc-day-today) {
     background-color: var(--fc-today-bg-color) !important;
 }
 
-.fc-scrollgrid {
+:deep(.fc-scrollgrid) {
     border: 1px solid var(--fc-border-color);
     border-radius: 0.5rem;
 }
 
-.fc th {
+:deep(.fc th) {
     background-color: #f9fafb;
     border-color: var(--fc-border-color);
 }
 
-.dark .fc th {
+.dark :deep(.fc th) {
     background-color: #1f2937;
     color: #d1d5db;
 }
 
-.fc td {
+:deep(.fc td) {
     border-color: var(--fc-border-color);
 }
 
-.dark .fc td {
+.dark :deep(.fc td) {
     color: #d1d5db;
 }
 
-.fc-col-header-cell {
+:deep(.fc-col-header-cell) {
     font-weight: 600;
     color: #374151;
 }
 
-.dark .fc-col-header-cell {
+.dark :deep(.fc-col-header-cell) {
     color: #d1d5db;
 }
 
-.fc-daygrid-day-number {
+:deep(.fc-daygrid-day-number) {
     color: #374151;
     font-weight: 500;
 }
 
-.dark .fc-daygrid-day-number {
+.dark :deep(.fc-daygrid-day-number) {
     color: #d1d5db;
+}
+
+/* Event hover effects */
+:deep(.fc-event:hover) {
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+/* Selection styles */
+:deep(.fc-highlight) {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Scrollbar styles for calendar */
+:deep(.fc-scroller::-webkit-scrollbar) {
+    width: 8px;
+    height: 8px;
+}
+
+:deep(.fc-scroller::-webkit-scrollbar-track) {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+:deep(.fc-scroller::-webkit-scrollbar-thumb) {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+:deep(.fc-scroller::-webkit-scrollbar-thumb:hover) {
+    background: #a1a1a1;
+}
+
+.dark :deep(.fc-scroller::-webkit-scrollbar-track) {
+    background: #374151;
+}
+
+.dark :deep(.fc-scroller::-webkit-scrollbar-thumb) {
+    background: #6b7280;
+}
+
+.dark :deep(.fc-scroller::-webkit-scrollbar-thumb:hover) {
+    background: #9ca3af;
 }
 </style>
