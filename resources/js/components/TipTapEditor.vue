@@ -12,11 +12,22 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
+import Link from '@tiptap/extension-link'
 import { ref, watch, onBeforeUnmount, computed, nextTick, onMounted } from 'vue'
 import ImageUploadDialog from '@/components/ImageUploadDialog.vue'
 import TipTapImage from '@/extensions/TipTapImageExtension'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -60,7 +71,10 @@ import {
     MoveHorizontal,
     Scissors,
     ImageIcon,
-    Clipboard
+    Clipboard,
+    Link as LinkIcon,
+    Unlink,
+    ExternalLink
 } from 'lucide-vue-next'
 
 interface Props {
@@ -71,6 +85,11 @@ interface Props {
 }
 
 const imageDialogOpen = ref(false)
+const linkDialogOpen = ref(false)
+const linkUrl = ref('')
+const linkText = ref('')
+const linkTarget = ref('_self')
+const isEditingLink = ref(false)
 
 const showImageDialog = () => {
     imageDialogOpen.value = true
@@ -104,11 +123,10 @@ const emit = defineEmits<{
     'save': []
 }>()
 
-
 // Context menu state
 const showContextMenu = ref(false)
 const contextMenuPosition = ref({ x: 0, y: 0 })
-const contextMenuType = ref<'text' | 'table'>('text')
+const contextMenuType = ref<'text' | 'table' | 'link'>('text')
 
 const editor = useEditor({
     content: props.modelValue,
@@ -143,6 +161,13 @@ const editor = useEditor({
             types: ['heading', 'paragraph'],
         }),
         Underline,
+        Link.configure({
+            HTMLAttributes: {
+                class: 'tiptap-link',
+            },
+            openOnClick: false,
+            linkOnPaste: true,
+        }),
         TipTapImage.configure({
             HTMLAttributes: {
                 class: 'max-w-full',
@@ -162,8 +187,16 @@ const editor = useEditor({
                 // Determine context menu type based on what was clicked
                 const target = event.target as HTMLElement
                 const isInTable = target.closest('table') !== null
+                const isOnLink = target.closest('a') !== null
 
-                contextMenuType.value = isInTable ? 'table' : 'text'
+                if (isOnLink) {
+                    contextMenuType.value = 'link'
+                } else if (isInTable) {
+                    contextMenuType.value = 'table'
+                } else {
+                    contextMenuType.value = 'text'
+                }
+
                 contextMenuPosition.value = { x: event.clientX, y: event.clientY }
                 showContextMenu.value = true
 
@@ -215,6 +248,12 @@ onMounted(() => {
             event.preventDefault()
             emit('save')
         }
+
+        // Ctrl+K or Cmd+K to create/edit link
+        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+            event.preventDefault()
+            openLinkDialog()
+        }
     }
 
     document.addEventListener('click', hideContextMenu)
@@ -233,6 +272,128 @@ const isInTable = computed(() => {
     if (!editor.value) return false
     return editor.value.isActive('table')
 })
+
+// Link functionality
+const openLinkDialog = () => {
+    if (!editor.value) return
+
+    // Blur the editor to prevent focus conflicts with dialog
+    editor.value.commands.blur()
+
+    const { state, view } = editor.value
+    const { from, to } = state.selection
+
+    // Check if we're editing an existing link
+    const link = editor.value.getAttributes('link')
+
+    if (link.href) {
+        // Editing existing link
+        isEditingLink.value = true
+        linkUrl.value = link.href
+        linkTarget.value = link.target || '_self'
+
+        // Get the text content of the link
+        const selectedText = state.doc.textBetween(from, to, ' ')
+        linkText.value = selectedText || 'Link'
+    } else {
+        // Creating new link
+        isEditingLink.value = false
+        linkUrl.value = ''
+        linkTarget.value = '_self'
+
+        // Get selected text if any
+        const selectedText = state.doc.textBetween(from, to, ' ')
+        linkText.value = selectedText || ''
+    }
+
+    linkDialogOpen.value = true
+}
+
+const closeLinkDialog = () => {
+    linkDialogOpen.value = false
+    linkUrl.value = ''
+    linkText.value = ''
+    linkTarget.value = '_self'
+    isEditingLink.value = false
+
+    // Refocus the editor after dialog closes
+    nextTick(() => {
+        editor.value?.commands.focus()
+    })
+}
+
+const insertOrUpdateLink = () => {
+    if (!editor.value || !linkUrl.value.trim()) return
+
+    const url = linkUrl.value.trim()
+
+    // Add protocol if missing
+    const finalUrl = url.match(/^https?:\/\//) ? url : `https://${url}`
+
+    if (isEditingLink.value) {
+        // Update existing link
+        editor.value.chain().focus().extendMarkRange('link').setLink({
+            href: finalUrl,
+            target: linkTarget.value === '_blank' ? '_blank' : undefined,
+        }).run()
+    } else {
+        // Create new link
+        if (linkText.value.trim()) {
+            // Insert content with link mark applied directly
+            const linkMark = editor.value.schema.marks.link.create({
+                href: finalUrl,
+                target: linkTarget.value === '_blank' ? '_blank' : undefined,
+            })
+
+            const textNode = editor.value.schema.text(linkText.value, [linkMark])
+            editor.value.chain().focus().insertContent(textNode.toJSON()).run()
+        } else {
+            // Just add link to selected text
+            editor.value.chain().focus().setLink({
+                href: finalUrl,
+                target: linkTarget.value === '_blank' ? '_blank' : undefined,
+            }).run()
+        }
+    }
+
+    closeLinkDialog()
+}
+
+const removeLink = () => {
+    if (!editor.value) return
+    editor.value.chain().focus().unsetLink().run()
+    showContextMenu.value = false
+}
+
+const openLinkInNewTab = () => {
+    if (!editor.value) return
+
+    const link = editor.value.getAttributes('link')
+    if (link.href) {
+        window.open(link.href, '_blank')
+    }
+    showContextMenu.value = false
+}
+
+const copyLinkUrl = async () => {
+    if (!editor.value) return
+
+    const link = editor.value.getAttributes('link')
+    if (link.href) {
+        try {
+            await navigator.clipboard.writeText(link.href)
+        } catch (error) {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea')
+            textArea.value = link.href
+            document.body.appendChild(textArea)
+            textArea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textArea)
+        }
+    }
+    showContextMenu.value = false
+}
 
 // Toolbar actions
 const toggleBold = () => editor.value?.chain().focus().toggleBold().run()
@@ -620,6 +781,31 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
 
             <Separator orientation="vertical" class="h-8" />
 
+            <!-- Link -->
+            <div class="flex items-center space-x-1">
+                <Button
+                    @click="openLinkDialog"
+                    :variant="isActive('link') ? 'default' : 'ghost'"
+                    size="sm"
+                    class="h-8 w-8 p-0"
+                    title="Insert Link (Ctrl+K)"
+                >
+                    <LinkIcon class="h-4 w-4" />
+                </Button>
+                <Button
+                    v-if="isActive('link')"
+                    @click="removeLink"
+                    variant="ghost"
+                    size="sm"
+                    class="h-8 w-8 p-0"
+                    title="Remove Link"
+                >
+                    <Unlink class="h-4 w-4" />
+                </Button>
+            </div>
+
+            <Separator orientation="vertical" class="h-8" />
+
             <!-- Other Elements -->
             <div class="flex items-center space-x-1">
                 <Button
@@ -824,6 +1010,35 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                     }"
                     @click.stop
                 >
+                    <!-- Link Context Menu -->
+                    <div v-if="contextMenuType === 'link'" class="p-1">
+                        <div class="px-3 py-2 text-sm text-muted-foreground border-b mb-1">
+                            Link Actions
+                        </div>
+
+                        <button @click="openLinkInNewTab" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm">
+                            <ExternalLink class="h-4 w-4 mr-2" />
+                            Open Link
+                        </button>
+
+                        <button @click="copyLinkUrl" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm">
+                            <Copy class="h-4 w-4 mr-2" />
+                            Copy Link
+                        </button>
+
+                        <button @click="openLinkDialog" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm">
+                            <LinkIcon class="h-4 w-4 mr-2" />
+                            Edit Link
+                        </button>
+
+                        <div class="border-t my-1"></div>
+
+                        <button @click="removeLink" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm text-destructive">
+                            <Unlink class="h-4 w-4 mr-2" />
+                            Remove Link
+                        </button>
+                    </div>
+
                     <!-- Text Context Menu -->
                     <div v-if="contextMenuType === 'text'" class="p-1">
                         <div class="px-3 py-2 text-sm text-muted-foreground border-b mb-1">
@@ -865,6 +1080,11 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                         <div class="border-t my-1"></div>
 
                         <!-- Insert Options -->
+                        <button @click="openLinkDialog" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm">
+                            <LinkIcon class="h-4 w-4 mr-2" />
+                            Insert Link
+                        </button>
+
                         <button @click="insertTable(3, 3, true)" class="w-full flex items-center px-3 py-2 text-sm hover:bg-accent rounded-sm">
                             <TableIcon class="h-4 w-4 mr-2" />
                             Insert Table
@@ -964,6 +1184,63 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                 </div>
             </Teleport>
         </div>
+
+        <!-- Link Dialog -->
+        <Dialog :open="linkDialogOpen" @update:open="(value) => { if (!value) closeLinkDialog() }">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>{{ isEditingLink ? 'Edit Link' : 'Insert Link' }}</DialogTitle>
+                    <DialogDescription>
+                        {{ isEditingLink ? 'Update the URL and settings for this link.' : 'Add a hyperlink to your text. Enter the URL and customize how it opens.' }}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="space-y-4 py-4">
+                    <div v-if="!isEditingLink" class="space-y-2">
+                        <Label for="linkText">Link Text</Label>
+                        <Input
+                            id="linkText"
+                            v-model="linkText"
+                            placeholder="Enter link text"
+                            autocomplete="off"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="linkUrl">URL</Label>
+                        <Input
+                            id="linkUrl"
+                            v-model="linkUrl"
+                            type="url"
+                            placeholder="https://example.com"
+                            autocomplete="off"
+                            required
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="linkTarget">Open In</Label>
+                        <select
+                            id="linkTarget"
+                            v-model="linkTarget"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <option value="_self">Same Tab</option>
+                            <option value="_blank">New Tab</option>
+                        </select>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" @click="closeLinkDialog">
+                        Cancel
+                    </Button>
+                    <Button @click="insertOrUpdateLink" :disabled="!linkUrl.trim()">
+                        {{ isEditingLink ? 'Update Link' : 'Insert Link' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <ImageUploadDialog
             v-model:open="imageDialogOpen"
