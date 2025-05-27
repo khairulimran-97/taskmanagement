@@ -272,35 +272,34 @@ class TaskController extends Controller
         DB::beginTransaction();
 
         try {
+            // Get all task IDs to verify ownership
             $taskIds = collect($validated['updates'])->pluck('id')->toArray();
-
             $tasks = Task::where('user_id', Auth::id())
                 ->whereIn('id', $taskIds)
                 ->get()
                 ->keyBy('id');
 
+            // Verify all tasks exist and belong to the user
             if ($tasks->count() !== count($taskIds)) {
                 DB::rollBack();
                 return redirect()->back()->withErrors(['error' => 'One or more tasks not found or access denied']);
             }
 
-            $reorderDetails = [];
-
+            // Update sort orders
             foreach ($validated['updates'] as $update) {
                 $task = $tasks->get($update['id']);
                 if ($task) {
                     $task->update(['sort_order' => $update['sort_order']]);
-                    $reorderDetails[] = "\"{$task->title}\" to position {$update['sort_order']}";
                 }
             }
 
             DB::commit();
 
-            $message = 'Tasks reordered successfully: ' . implode(', ', $reorderDetails);
-            return redirect()->back()->with('success', $message);
+            return redirect()->back()->with('success', 'Tasks reordered successfully and changes have been saved.');
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->back()->withErrors(['error' => 'Failed to reorder tasks: ' . $e->getMessage()]);
         }
     }
