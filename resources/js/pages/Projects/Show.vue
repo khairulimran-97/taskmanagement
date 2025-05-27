@@ -240,6 +240,21 @@ const createNewTag = (tagData) => {
     );
 };
 
+// Task reordering method
+const reorderTasks = (updates) => {
+    router.post(
+        route('tasks.reorder'),
+        { updates },
+        {
+            preserveScroll: true,
+            onError: (errors) => {
+                console.error('Failed to reorder tasks:', errors);
+                // Inertia will automatically handle showing the error message
+            }
+        }
+    );
+};
+
 watch(
     () => props.tags,
     (newTags) => {
@@ -313,6 +328,7 @@ const handleEditTask = (task) => {
                 @delete-task="deleteTask"
                 @view-tags="handleViewTags"
                 @edit-task="handleEditTask"
+                @reorder-tasks="reorderTasks"
             />
         </div>
 
@@ -330,6 +346,7 @@ const handleEditTask = (task) => {
                 @edit-subtask="editSubtask"
                 @delete-task="deleteTask"
                 @add-subtask="openSubtaskForm"
+                @reorder-tasks="reorderTasks"
             >
                 <!-- Subtask Form slot -->
                 <template #subtask-form>

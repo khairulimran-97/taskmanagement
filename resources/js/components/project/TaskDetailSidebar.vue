@@ -9,6 +9,9 @@ import {
     Trash2,
     Plus,
     Loader2,
+    ChevronUp,
+    ChevronDown,
+    ChevronsUp,
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,13 +57,14 @@ const emit = defineEmits([
     'edit-subtask',
     'delete-task',
     'add-subtask',
+    'reorder-tasks',
 ]);
 
 // Get subtasks for a given parent task
 const getSubtasks = (parentId: string | number) => {
-    return (props.project.tasks || []).filter(
-        (task) => task.parent_task_id === parentId,
-    );
+    return (props.project.tasks || [])
+        .filter((task) => task.parent_task_id === parentId)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 };
 
 const formatDate = (date: string | Date | null) => {
@@ -79,6 +83,65 @@ const getDueDateClass = (task: any) => {
     if (diffDays <= 1) return 'text-orange-600 font-medium dark:text-orange-400'; // Due soon
     if (diffDays <= 3) return 'text-yellow-600 dark:text-yellow-400'; // Due in a few days
     return 'text-gray-500 dark:text-gray-400';
+};
+
+// Sort control methods
+const moveTaskUp = (task: any) => {
+    const subtasks = getSubtasks(props.selectedTask.id);
+    const currentIndex = subtasks.findIndex(t => t.id === task.id);
+
+    if (currentIndex <= 0) return; // Already at top
+
+    const updates = [
+        { id: task.id, sort_order: subtasks[currentIndex - 1].sort_order },
+        { id: subtasks[currentIndex - 1].id, sort_order: task.sort_order }
+    ];
+
+    emit('reorder-tasks', updates);
+};
+
+const moveTaskDown = (task: any) => {
+    const subtasks = getSubtasks(props.selectedTask.id);
+    const currentIndex = subtasks.findIndex(t => t.id === task.id);
+
+    if (currentIndex >= subtasks.length - 1) return; // Already at bottom
+
+    const updates = [
+        { id: task.id, sort_order: subtasks[currentIndex + 1].sort_order },
+        { id: subtasks[currentIndex + 1].id, sort_order: task.sort_order }
+    ];
+
+    emit('reorder-tasks', updates);
+};
+
+const moveTaskToTop = (task: any) => {
+    const subtasks = getSubtasks(props.selectedTask.id);
+    const currentIndex = subtasks.findIndex(t => t.id === task.id);
+
+    if (currentIndex <= 0) return; // Already at top
+
+    // Create updates to shift all tasks and move current to top
+    const updates = subtasks.slice(0, currentIndex).map((t, index) => ({
+        id: t.id,
+        sort_order: index + 1
+    }));
+
+    updates.push({ id: task.id, sort_order: 0 });
+
+    emit('reorder-tasks', updates);
+};
+
+// Check if task can move up/down
+const canMoveUp = (task: any) => {
+    const subtasks = getSubtasks(props.selectedTask.id);
+    const currentIndex = subtasks.findIndex(t => t.id === task.id);
+    return currentIndex > 0;
+};
+
+const canMoveDown = (task: any) => {
+    const subtasks = getSubtasks(props.selectedTask.id);
+    const currentIndex = subtasks.findIndex(t => t.id === task.id);
+    return currentIndex < subtasks.length - 1;
 };
 </script>
 
@@ -176,6 +239,7 @@ const getDueDateClass = (task: any) => {
                                 <TableHead class="w-64 py-2 text-xs">Title</TableHead>
                                 <TableHead class="w-24 py-2 text-xs">Status</TableHead>
                                 <TableHead class="w-24 py-2 text-xs">Due</TableHead>
+                                <TableHead class="w-16 py-2 text-xs">Order</TableHead>
                                 <TableHead class="w-20 py-2 text-right text-xs">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -234,6 +298,40 @@ const getDueDateClass = (task: any) => {
                                         {{ formatDate(subtask.due_date) }}
                                     </div>
                                     <span v-else class="text-xs text-gray-400 dark:text-gray-500">-</span>
+                                </TableCell>
+                                <TableCell class="w-16 py-1">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="moveTaskToTop(subtask)"
+                                            :disabled="!canMoveUp(subtask)"
+                                            class="h-5 w-5 p-0"
+                                            title="Move to top"
+                                        >
+                                            <ChevronsUp class="h-3 w-3" :class="canMoveUp(subtask) ? 'text-blue-600 dark:text-blue-400' : 'text-gray-300 dark:text-gray-600'" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="moveTaskUp(subtask)"
+                                            :disabled="!canMoveUp(subtask)"
+                                            class="h-5 w-5 p-0"
+                                            title="Move up"
+                                        >
+                                            <ChevronUp class="h-3 w-3" :class="canMoveUp(subtask) ? 'text-gray-600 dark:text-gray-300' : 'text-gray-300 dark:text-gray-600'" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="moveTaskDown(subtask)"
+                                            :disabled="!canMoveDown(subtask)"
+                                            class="h-5 w-5 p-0"
+                                            title="Move down"
+                                        >
+                                            <ChevronDown class="h-3 w-3" :class="canMoveDown(subtask) ? 'text-gray-600 dark:text-gray-300' : 'text-gray-300 dark:text-gray-600'" />
+                                        </Button>
+                                    </div>
                                 </TableCell>
                                 <TableCell class="w-20 py-1 text-right">
                                     <div class="flex items-center justify-end space-x-1">

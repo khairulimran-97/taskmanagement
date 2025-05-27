@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class TaskController extends Controller
 {
@@ -257,8 +259,9 @@ class TaskController extends Controller
 
     /**
      * Reorder tasks within a project
+     * @throws Throwable
      */
-    public function reorder(Request $request): JsonResponse
+    public function reorder(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'updates' => 'required|array',
@@ -266,16 +269,40 @@ class TaskController extends Controller
             'updates.*.sort_order' => 'required|integer|min:0'
         ]);
 
-        foreach ($validated['updates'] as $update) {
-            Task::where('id', $update['id'])
-                ->where('user_id', Auth::id())
-                ->update(['sort_order' => $update['sort_order']]);
-        }
+        DB::beginTransaction();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Tasks reordered successfully'
-        ]);
+        try {
+            $taskIds = collect($validated['updates'])->pluck('id')->toArray();
+
+            $tasks = Task::where('user_id', Auth::id())
+                ->whereIn('id', $taskIds)
+                ->get()
+                ->keyBy('id');
+
+            if ($tasks->count() !== count($taskIds)) {
+                DB::rollBack();
+                return redirect()->back()->withErrors(['error' => 'One or more tasks not found or access denied']);
+            }
+
+            $reorderDetails = [];
+
+            foreach ($validated['updates'] as $update) {
+                $task = $tasks->get($update['id']);
+                if ($task) {
+                    $task->update(['sort_order' => $update['sort_order']]);
+                    $reorderDetails[] = "\"{$task->title}\" to position {$update['sort_order']}";
+                }
+            }
+
+            DB::commit();
+
+            $message = 'Tasks reordered successfully: ' . implode(', ', $reorderDetails);
+            return redirect()->back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Failed to reorder tasks: ' . $e->getMessage()]);
+        }
     }
 
     /**
