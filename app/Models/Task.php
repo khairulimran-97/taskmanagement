@@ -281,14 +281,18 @@ class Task extends Model
      */
     public function getCompletionPercentageAttribute(): float
     {
-        if (!$this->hasSubtasks()) {
+        $totalSubtasks = $this->relationLoaded('subtasks')
+            ? $this->subtasks->count()
+            : $this->subtasks()->count();
+
+        if ($totalSubtasks === 0) {
             return $this->isCompleted() ? 100.0 : 0.0;
         }
 
-        $totalSubtasks = $this->subtasks()->count();
-        if ($totalSubtasks === 0) return 0.0;
+        $completedSubtasks = $this->relationLoaded('subtasks')
+            ? $this->subtasks->where('status', self::STATUS_COMPLETED)->count()
+            : $this->subtasks()->completed()->count();
 
-        $completedSubtasks = $this->subtasks()->completed()->count();
         return round(($completedSubtasks / $totalSubtasks) * 100, 2);
     }
 

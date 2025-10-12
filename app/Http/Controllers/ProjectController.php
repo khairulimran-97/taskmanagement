@@ -82,11 +82,11 @@ class ProjectController extends Controller
         $project = Project::where('user_id', Auth::id())
             ->with([
                 'tasks' => function ($query) {
-                    $query->with(['tags', 'subtasks.tags'])
+                    $query->whereNull('parent_task_id')
+                        ->with(['tags', 'subtasks.tags'])
                         ->orderBy('sort_order')
                         ->orderBy('created_at');
-                },
-                'tasks.parentTask'
+                }
             ])
             ->findOrFail($id);
 
