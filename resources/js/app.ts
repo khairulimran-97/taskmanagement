@@ -95,5 +95,23 @@ router.on('success', (event) => {
     }
 });
 
+router.on('invalid', (event) => {
+    const response = event.detail.response;
+    if (response.status === 419) {
+        event.preventDefault();
+        toast.error('Your session has expired. The page will now reload.', {
+            style: {
+                background: '#ef4444',
+                color: 'white',
+                border: '1px solid #dc2626'
+            },
+            duration: 3000
+        });
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    }
+});
+
 // This will set light / dark mode on page load...
 initializeTheme();
