@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { BreadcrumbItem } from '@/types';
 
 import ProjectHeader from '@/components/project/ProjectHeader.vue';
 import ProjectStats from '@/components/project/ProjectStats.vue';
 import TaskList from '@/components/project/TaskList.vue';
+import TaskKanbanBoard from '@/components/project/TaskKanbanBoard.vue';
 import TaskDetailSidebar from '@/components/project/TaskDetailSidebar.vue';
 import TaskForm from '@/components/project/TaskForm.vue';
 import SubtaskForm from '@/components/project/SubtaskForm.vue';
 import DeleteTaskDialog from '@/components/project/DeleteTaskDialog.vue';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Plus, Search, LayoutList, Columns3, X } from 'lucide-vue-next';
 
 const props = defineProps({
     project: {
@@ -51,6 +58,18 @@ const editingSubtask = ref(null);
 
 // Available tags from props (reactive)
 const availableTags = ref([...props.tags]);
+
+// View mode (table / kanban) - persisted to localStorage
+const VIEW_PREF_KEY = 'project-view-mode';
+const viewMode = ref(localStorage.getItem(VIEW_PREF_KEY) || 'table');
+
+watch(viewMode, (val) => {
+    localStorage.setItem(VIEW_PREF_KEY, val);
+});
+
+// Search and filter
+const searchQuery = ref('');
+const filterPriority = ref('all');
 
 // Status and priority configuration
 const priorityConfig = {
@@ -318,18 +337,93 @@ const handleEditTask = (task) => {
                 />
             </div>
 
-            <!-- Task List -->
-            <TaskList
-                :project="project"
-                :updating-tasks="updatingTasks"
-                @add-task="openAddTaskModal"
-                @view-task="openTaskDetailModal"
-                @toggle-task="toggleTaskCompletion"
-                @delete-task="deleteTask"
-                @view-tags="handleViewTags"
-                @edit-task="handleEditTask"
-                @reorder-tasks="reorderTasks"
-            />
+            <!-- View Switcher + Search/Filter Toolbar -->
+            <Tabs :default-value="viewMode" @update:model-value="(val) => viewMode = val">
+                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <TabsList class="grid w-auto grid-cols-2">
+                        <TabsTrigger value="table" class="flex items-center gap-1.5 px-3 text-xs">
+                            <LayoutList class="h-3.5 w-3.5" />
+                            Table
+                        </TabsTrigger>
+                        <TabsTrigger value="kanban" class="flex items-center gap-1.5 px-3 text-xs">
+                            <Columns3 class="h-3.5 w-3.5" />
+                            Board
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Search -->
+                        <div class="relative">
+                            <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                            <Input
+                                v-model="searchQuery"
+                                placeholder="Search tasks..."
+                                class="h-8 w-48 pl-8 text-xs"
+                            />
+                            <button
+                                v-if="searchQuery"
+                                @click="searchQuery = ''"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                                <X class="h-3 w-3" />
+                            </button>
+                        </div>
+
+                        <!-- Priority Filter -->
+                        <Select v-model="filterPriority">
+                            <SelectTrigger class="h-8 w-32 text-xs">
+                                <SelectValue placeholder="Priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Priority</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="low">Low</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <!-- Add Task Button -->
+                        <Button @click="openAddTaskModal()" class="flex h-8 items-center gap-1.5 px-3 text-xs shadow-sm">
+                            <Plus class="h-3.5 w-3.5" />
+                            <span class="hidden sm:inline">Add Task</span>
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Table View -->
+                <TabsContent value="table" class="mt-0">
+                    <TaskList
+                        :project="project"
+                        :updating-tasks="updatingTasks"
+                        :search-query="searchQuery"
+                        :filter-priority="filterPriority"
+                        @add-task="openAddTaskModal"
+                        @view-task="openTaskDetailModal"
+                        @toggle-task="toggleTaskCompletion"
+                        @delete-task="deleteTask"
+                        @view-tags="handleViewTags"
+                        @edit-task="handleEditTask"
+                        @reorder-tasks="reorderTasks"
+                    />
+                </TabsContent>
+
+                <!-- Kanban View -->
+                <TabsContent value="kanban" class="mt-0">
+                    <TaskKanbanBoard
+                        :project="project"
+                        :updating-tasks="updatingTasks"
+                        :search-query="searchQuery"
+                        :filter-priority="filterPriority"
+                        @add-task="openAddTaskModal"
+                        @view-task="openTaskDetailModal"
+                        @toggle-task="toggleTaskCompletion"
+                        @delete-task="deleteTask"
+                        @view-tags="handleViewTags"
+                        @edit-task="handleEditTask"
+                    />
+                </TabsContent>
+            </Tabs>
         </div>
 
         <!-- Task Detail Sidebar with Subtask Form using slot -->

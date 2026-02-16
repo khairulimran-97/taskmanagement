@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
     Plus,
     ChevronDown,
@@ -9,7 +9,9 @@ import {
     Tag as TagIcon,
     Edit,
     ChevronUp,
-    ChevronsUp
+    ChevronsUp,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +25,8 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 
+const TASKS_PER_PAGE = 10;
+
 const props = defineProps({
     project: {
         type: Object,
@@ -31,7 +35,15 @@ const props = defineProps({
     updatingTasks: {
         type: Object,
         required: true
-    }
+    },
+    searchQuery: {
+        type: String,
+        default: '',
+    },
+    filterPriority: {
+        type: String,
+        default: 'all',
+    },
 });
 
 const emit = defineEmits([
@@ -44,17 +56,57 @@ const emit = defineEmits([
     'reorder-tasks'
 ]);
 
-// Computed - Group tasks by status
-const tasksByStatus = computed(() => {
-    const rootTasks = (props.project.tasks || []).filter((task) => !task.parent_task_id);
+// Computed - filter + group tasks by status
+const filteredRootTasks = computed(() => {
+    let tasks = (props.project.tasks || []).filter((task) => !task.parent_task_id);
 
+    if (props.searchQuery) {
+        const q = props.searchQuery.toLowerCase();
+        tasks = tasks.filter((task) =>
+            task.title.toLowerCase().includes(q) ||
+            (task.description && task.description.toLowerCase().includes(q))
+        );
+    }
+
+    if (props.filterPriority && props.filterPriority !== 'all') {
+        tasks = tasks.filter((task) => task.priority === props.filterPriority);
+    }
+
+    return tasks;
+});
+
+const tasksByStatus = computed(() => {
     return {
-        todo: rootTasks.filter((task) => task.status === 'todo').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
-        in_progress: rootTasks.filter((task) => task.status === 'in_progress').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
-        completed: rootTasks.filter((task) => task.status === 'completed').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
-        cancelled: rootTasks.filter((task) => task.status === 'cancelled').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+        todo: filteredRootTasks.value.filter((task) => task.status === 'todo').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+        in_progress: filteredRootTasks.value.filter((task) => task.status === 'in_progress').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+        completed: filteredRootTasks.value.filter((task) => task.status === 'completed').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+        cancelled: filteredRootTasks.value.filter((task) => task.status === 'cancelled').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
     };
 });
+
+// Pagination state per status
+const currentPage = ref<Record<string, number>>({ todo: 1, in_progress: 1, completed: 1, cancelled: 1 });
+
+// Reset pages when filters change
+watch([() => props.searchQuery, () => props.filterPriority], () => {
+    currentPage.value = { todo: 1, in_progress: 1, completed: 1, cancelled: 1 };
+});
+
+const paginatedTasks = (statusKey: string) => {
+    const tasks = tasksByStatus.value[statusKey] || [];
+    const page = currentPage.value[statusKey] || 1;
+    const start = (page - 1) * TASKS_PER_PAGE;
+    return tasks.slice(start, start + TASKS_PER_PAGE);
+};
+
+const totalPages = (statusKey: string) => {
+    const tasks = tasksByStatus.value[statusKey] || [];
+    return Math.max(1, Math.ceil(tasks.length / TASKS_PER_PAGE));
+};
+
+const goToPage = (statusKey: string, page: number) => {
+    currentPage.value[statusKey] = Math.max(1, Math.min(page, totalPages(statusKey)));
+};
 
 const subtaskCountMap = computed<Record<string | number, number>>(() => {
     const map: Record<string | number, number> = {};
@@ -200,14 +252,6 @@ const canMoveDown = (task: any, statusTasks: any[]) => {
 
 <template>
     <div class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold dark:text-white text-gray-900">Tasks</h2>
-            <Button @click="$emit('add-task')" class="flex h-8 items-center space-x-2 px-3 text-xs shadow-sm">
-                <Plus class="h-3 w-3" />
-                <span>Add Task</span>
-            </Button>
-        </div>
-
         <!-- Tasks by Status -->
         <div class="space-y-4">
             <div v-for="status in statusSections" :key="status.key"
@@ -247,7 +291,7 @@ const canMoveDown = (task: any, statusTasks: any[]) => {
                     </TableHeader>
                     <TableBody>
                         <TableRow
-                            v-for="task in status.tasks"
+                            v-for="task in paginatedTasks(status.key)"
                             :key="task.id"
                             class="hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
@@ -375,6 +419,34 @@ const canMoveDown = (task: any, statusTasks: any[]) => {
                         </TableRow>
                     </TableBody>
                 </Table>
+
+                <!-- Pagination -->
+                <div v-if="totalPages(status.key) > 1" class="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800">
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                        Page {{ currentPage[status.key] }} of {{ totalPages(status.key) }}
+                        ({{ status.tasks.length }} tasks)
+                    </span>
+                    <div class="flex items-center gap-1">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="h-7 w-7 p-0"
+                            :disabled="currentPage[status.key] <= 1"
+                            @click="goToPage(status.key, currentPage[status.key] - 1)"
+                        >
+                            <ChevronLeft class="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="h-7 w-7 p-0"
+                            :disabled="currentPage[status.key] >= totalPages(status.key)"
+                            @click="goToPage(status.key, currentPage[status.key] + 1)"
+                        >
+                            <ChevronRight class="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <!-- No Tasks Message -->
