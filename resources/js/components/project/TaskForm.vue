@@ -118,6 +118,13 @@ watch(() => props.editingTask, (task) => {
     }
 }, { immediate: true });
 
+// Reset form when dialog opens for a new task (handles reopening with null editingTask)
+watch(() => props.isOpen, (open) => {
+    if (open && !props.editingTask) {
+        resetForm();
+    }
+});
+
 
 // Watch for date changes
 watch(startDateValue, (newValue) => {
