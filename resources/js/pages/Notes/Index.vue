@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
 import { BreadcrumbItem, Note } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'vue-sonner'
 import {
@@ -24,7 +22,8 @@ import {
     Loader2,
     CheckCircle2,
     CloudOff,
-    AlertCircle
+    AlertCircle,
+    ChevronLeft,
 } from 'lucide-vue-next';
 import Image from '@/extensions/TipTapImageExtension';
 
@@ -285,17 +284,21 @@ watch(searchQuery, () => {
     searchTimeout.value = setTimeout(performSearch, 300);
 });
 
-// Select a note
+// Select a note (client-side, no server roundtrip)
 const selectNote = (note: Note) => {
+    if (currentNote.value?.id === note.id) return;
+
     // Save current note if has unsaved changes
     if (hasUnsavedChanges.value) {
         autoSave();
     }
 
-    router.get(route('notes.show', note.id), {}, {
-        preserveState: true,
-        preserveScroll: true
-    });
+    currentNote.value = note;
+    initializeForm();
+    isTitleEditing.value = false;
+
+    // Update URL without navigation
+    window.history.replaceState({}, '', route('notes.show', note.id));
 };
 
 // Create new note
@@ -531,209 +534,153 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Notes" />
 
-        <div class="flex bg-background relative">
-            <!-- Sidebar (Fixed/Sticky) -->
-            <div class="w-80 border-r border-l border-b border-border bg-card h-screen sticky top-0 flex flex-col">
-                <!-- Header -->
-                <div class="p-4 border-b border-border shrink-0">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center space-x-2">
-                            <FileText class="h-5 w-5 text-primary" />
-                            <h1 class="text-lg font-semibold">All Notes</h1>
+        <div class="notes-layout flex h-[calc(100vh-3.5rem)] overflow-hidden border-x border-border">
+            <!-- Sidebar -->
+            <aside
+                class="flex w-72 flex-col overflow-hidden border-r border-border bg-muted/30 lg:w-80"
+                :class="{ 'hidden md:flex': hasSelectedNote, 'flex': !hasSelectedNote }"
+            >
+                <!-- Sidebar Header -->
+                <div class="flex flex-col gap-3 border-b border-border p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <FileText class="h-4 w-4 text-primary" />
+                            <h1 class="text-sm font-semibold text-foreground">Notes</h1>
+                            <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">
+                                {{ filteredNotes.length }}
+                            </span>
                         </div>
-                        <Button @click="createNewNote" size="sm" class="h-8 w-8 p-0">
-                            <Plus class="h-4 w-4" />
+                        <Button @click="createNewNote" size="sm" class="h-7 gap-1.5 px-2 text-xs">
+                            <Plus class="h-3.5 w-3.5" />
+                            New
                         </Button>
                     </div>
-
-                    <!-- Search -->
                     <div class="relative">
-                        <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Search class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             v-model="searchQuery"
-                            placeholder="Search all notes and tags"
-                            class="pl-9 h-9"
+                            placeholder="Search notes..."
+                            class="h-8 pl-8 text-xs"
                         />
                     </div>
                 </div>
 
                 <!-- Notes List -->
-                <ScrollArea class="flex-1 overflow-y-auto">
-                    <div class="p-0">
-                        <div v-if="!hasNotes" class="p-4 text-center text-muted-foreground">
-                            <FileText class="h-12 w-12 mx-auto mb-2 opacity-50" />
-                            <p class="text-sm">No notes found</p>
-                            <Button @click="createNewNote" variant="outline" size="sm" class="mt-2">
-                                Create your first note
-                            </Button>
+                <div class="min-h-0 flex-1 overflow-y-auto">
+                    <!-- Empty State -->
+                    <div v-if="!hasNotes" class="flex flex-col items-center justify-center px-4 py-12 text-center">
+                        <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                            <FileText class="h-5 w-5 text-muted-foreground" />
                         </div>
-
-                        <div v-else class="">
-                            <Card
-                                v-for="note in filteredNotes"
-                                :key="note.id"
-                                @click="selectNote(note)"
-                                class="cursor-pointer border-t border-b-0 border-r-0 border-l-0 rounded-none transition-colors hover:bg-accent/50 p-3"
-                                :class="{ 'bg-accent': currentNote?.id === note.id }"
-                            >
-                                <div class="flex items-start justify-between mb-2">
-                                    <h3 class="font-medium text-sm truncate flex-1">
-                                        {{ note.title || 'Untitled' }}
-                                    </h3>
-                                    <div class="flex items-center space-x-1 ml-2">
-                                        <Button
-                                            v-if="note.is_pinned"
-                                            @click.stop="togglePin(note)"
-                                            variant="ghost"
-                                            size="icon"
-                                            class="h-6 w-6 text-yellow-600"
-                                        >
-                                            <Pin class="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center justify-between text-xs text-muted-foreground">
-                                    <div class="flex items-center space-x-2">
-                                        <Clock class="h-3 w-3" />
-                                        <span>{{ formatDate(note.updated_at) }}</span>
-                                    </div>
-                                    <span v-if="note.word_count > 0">{{ note.word_count }} words</span>
-                                </div>
-
-                                <div v-if="note.tags.length > 0" class="flex flex-wrap gap-1 mt-2">
-                                    <Badge
-                                        v-for="tag in note.tags.slice(0, 3)"
-                                        :key="tag"
-                                        variant="secondary"
-                                        class="text-xs px-1 py-0"
-                                    >
-                                        {{ tag }}
-                                    </Badge>
-                                    <Badge
-                                        v-if="note.tags.length > 3"
-                                        variant="secondary"
-                                        class="text-xs px-1 py-0"
-                                    >
-                                        +{{ note.tags.length - 3 }}
-                                    </Badge>
-                                </div>
-                            </Card>
-                        </div>
+                        <p class="text-sm font-medium text-foreground">No notes yet</p>
+                        <p class="mt-1 text-xs text-muted-foreground">Create your first note to get started</p>
+                        <Button @click="createNewNote" variant="outline" size="sm" class="mt-3 h-7 text-xs">
+                            <Plus class="mr-1.5 h-3 w-3" />
+                            Create Note
+                        </Button>
                     </div>
-                </ScrollArea>
-            </div>
+
+                    <!-- Note Items -->
+                    <div v-else class="divide-y divide-border">
+                        <button
+                            v-for="note in filteredNotes"
+                            :key="note.id"
+                            @click="selectNote(note)"
+                            class="group flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors hover:bg-accent/50"
+                            :class="currentNote?.id === note.id ? 'bg-accent border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'"
+                        >
+                            <!-- Title Row -->
+                            <div class="flex items-center gap-2">
+                                <Pin v-if="note.is_pinned" class="h-3 w-3 flex-shrink-0 text-amber-500" />
+                                <span class="truncate text-sm font-medium text-foreground">
+                                    {{ note.title || 'Untitled' }}
+                                </span>
+                            </div>
+
+                            <!-- Preview -->
+                            <p v-if="note.content_preview" class="line-clamp-2 text-xs text-muted-foreground">
+                                {{ note.content_preview }}
+                            </p>
+
+                            <!-- Meta Row -->
+                            <div class="flex items-center gap-3 text-[11px] text-muted-foreground">
+                                <span>{{ formatDate(note.updated_at) }}</span>
+                                <span v-if="note.word_count > 0" class="flex items-center gap-1">
+                                    {{ note.word_count }} words
+                                </span>
+                                <div v-if="note.tags?.length > 0" class="flex items-center gap-1">
+                                    <Hash class="h-2.5 w-2.5" />
+                                    <span>{{ note.tags.slice(0, 2).join(', ') }}</span>
+                                    <span v-if="note.tags.length > 2">+{{ note.tags.length - 2 }}</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </aside>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col">
-                <div v-if="!hasSelectedNote" class="flex-1 flex items-center justify-center border-b border-r">
-                    <div class="text-center text-muted-foreground">
-                        <FileText class="h-24 w-24 mx-auto mb-4 opacity-30" />
-                        <h3 class="text-lg font-medium mb-2">No note selected</h3>
-                        <p class="text-sm mb-4">Choose a note from the sidebar to start reading, or create a new one.</p>
-                        <Button @click="createNewNote">
-                            <Plus class="h-4 w-4 mr-2" />
-                            Create New Note
+            <main class="flex flex-1 flex-col overflow-hidden"
+                  :class="{ 'hidden md:flex': !hasSelectedNote }">
+
+                <!-- No Note Selected -->
+                <div v-if="!hasSelectedNote" class="flex flex-1 items-center justify-center">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+                            <FileText class="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                        <h3 class="text-base font-medium text-foreground">Select a note</h3>
+                        <p class="mt-1 max-w-xs text-sm text-muted-foreground">
+                            Choose a note from the sidebar or create a new one to start writing.
+                        </p>
+                        <Button @click="createNewNote" class="mt-4" size="sm">
+                            <Plus class="mr-2 h-4 w-4" />
+                            New Note
                         </Button>
                     </div>
                 </div>
 
-                <div v-else class="flex-1 flex flex-col">
-                    <!-- Note Header -->
-                    <div class="p-4 border-r border-border bg-card">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
+                <!-- Note Editor -->
+                <div v-else class="flex flex-1 flex-col overflow-hidden">
+                    <!-- Toolbar -->
+                    <div class="flex items-center justify-between border-b border-border bg-card px-4 py-2.5">
+                        <div class="flex min-w-0 flex-1 items-center gap-3">
+                            <!-- Back button (mobile) -->
+                            <Button
+                                @click="currentNote = null; router.get(route('notes.index'), {}, { preserveState: true })"
+                                variant="ghost"
+                                size="sm"
+                                class="h-7 w-7 p-0 md:hidden"
+                            >
+                                <ChevronLeft class="h-4 w-4" />
+                            </Button>
+
+                            <!-- Title -->
+                            <div class="min-w-0 flex-1">
                                 <Input
                                     v-if="isTitleEditing"
                                     ref="titleInput"
                                     v-model="noteForm.title"
-                                    class="text-lg font-semibold border-none p-0 h-auto bg-transparent"
+                                    class="h-auto border-none bg-transparent p-0 text-base font-semibold shadow-none focus-visible:ring-0"
                                     placeholder="Untitled"
+                                    @blur="isTitleEditing = false"
+                                    @keydown.enter="isTitleEditing = false"
+                                    @keydown.escape="cancelTitleEdit"
                                 />
-                                <h1
+                                <button
                                     v-else
                                     @click="toggleTitleEdit"
-                                    class="text-lg font-semibold cursor-pointer hover:bg-accent/20 px-2 py-1 -mx-2 -my-1 rounded transition-colors"
+                                    class="w-full truncate rounded px-1 py-0.5 text-left text-base font-semibold text-foreground transition-colors hover:bg-accent/50"
                                 >
                                     {{ currentNote.title || 'Untitled' }}
-                                </h1>
-                            </div>
-
-                            <div class="flex items-center space-x-2">
-                                <!-- Pin Button -->
-                                <Button
-                                    @click="togglePin(currentNote)"
-                                    variant="ghost"
-                                    size="icon"
-                                    class="h-8 w-8"
-                                    :class="{ 'text-yellow-600': currentNote.is_pinned }"
-                                >
-                                    <Pin v-if="currentNote.is_pinned" class="h-4 w-4" />
-                                    <PinOff v-else class="h-4 w-4" />
-                                </Button>
-
-                                <!-- Save Button (shows state) -->
-                                <Button
-                                    @click="saveNote"
-                                    size="sm"
-                                    :disabled="isSaving || !contentChanged"
-                                    :variant="hasUnsavedChanges ? 'default' : 'outline'"
-                                    title="Save (Ctrl+S)"
-                                >
-                                    <Loader2 v-if="isSaving" class="h-4 w-4 mr-2 animate-spin" />
-                                    <Save v-else class="h-4 w-4 mr-2" />
-                                    {{ isSaving ? 'Saving...' : (contentChanged ? 'Save' : 'Saved') }}
-                                </Button>
-
-                                <!-- Title Edit Controls (only when editing title) -->
-                                <template v-if="isTitleEditing">
-                                    <Button
-                                        @click="cancelTitleEdit"
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        Cancel
-                                    </Button>
-                                </template>
-
-                                <!-- Delete Button -->
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive">
-                                            <Trash2 class="h-4 w-4" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Note</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Are you sure you want to delete "{{ currentNote.title || 'Untitled' }}"? This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                @click="deleteNote(currentNote.id)"
-                                                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            >
-                                                Delete Note
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Meta Information with Auto-save Status -->
-                        <div class="flex items-center justify-between text-xs text-muted-foreground mt-2">
-                            <div class="flex items-center space-x-4">
-                                <div class="flex items-center space-x-1">
-                                    <Clock class="h-3 w-3" />
-                                    <span>Updated {{ formatDate(currentNote.updated_at) }}</span>
-                                </div>
-                                <span v-if="currentNote.word_count > 0">{{ currentNote.word_count }} words</span>
-                            </div>
-                            <div class="flex items-center space-x-1" :class="autoSaveStatus.class">
+                        <!-- Actions -->
+                        <div class="flex items-center gap-1">
+                            <!-- Auto-save status -->
+                            <div class="mr-2 hidden items-center gap-1 text-xs sm:flex" :class="autoSaveStatus.class">
                                 <component
                                     :is="autoSaveStatus.icon"
                                     class="h-3 w-3"
@@ -741,36 +688,96 @@ onMounted(() => {
                                 />
                                 <span>{{ autoSaveStatus.text }}</span>
                             </div>
-                        </div>
 
-                        <!-- Tags -->
-                        <div v-if="currentNote.tags.length > 0" class="flex flex-wrap gap-1 mt-2">
-                            <Badge
-                                v-for="tag in currentNote.tags"
-                                :key="tag"
-                                variant="secondary"
-                                class="text-xs"
+                            <Button
+                                @click="togglePin(currentNote)"
+                                variant="ghost"
+                                size="sm"
+                                class="h-7 w-7 p-0"
+                                :class="currentNote.is_pinned ? 'text-amber-500' : 'text-muted-foreground'"
+                                :title="currentNote.is_pinned ? 'Unpin note' : 'Pin note'"
                             >
-                                <Hash class="h-3 w-3 mr-1" />
-                                {{ tag }}
-                            </Badge>
+                                <Pin v-if="currentNote.is_pinned" class="h-3.5 w-3.5" />
+                                <PinOff v-else class="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                                @click="saveNote"
+                                size="sm"
+                                :disabled="isSaving || !contentChanged"
+                                :variant="hasUnsavedChanges ? 'default' : 'outline'"
+                                class="h-7 gap-1.5 px-2.5 text-xs"
+                                title="Save (Ctrl+S)"
+                            >
+                                <Loader2 v-if="isSaving" class="h-3.5 w-3.5 animate-spin" />
+                                <Save v-else class="h-3.5 w-3.5" />
+                                {{ isSaving ? 'Saving...' : (contentChanged ? 'Save' : 'Saved') }}
+                            </Button>
+
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
+                                        <Trash2 class="h-3.5 w-3.5" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to delete "{{ currentNote.title || 'Untitled' }}"? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            @click="deleteNote(currentNote.id)"
+                                            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     </div>
 
-                    <!-- Note Content - Always Editable -->
-                    <div class="flex-1 rounded-none border-l-0">
+                    <!-- Meta bar -->
+                    <div class="flex items-center gap-4 border-b border-border bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground">
+                        <div class="flex items-center gap-1.5">
+                            <Clock class="h-3 w-3" />
+                            <span>{{ formatDate(currentNote.updated_at) }}</span>
+                        </div>
+                        <span v-if="currentNote.word_count > 0">{{ currentNote.word_count }} words</span>
+                        <div v-if="currentNote.tags?.length > 0" class="flex items-center gap-1.5">
+                            <Hash class="h-3 w-3" />
+                            <div class="flex gap-1">
+                                <Badge
+                                    v-for="tag in currentNote.tags"
+                                    :key="tag"
+                                    variant="secondary"
+                                    class="h-4 px-1.5 text-[10px] font-normal"
+                                >
+                                    {{ tag }}
+                                </Badge>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Editor -->
+                    <div class="flex-1 overflow-y-auto">
                         <TipTapEditor
+                            :key="currentNote?.id"
                             v-model="noteForm.content"
                             :editable="true"
                             :noteId="currentNote?.id"
                             placeholder="Start writing your note... (Type '/' for commands)"
-                            class="w-full h-full rounded-none"
+                            class="h-full w-full !rounded-none !border-0"
                             @update:modelValue="(value) => noteForm.content = value"
                             @save="handleEditorSave"
                         />
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     </AppLayout>
 </template>

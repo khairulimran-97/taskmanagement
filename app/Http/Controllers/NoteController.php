@@ -90,6 +90,7 @@ class NoteController extends Controller
                 return [
                     'id' => $n->id,
                     'title' => $n->generateAutoTitle(),
+                    'content' => $n->content,
                     'content_preview' => $n->content_preview,
                     'tags' => $n->tags_array,
                     'is_pinned' => $n->is_pinned,
