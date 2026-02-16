@@ -221,8 +221,9 @@ const loadMore = (statusKey: string) => {
                                     <Circle v-else class="h-3 w-3 text-gray-400 dark:text-gray-500" />
                                 </button>
                                 <span
-                                    class="text-sm font-medium leading-tight"
+                                    class="line-clamp-2 text-sm font-medium leading-tight"
                                     :class="task.status === 'completed' ? 'text-gray-400 line-through dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'"
+                                    :title="task.title"
                                 >
                                     {{ task.title }}
                                 </span>

@@ -325,70 +325,65 @@ const handleEditTask = (task) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="project.name" />
 
-        <div class="container mx-auto px-4 py-6">
+        <div class="px-4 py-4 lg:px-6">
             <!-- Project Header -->
-            <div class="mb-6">
+            <div class="mb-4 space-y-3">
                 <ProjectHeader :project="project" />
-
-                <!-- Project Stats -->
-                <ProjectStats
-                    :project="project"
-                    :completion-percentage="completionPercentage"
-                />
+                <ProjectStats :project="project" :completion-percentage="completionPercentage" />
             </div>
 
-            <!-- View Switcher + Search/Filter Toolbar -->
+            <!-- Toolbar -->
             <Tabs :default-value="viewMode" @update:model-value="(val) => viewMode = val">
-                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <TabsList class="grid w-auto grid-cols-2">
-                        <TabsTrigger value="table" class="flex items-center gap-1.5 px-3 text-xs">
-                            <LayoutList class="h-3.5 w-3.5" />
-                            Table
-                        </TabsTrigger>
-                        <TabsTrigger value="kanban" class="flex items-center gap-1.5 px-3 text-xs">
-                            <Columns3 class="h-3.5 w-3.5" />
-                            Board
-                        </TabsTrigger>
-                    </TabsList>
+                <div class="mb-3 flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <TabsList class="h-8 rounded-md bg-gray-100 p-0.5 dark:bg-gray-800">
+                            <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700">
+                                <LayoutList class="h-3.5 w-3.5" />
+                                List
+                            </TabsTrigger>
+                            <TabsTrigger value="kanban" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700">
+                                <Columns3 class="h-3.5 w-3.5" />
+                                Board
+                            </TabsTrigger>
+                        </TabsList>
 
-                    <div class="flex items-center gap-2">
-                        <!-- Search -->
-                        <div class="relative">
-                            <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                            <Input
-                                v-model="searchQuery"
-                                placeholder="Search tasks..."
-                                class="h-8 w-48 pl-8 text-xs"
-                            />
-                            <button
-                                v-if="searchQuery"
-                                @click="searchQuery = ''"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                                <X class="h-3 w-3" />
-                            </button>
+                        <!-- Filters -->
+                        <div class="hidden items-center gap-2 sm:flex">
+                            <div class="relative">
+                                <Search class="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                                <Input
+                                    v-model="searchQuery"
+                                    placeholder="Filter tasks..."
+                                    class="h-7 w-44 border-gray-200 bg-white pl-7 text-xs shadow-none focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-800"
+                                />
+                                <button
+                                    v-if="searchQuery"
+                                    @click="searchQuery = ''"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X class="h-3 w-3" />
+                                </button>
+                            </div>
+
+                            <Select v-model="filterPriority">
+                                <SelectTrigger class="h-7 w-28 border-gray-200 bg-white text-xs shadow-none dark:border-gray-700 dark:bg-gray-800">
+                                    <SelectValue placeholder="Priority" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Priority</SelectItem>
+                                    <SelectItem value="urgent">Urgent</SelectItem>
+                                    <SelectItem value="high">High</SelectItem>
+                                    <SelectItem value="medium">Medium</SelectItem>
+                                    <SelectItem value="low">Low</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-
-                        <!-- Priority Filter -->
-                        <Select v-model="filterPriority">
-                            <SelectTrigger class="h-8 w-32 text-xs">
-                                <SelectValue placeholder="Priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Priority</SelectItem>
-                                <SelectItem value="urgent">Urgent</SelectItem>
-                                <SelectItem value="high">High</SelectItem>
-                                <SelectItem value="medium">Medium</SelectItem>
-                                <SelectItem value="low">Low</SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <!-- Add Task Button -->
-                        <Button @click="openAddTaskModal()" class="flex h-8 items-center gap-1.5 px-3 text-xs shadow-sm">
-                            <Plus class="h-3.5 w-3.5" />
-                            <span class="hidden sm:inline">Add Task</span>
-                        </Button>
                     </div>
+
+                    <Button @click="openAddTaskModal()" size="sm" class="h-7 gap-1.5 px-2.5 text-xs">
+                        <Plus class="h-3.5 w-3.5" />
+                        Issue
+                    </Button>
                 </div>
 
                 <!-- Table View -->
