@@ -420,10 +420,10 @@ const openNewEventDialog = () => {
 .calendar-container {
     --fc-border-color: var(--border);
     --fc-button-text-color: var(--foreground);
-    --fc-button-bg-color: var(--muted);
+    --fc-button-bg-color: var(--card);
     --fc-button-border-color: var(--border);
     --fc-button-hover-bg-color: var(--accent);
-    --fc-button-hover-border-color: var(--border);
+    --fc-button-hover-border-color: var(--primary);
     --fc-button-active-bg-color: var(--primary);
     --fc-today-bg-color: color-mix(in srgb, var(--primary) 10%, transparent);
     --fc-event-text-color: #ffffff;
@@ -451,11 +451,17 @@ const openNewEventDialog = () => {
 
 :deep(.fc-button) {
     border-radius: 0.5rem !important;
+    border: 1px solid var(--border) !important;
     font-weight: 500;
     font-size: 0.875rem;
     padding: 0.45rem 0.85rem;
     text-transform: capitalize;
-    box-shadow: none !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+:deep(.fc-button:hover) {
+    border-color: var(--primary) !important;
 }
 
 /* Space out buttons within FullCalendar's button groups */
