@@ -74,7 +74,10 @@ const toggleTheme = () => {
     updateAppearance(isDark.value ? 'light' : 'dark');
 };
 
-const isCurrentRoute = computed(() => (url: string) => page.url === url);
+const isCurrentRoute = computed(() => (url: string) => {
+    const path = page.url.split('?')[0];
+    return path === url || path.startsWith(url + '/');
+});
 
 const activeItemStyles = computed(
     () => (url: string) => (isCurrentRoute.value(url) ? 'bg-accent text-foreground' : 'text-muted-foreground'),

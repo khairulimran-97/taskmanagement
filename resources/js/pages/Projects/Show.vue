@@ -13,6 +13,7 @@ import TaskDetailSidebar from '@/components/project/TaskDetailSidebar.vue';
 import TaskForm from '@/components/project/TaskForm.vue';
 import SubtaskForm from '@/components/project/SubtaskForm.vue';
 import DeleteTaskDialog from '@/components/project/DeleteTaskDialog.vue';
+import EditProjectDialog from './Edit.vue';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ const breadcrumbs = ref<BreadcrumbItem[]>([
 ]);
 
 // State
+const isEditProjectOpen = ref(false);
 const isAddTaskModalOpen = ref(false);
 const isEditTaskModalOpen = ref(false);
 const editingTask = ref(null);
@@ -78,33 +80,33 @@ const priorityConfig = {
         key: 'urgent',
         label: 'Urgent Priority',
         emoji: '🔥',
-        class: 'bg-red-100 text-red-800 border-red-200',
-        headerClass: 'bg-red-50 border-red-200 text-red-800',
-        hoverClass: 'hover:bg-red-50/50',
+        class: 'bg-destructive/12 text-destructive border-destructive/25',
+        headerClass: 'bg-destructive/8 border-destructive/20 text-destructive',
+        hoverClass: 'hover:bg-destructive/5',
     },
     high: {
         key: 'high',
         label: 'High Priority',
         emoji: '⚠️',
-        class: 'bg-orange-100 text-orange-800 border-orange-200',
-        headerClass: 'bg-orange-50 border-orange-200 text-orange-800',
-        hoverClass: 'hover:bg-orange-50/50',
+        class: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/25',
+        headerClass: 'bg-orange-500/8 border-orange-500/20 text-orange-700 dark:text-orange-400',
+        hoverClass: 'hover:bg-orange-500/5',
     },
     medium: {
         key: 'medium',
         label: 'Medium Priority',
         emoji: '📋',
-        class: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        headerClass: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-        hoverClass: 'hover:bg-yellow-50/50',
+        class: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/25',
+        headerClass: 'bg-amber-500/8 border-amber-500/20 text-amber-700 dark:text-amber-400',
+        hoverClass: 'hover:bg-amber-500/5',
     },
     low: {
         key: 'low',
         label: 'Low Priority',
         emoji: '📝',
-        class: 'bg-green-100 text-green-800 border-green-200',
-        headerClass: 'bg-green-50 border-green-200 text-green-800',
-        hoverClass: 'hover:bg-green-50/50',
+        class: 'bg-[hsl(150_24%_42%/0.14)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)] border-[hsl(150_24%_42%/0.25)]',
+        headerClass: 'bg-[hsl(150_24%_42%/0.08)] border-[hsl(150_24%_42%/0.2)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)]',
+        hoverClass: 'hover:bg-[hsl(150_24%_42%/0.05)]',
     },
 };
 
@@ -112,26 +114,26 @@ const statusConfig = {
     todo: {
         label: 'To Do',
         icon: 'Circle',
-        class: 'bg-slate-100 text-slate-700 hover:bg-slate-200',
-        iconClass: 'text-slate-400 hover:text-slate-600',
+        class: 'bg-muted text-muted-foreground hover:bg-muted/70',
+        iconClass: 'text-muted-foreground hover:text-foreground',
     },
     in_progress: {
         label: 'In Progress',
         icon: 'PlayCircle',
-        class: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-        iconClass: 'text-blue-500 hover:text-blue-700',
+        class: 'bg-primary/12 text-primary hover:bg-primary/20',
+        iconClass: 'text-primary hover:text-primary',
     },
     completed: {
         label: 'Completed',
         icon: 'CheckCircle2',
-        class: 'bg-green-100 text-green-800 hover:bg-green-200',
-        iconClass: 'text-green-500 hover:text-green-700',
+        class: 'bg-[hsl(150_24%_42%/0.14)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)] hover:bg-[hsl(150_24%_42%/0.2)]',
+        iconClass: 'text-[hsl(150_24%_45%)] hover:text-[hsl(150_30%_38%)]',
     },
     cancelled: {
         label: 'Cancelled',
         icon: 'XCircle',
-        class: 'bg-red-100 text-red-800 hover:bg-red-200',
-        iconClass: 'text-red-500 hover:text-red-700',
+        class: 'bg-destructive/12 text-destructive hover:bg-destructive/20',
+        iconClass: 'text-destructive hover:text-destructive',
     },
 };
 
@@ -329,7 +331,7 @@ const handleEditTask = (task) => {
         <PageContainer>
             <!-- Project Header -->
             <div class="mb-4 space-y-3">
-                <ProjectHeader :project="project" />
+                <ProjectHeader :project="project" @edit="isEditProjectOpen = true" @add-task="openAddTaskModal()" />
                 <ProjectStats :project="project" :completion-percentage="completionPercentage" />
             </div>
 
@@ -457,7 +459,7 @@ const handleEditTask = (task) => {
         </div>
 
         <!-- Overlay -->
-        <div v-if="isTaskDetailModalOpen" class="bg-opacity-20 fixed inset-0 z-40 bg-[#e6e6e68f]" @click="closeTaskDetailModal"></div>
+        <div v-if="isTaskDetailModalOpen" class="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" @click="closeTaskDetailModal"></div>
 
         <!-- Task Form Modal -->
         <TaskForm
@@ -479,6 +481,14 @@ const handleEditTask = (task) => {
             @update:open="isDeleteTaskDialogOpen = $event"
             @confirm="confirmDeleteTask"
             @cancel="isDeleteTaskDialogOpen = false; taskToDelete = null"
+        />
+
+        <!-- Edit Project Dialog -->
+        <EditProjectDialog
+            :open="isEditProjectOpen"
+            :project="project"
+            @update:open="isEditProjectOpen = $event"
+            @success="isEditProjectOpen = false"
         />
     </AppLayout>
 </template>

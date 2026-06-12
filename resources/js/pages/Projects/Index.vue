@@ -2,13 +2,14 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import StatCard from '@/components/StatCard.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { BreadcrumbItem, Project } from '@/types';
-import { CheckCircle2, Edit, GripVertical, Loader2, Trash2 } from 'lucide-vue-next';
+import { Activity, CheckCircle2, Edit, Eye, Flag, FolderKanban, GripVertical, Loader2, Trash2 } from 'lucide-vue-next';
+import { projectStatusBadge, priorityBadge, progressColor, labelize } from '@/lib/projectMeta';
 import { computed, ref, watch } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -120,8 +121,8 @@ const handleDragStart = (event: DragEvent, project: Project) => {
         event.dataTransfer.setData('text/html', '');
         // Add custom drag image
         const dragImage = document.createElement('div');
-        dragImage.className = 'bg-blue-100 border-2 border-blue-300 rounded-lg p-3 shadow-lg';
-        dragImage.innerHTML = `<div class="font-semibold text-blue-800">📋 ${project.name}</div>`;
+        dragImage.className = 'bg-primary/10 border-2 border-primary/40 rounded-lg p-3 shadow-lg';
+        dragImage.innerHTML = `<div class="font-semibold text-primary">📋 ${project.name}</div>`;
         dragImage.style.position = 'absolute';
         dragImage.style.top = '-1000px';
         document.body.appendChild(dragImage);
@@ -255,35 +256,6 @@ function formatDate(date: string | null): string {
     }).format(dateObj);
 }
 
-// Get priority class for badge
-function getPriorityClass(priority: string): string {
-    switch (priority) {
-        case 'high':
-            return 'bg-red-100 text-red-800 border-red-200';
-        case 'medium':
-            return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        case 'low':
-            return 'bg-green-100 text-green-800 border-green-200';
-        default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-}
-
-// Get status class for badge
-function getStatusClass(status: string): string {
-    switch (status) {
-        case 'active':
-            return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'paused':
-            return 'bg-orange-100 text-orange-800 border-orange-200';
-        case 'completed':
-            return 'bg-green-100 text-green-800 border-green-200';
-        case 'archived':
-            return 'bg-gray-100 text-gray-800 border-gray-200';
-        default:
-            return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-}
 </script>
 
 <template>
@@ -306,60 +278,11 @@ function getStatusClass(status: string): string {
                 @success="handleEditSuccess"
             />
 
-            <div class="mt-6 mb-10 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground mb-1">Total Projects</div>
-                            <div class="text-3xl font-bold text-foreground">{{ props.projects.length }}</div>
-                        </div>
-                        <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                            <GripVertical class="w-6 h-6 text-muted-foreground" />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground mb-1">Active</div>
-                            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                                {{ props.projects.filter(p => p.status === 'active').length }}
-                            </div>
-                        </div>
-                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                            <div class="w-3 h-3 bg-blue-600 dark:bg-blue-400 rounded-full"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground mb-1">Completed</div>
-                            <div class="text-3xl font-bold text-green-600 dark:text-green-400">
-                                {{ props.projects.filter(p => p.status === 'completed').length }}
-                            </div>
-                        </div>
-                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                            <CheckCircle2 class="w-6 h-6 text-green-600 dark:text-green-400" />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-sm font-medium text-muted-foreground mb-1">High Priority</div>
-                            <div class="text-3xl font-bold text-red-600 dark:text-red-400">
-                                {{ props.projects.filter(p => p.priority === 'high').length }}
-                            </div>
-                        </div>
-                        <div class="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
-                            <div class="w-3 h-3 bg-red-600 dark:bg-red-400 rounded-full"></div>
-                        </div>
-                    </div>
-                </div>
+            <div class="mt-6 mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <StatCard :icon="FolderKanban" label="Total Projects" :value="props.projects.length" accent />
+                <StatCard :icon="Activity" label="Active" :value="props.projects.filter(p => p.status === 'active').length" hint="in progress" />
+                <StatCard :icon="CheckCircle2" label="Completed" :value="props.projects.filter(p => p.status === 'completed').length" hint="done" />
+                <StatCard :icon="Flag" label="High Priority" :value="props.projects.filter(p => p.priority === 'high').length" hint="needs focus" />
             </div>
 
             <div class="bg-card rounded-lg border border-border overflow-hidden">
@@ -407,10 +330,10 @@ function getStatusClass(status: string): string {
                             :class="[
                     'group transition-all duration-200 relative',
                     isDragging && draggedProject?.id === project.id
-                        ? 'opacity-50 scale-95 bg-blue-50 dark:bg-blue-900 shadow-lg border-2 border-blue-200 dark:border-blue-700'
+                        ? 'opacity-50 scale-[0.99] bg-primary/5 shadow-lg border-2 border-primary/30'
                         : 'hover:bg-muted/50',
                     dragOverIndex === index && draggedProject?.id !== project.id
-                        ? 'bg-blue-50 dark:bg-blue-900 border-l-4 border-blue-500 dark:border-blue-400 shadow-sm transform scale-[1.01]'
+                        ? 'bg-primary/5 border-l-4 border-primary shadow-sm'
                         : '',
                     isReordering ? 'pointer-events-none opacity-75' : 'cursor-move'
                 ]"
@@ -426,25 +349,25 @@ function getStatusClass(status: string): string {
                                 <div
                                     class="flex items-center justify-center w-6 h-8 rounded transition-colors"
                                     :class="isDragging && draggedProject?.id === project.id
-                            ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-muted group-hover:bg-muted'"
+                            ? 'text-primary bg-primary/15'
+                            : 'text-muted-foreground/60 group-hover:text-foreground group-hover:bg-muted'"
                                 >
                                     <GripVertical class="w-4 h-4" />
                                 </div>
                                 <div
                                     v-if="dragOverIndex === index && draggedProject?.id !== project.id"
-                                    class="absolute top-0 left-2 right-2 h-0.5 bg-blue-500 rounded-full shadow-sm"
+                                    class="absolute top-0 left-2 right-2 h-0.5 bg-primary rounded-full shadow-sm"
                                 ></div>
                                 <div
                                     v-if="dragOverIndex === index && draggedProject?.id !== project.id"
-                                    class="absolute top-0 left-2 w-2 h-2 bg-blue-500 rounded-full transform -translate-y-1 shadow-sm"
+                                    class="absolute top-0 left-2 w-2 h-2 bg-primary rounded-full transform -translate-y-1 shadow-sm"
                                 ></div>
                             </TableCell>
 
                             <TableCell class="p-3">
                                 <div
-                                    class="w-4 h-4 rounded-full border-2 border-card shadow-sm"
-                                    :style="`background-color: ${project.color || '#3B82F6'}`"
+                                    class="w-4 h-4 rounded-full border-2 border-card shadow-sm ring-1 ring-border"
+                                    :style="`background-color: ${project.color || 'var(--primary)'}`"
                                 ></div>
                             </TableCell>
 
@@ -452,7 +375,7 @@ function getStatusClass(status: string): string {
                             <TableCell class="font-medium">
                                 <Link
                                     :href="route('projects.show', project.id)"
-                                    class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-semibold transition-colors"
+                                    class="font-semibold text-foreground transition-colors hover:text-primary"
                                     @click.stop
                                 >
                                     {{ project.name }}
@@ -468,16 +391,16 @@ function getStatusClass(status: string): string {
 
                             <!-- Status -->
                             <TableCell>
-                                <Badge :class="getStatusClass(project.status)" class="font-medium">
+                                <Badge variant="outline" :class="projectStatusBadge(project.status)" class="font-medium">
                                     <CheckCircle2 v-if="project.status === 'completed'" class="w-3 h-3 mr-1" />
-                                    {{ project.status.charAt(0).toUpperCase() + project.status.slice(1) }}
+                                    {{ labelize(project.status) }}
                                 </Badge>
                             </TableCell>
 
                             <!-- Priority -->
                             <TableCell>
-                                <Badge :class="getPriorityClass(project.priority)" class="font-medium">
-                                    {{ project.priority.charAt(0).toUpperCase() + project.priority.slice(1) }}
+                                <Badge variant="outline" :class="priorityBadge(project.priority)" class="font-medium">
+                                    {{ labelize(project.priority) }}
                                 </Badge>
                             </TableCell>
 
@@ -485,15 +408,13 @@ function getStatusClass(status: string): string {
                             <TableCell>
                                 <div v-if="project.completion_percentage !== undefined" class="min-w-24">
                                     <div class="flex items-center space-x-2">
-                                        <Progress
-                                            :model-value="project.completion_percentage"
-                                            class="flex-1"
-                                            :class="{
-                                    'bg-red-200 dark:bg-red-800 [&>div]:bg-red-500 dark:[&>div]:bg-red-400': project.completion_percentage < 25,
-                                    'bg-orange-200 dark:bg-orange-800 [&>div]:bg-orange-500 dark:[&>div]:bg-orange-400': project.completion_percentage >= 25 && project.completion_percentage < 50,
-                                    'bg-yellow-200 dark:bg-yellow-800 [&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-400': project.completion_percentage >= 50 && project.completion_percentage < 75,
-                                    'bg-green-200 dark:bg-green-800 [&>div]:bg-green-500 dark:[&>div]:bg-green-400': project.completion_percentage >= 75
-                                }" />
+                                        <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                            <div
+                                                class="h-full rounded-full transition-all"
+                                                :class="progressColor(project.completion_percentage)"
+                                                :style="{ width: project.completion_percentage + '%' }"
+                                            ></div>
+                                        </div>
                                         <span class="text-xs text-muted-foreground font-medium min-w-8 text-right">
                                 {{ project.completion_percentage }}%
                             </span>
@@ -504,13 +425,14 @@ function getStatusClass(status: string): string {
 
                             <!-- Actions -->
                             <TableCell class="text-right">
-                                <div class="flex justify-end space-x-2">
-                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="transition-colors text-foreground hover:text-blue-600 dark:hover:text-blue-400">
+                                <div class="flex justify-end gap-1">
+                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="text-muted-foreground transition-colors hover:text-primary">
                                         <Edit class="w-4 h-4 mr-1" />
                                         Edit
                                     </Button>
-                                    <Button asChild variant="outline" size="sm" class="transition-colors">
-                                        <Link :href="route('projects.show', project.id)" @click.stop class="text-foreground hover:text-blue-600 dark:hover:text-blue-400">
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link :href="route('projects.show', project.id)" @click.stop>
+                                            <Eye class="w-4 h-4 mr-1" />
                                             View
                                         </Link>
                                     </Button>
@@ -518,10 +440,9 @@ function getStatusClass(status: string): string {
                                         variant="ghost"
                                         size="sm"
                                         @click.stop="openDeleteDialog(project)"
-                                        class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900 transition-colors"
+                                        class="text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                                     >
-                                        <Trash2 class="w-4 h-4 mr-1" />
-                                        Delete
+                                        <Trash2 class="w-4 h-4" />
                                     </Button>
                                 </div>
                             </TableCell>
@@ -543,7 +464,7 @@ function getStatusClass(status: string): string {
                         <AlertDialogCancel @click="cancelDelete">Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             @click="confirmDelete"
-                            class="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                            class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
                         >
                             Delete Project
                         </AlertDialogAction>

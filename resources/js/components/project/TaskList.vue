@@ -96,9 +96,9 @@ const subtaskCountMap = computed<Record<string | number, number>>(() => {
 // Status sections
 const statusSections = computed(() => [
     { key: 'todo', label: 'Todo', icon: Circle, iconClass: 'text-muted-foreground', tasks: tasksByStatus.value.todo || [] },
-    { key: 'in_progress', label: 'In Progress', icon: Clock, iconClass: 'text-amber-500', tasks: tasksByStatus.value.in_progress || [] },
-    { key: 'completed', label: 'Done', icon: CheckCircle2, iconClass: 'text-green-500', tasks: tasksByStatus.value.completed || [] },
-    { key: 'cancelled', label: 'Cancelled', icon: XCircle, iconClass: 'text-red-400', tasks: tasksByStatus.value.cancelled || [] },
+    { key: 'in_progress', label: 'In Progress', icon: Clock, iconClass: 'text-primary', tasks: tasksByStatus.value.in_progress || [] },
+    { key: 'completed', label: 'Done', icon: CheckCircle2, iconClass: 'text-[hsl(150_24%_45%)]', tasks: tasksByStatus.value.completed || [] },
+    { key: 'cancelled', label: 'Cancelled', icon: XCircle, iconClass: 'text-destructive', tasks: tasksByStatus.value.cancelled || [] },
 ].filter(s => s.tasks.length > 0));
 
 // Priority
@@ -109,7 +109,7 @@ const getPriorityBadge = (p: string) => {
         medium: { class: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-500' },
         low: { class: 'text-green-700 dark:text-green-400', dot: 'bg-green-500' },
     };
-    return c[p] || { class: 'text-muted-foreground', dot: 'bg-gray-400' };
+    return c[p] || { class: 'text-muted-foreground', dot: 'bg-muted-foreground/40' };
 };
 
 // Date formatting & color
