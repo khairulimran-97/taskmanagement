@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Search, Pin, FileText, ExternalLink, NotebookText } from 'lucide-vue-next';
+import NoteItem from '@/components/notes/NoteItem.vue';
 
 const open = ref(false);
 const notes = ref<any[]>([]);
@@ -115,7 +116,7 @@ defineExpose({ openSheet });
     </Teleport>
 
     <Sheet :open="open" @update:open="open = $event">
-        <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:max-w-3xl">
+        <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:!max-w-4xl lg:!max-w-5xl">
             <!-- Header -->
             <div class="flex items-center justify-between border-b border-border px-5 py-3.5">
                 <div class="flex items-center gap-2">
@@ -133,7 +134,7 @@ defineExpose({ openSheet });
 
             <div class="flex min-h-0 flex-1">
                 <!-- List pane -->
-                <div class="flex w-72 shrink-0 flex-col border-r border-border bg-muted/20">
+                <div class="flex w-80 shrink-0 flex-col border-r border-border bg-muted/20">
                     <div class="border-b border-border p-3">
                         <div class="relative">
                             <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -148,31 +149,28 @@ defineExpose({ openSheet });
                         </div>
 
                         <template v-else>
-                            <p v-if="pinned.length" class="flex items-center gap-1.5 px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                <Pin class="h-3 w-3 text-amber-500" /> Pinned
-                            </p>
-                            <button
-                                v-for="n in pinned"
-                                :key="n.id"
-                                @click="selectedId = n.id"
-                                class="flex w-full flex-col gap-0.5 border-b border-l-2 border-b-border/60 px-3 py-2.5 text-left transition-colors"
-                                :class="selectedId === n.id ? 'border-l-primary bg-accent' : 'border-l-transparent hover:bg-accent/50'"
-                            >
-                                <span class="truncate text-sm font-semibold text-foreground">{{ n.title || 'Untitled' }}</span>
-                                <span class="line-clamp-1 text-xs text-muted-foreground">{{ n.content_preview }}</span>
-                            </button>
-
-                            <p v-if="pinned.length && others.length" class="px-3 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">All notes</p>
-                            <button
-                                v-for="n in others"
-                                :key="n.id"
-                                @click="selectedId = n.id"
-                                class="flex w-full flex-col gap-0.5 border-b border-l-2 border-b-border/60 px-3 py-2.5 text-left transition-colors"
-                                :class="selectedId === n.id ? 'border-l-primary bg-accent' : 'border-l-transparent hover:bg-accent/50'"
-                            >
-                                <span class="truncate text-sm font-semibold text-foreground">{{ n.title || 'Untitled' }}</span>
-                                <span class="line-clamp-1 text-xs text-muted-foreground">{{ n.content_preview }}</span>
-                            </button>
+                            <div v-if="pinned.length">
+                                <p class="flex items-center gap-1.5 border-b border-border/60 bg-muted/40 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <Pin class="h-3 w-3 text-amber-500" /> Pinned
+                                </p>
+                                <NoteItem
+                                    v-for="n in pinned"
+                                    :key="n.id"
+                                    :note="n"
+                                    :active="selectedId === n.id"
+                                    @select="selectedId = n.id"
+                                />
+                            </div>
+                            <div v-if="others.length">
+                                <p v-if="pinned.length" class="border-y border-border bg-muted/40 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">All notes</p>
+                                <NoteItem
+                                    v-for="n in others"
+                                    :key="n.id"
+                                    :note="n"
+                                    :active="selectedId === n.id"
+                                    @select="selectedId = n.id"
+                                />
+                            </div>
                         </template>
                     </div>
                 </div>
