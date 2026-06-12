@@ -352,7 +352,7 @@ const handleEditTask = (task) => {
 
                         <!-- Filters -->
                         <div class="flex flex-1 items-center gap-2">
-                            <div class="relative max-w-xs flex-1">
+                            <div class="relative flex-1">
                                 <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     v-model="searchQuery"
