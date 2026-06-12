@@ -21,7 +21,10 @@ return new class extends Migration
             // Indexes
             $table->index(['user_id', 'created_at']);
             $table->index(['user_id', 'is_pinned', 'created_at']);
-            $table->fullText(['title', 'content']);
+
+            if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+                $table->fullText(['title', 'content']);
+            }
         });
     }
 
