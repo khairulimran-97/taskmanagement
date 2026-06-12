@@ -36,7 +36,10 @@ import {
     PenTool
 } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import QuickNotesSheet from '@/components/notes/QuickNotesSheet.vue';
+
+const quickNotes = ref<InstanceType<typeof QuickNotesSheet> | null>(null);
 
 interface Props {
     breadcrumbs?: BreadcrumbItem[];
@@ -113,7 +116,7 @@ const createNewNote = () => {
 </script>
 
 <template>
-    <div>
+    <div class="contents">
         <div class="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
             <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                 <!-- Mobile Menu -->
@@ -194,7 +197,7 @@ const createNewNote = () => {
                 <div class="ml-auto flex items-center space-x-2">
                     <!-- Quick Actions -->
                     <div class="hidden items-center space-x-2 md:flex">
-                        <Button size="sm" class="h-9" @click="createNewNote">
+                        <Button variant="secondary" size="sm" class="h-9 border border-border" @click="createNewNote">
                             <PenTool class="mr-2 h-4 w-4" />
                             Add New Note
                         </Button>
@@ -320,5 +323,8 @@ const createNewNote = () => {
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </div>
         </div>
+
+        <!-- Global Quick Notes (read-only) -->
+        <QuickNotesSheet ref="quickNotes" />
     </div>
 </template>

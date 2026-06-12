@@ -48,7 +48,8 @@ const props = defineProps({
 const emit = defineEmits(['add-task', 'view-task', 'toggle-task', 'delete-task', 'view-tags', 'edit-task', 'reorder-tasks']);
 
 // Collapsed sections
-const collapsedSections = ref<Record<string, boolean>>({});
+// Done and Cancelled start collapsed — they're usually reference, not active work
+const collapsedSections = ref<Record<string, boolean>>({ completed: true, cancelled: true });
 const toggleSection = (key: string) => {
     collapsedSections.value[key] = !collapsedSections.value[key];
 };

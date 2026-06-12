@@ -213,6 +213,7 @@ class NoteController extends Controller
                 return [
                     'id' => $note->id,
                     'title' => $note->generateAutoTitle(),
+                    'content' => $note->content,
                     'content_preview' => $note->content_preview,
                     'tags' => $note->tags_array,
                     'is_pinned' => $note->is_pinned,
