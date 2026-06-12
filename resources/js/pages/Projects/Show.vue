@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, LayoutList, Columns3, X } from 'lucide-vue-next';
+import { Search, LayoutList, Columns3, X } from 'lucide-vue-next';
 
 const props = defineProps({
     project: {
@@ -382,11 +382,6 @@ const handleEditTask = (task) => {
                             </Select>
                         </div>
                     </div>
-
-                    <Button @click="openAddTaskModal()" size="sm" class="h-7 gap-1.5 px-2.5 text-xs">
-                        <Plus class="h-3.5 w-3.5" />
-                        Issue
-                    </Button>
                 </div>
 
                 <!-- Table View -->
