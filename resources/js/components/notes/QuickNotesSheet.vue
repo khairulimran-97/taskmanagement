@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
-import { Search, Pin, FileText, NotebookText } from 'lucide-vue-next';
+import { Search, Pin, FileText, NotebookText, ChevronLeft } from 'lucide-vue-next';
 import NoteItem from '@/components/notes/NoteItem.vue';
 
 const open = ref(false);
@@ -32,6 +32,7 @@ const fetchNotes = async () => {
 
 const openSheet = () => {
     open.value = true;
+    mobileReading.value = false;
     if (!loaded.value) fetchNotes();
     nextTick(() => searchInput.value?.focus());
 };
@@ -48,6 +49,13 @@ const pinned = computed(() => filtered.value.filter((n) => n.is_pinned));
 const others = computed(() => filtered.value.filter((n) => !n.is_pinned));
 
 const selected = computed(() => notes.value.find((n) => n.id === selectedId.value) || null);
+
+// Mobile is single-pane: tapping a note shows the reading view
+const mobileReading = ref(false);
+const selectNote = (id: number) => {
+    selectedId.value = id;
+    mobileReading.value = true;
+};
 
 // Auto-select first note when opening / filtering
 watch([open, filtered], () => {
@@ -126,7 +134,10 @@ defineExpose({ openSheet });
 
             <div class="flex min-h-0 flex-1">
                 <!-- List pane -->
-                <div class="flex w-80 shrink-0 flex-col border-r border-border bg-muted/20">
+                <div
+                    class="flex w-full shrink-0 flex-col border-r border-border bg-muted/20 md:w-80"
+                    :class="{ 'hidden md:flex': mobileReading }"
+                >
                     <div class="border-b border-border p-3">
                         <div class="relative">
                             <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -150,7 +161,7 @@ defineExpose({ openSheet });
                                     :key="n.id"
                                     :note="n"
                                     :active="selectedId === n.id"
-                                    @select="selectedId = n.id"
+                                    @select="selectNote(n.id)"
                                 />
                             </div>
                             <div v-if="others.length">
@@ -160,7 +171,7 @@ defineExpose({ openSheet });
                                     :key="n.id"
                                     :note="n"
                                     :active="selectedId === n.id"
-                                    @select="selectedId = n.id"
+                                    @select="selectNote(n.id)"
                                 />
                             </div>
                         </template>
@@ -168,10 +179,20 @@ defineExpose({ openSheet });
                 </div>
 
                 <!-- Reading pane -->
-                <div class="flex min-w-0 flex-1 flex-col">
+                <div
+                    class="flex min-w-0 flex-1 flex-col"
+                    :class="{ 'hidden md:flex': !mobileReading }"
+                >
                     <template v-if="selected">
                         <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
                             <div class="flex min-w-0 items-center gap-2">
+                                <button
+                                    class="-ml-1 mr-0.5 shrink-0 rounded p-1 text-muted-foreground hover:text-foreground md:hidden"
+                                    @click="mobileReading = false"
+                                    aria-label="Back to list"
+                                >
+                                    <ChevronLeft class="h-4 w-4" />
+                                </button>
                                 <Pin v-if="selected.is_pinned" class="h-3.5 w-3.5 shrink-0 text-amber-500" />
                                 <h3 class="truncate font-display text-lg font-semibold tracking-tight text-foreground">{{ selected.title || 'Untitled' }}</h3>
                             </div>

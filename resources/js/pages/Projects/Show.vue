@@ -338,7 +338,7 @@ const handleEditTask = (task) => {
             <!-- Toolbar -->
             <Tabs :default-value="viewMode" @update:model-value="(val) => viewMode = val">
                 <div class="mb-4 flex flex-col gap-2 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex flex-1 items-center gap-2.5">
+                    <div class="flex flex-1 flex-wrap items-center gap-2.5">
                         <TabsList class="h-9 shrink-0 rounded-lg bg-muted p-1">
                             <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded-md px-3 text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
                                 <LayoutList class="h-4 w-4" />
@@ -351,7 +351,7 @@ const handleEditTask = (task) => {
                         </TabsList>
 
                         <!-- Filters -->
-                        <div class="flex flex-1 items-center gap-2">
+                        <div class="flex w-full flex-1 items-center gap-2 sm:w-auto">
                             <div class="relative flex-1">
                                 <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input

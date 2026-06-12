@@ -285,11 +285,11 @@ function formatDate(date: string | null): string {
                 <StatCard :icon="Flag" label="High Priority" :value="props.projects.filter(p => p.priority === 'high').length" hint="needs focus" />
             </div>
 
-            <div class="bg-card rounded-lg border border-border overflow-hidden">
-                <div class="px-4 py-3 bg-primary/8 border-b border-border flex items-center justify-between">
+            <div class="bg-card rounded-lg border border-border overflow-x-auto">
+                <div class="hidden sm:flex px-4 py-3 bg-primary/8 border-b border-border items-center justify-between">
                     <div class="flex items-center text-sm text-primary">
                         <GripVertical class="w-4 h-4 mr-2" />
-                        <span class="font-medium">Drag & Drop to Reorder Projects</span>
+                        <span class="font-medium">Drag &amp; Drop to Reorder Projects</span>
                     </div>
                     <div v-if="isReordering" class="flex items-center text-sm text-primary">
                         <Loader2 class="w-4 h-4 mr-2 animate-spin" />
@@ -300,13 +300,13 @@ function formatDate(date: string | null): string {
                 <Table>
                     <TableHeader>
                         <TableRow class="bg-muted/50">
-                            <TableHead class="w-8"></TableHead>
+                            <TableHead class="hidden sm:table-cell w-8"></TableHead>
                             <TableHead class="w-8"></TableHead>
                             <TableHead class="font-semibold text-foreground">Project Name</TableHead>
-                            <TableHead class="font-semibold text-foreground">Description</TableHead>
-                            <TableHead class="font-semibold text-foreground">Status</TableHead>
-                            <TableHead class="font-semibold text-foreground">Priority</TableHead>
-                            <TableHead class="font-semibold text-foreground">Progress</TableHead>
+                            <TableHead class="hidden lg:table-cell font-semibold text-foreground">Description</TableHead>
+                            <TableHead class="hidden md:table-cell font-semibold text-foreground">Status</TableHead>
+                            <TableHead class="hidden sm:table-cell font-semibold text-foreground">Priority</TableHead>
+                            <TableHead class="hidden md:table-cell font-semibold text-foreground">Progress</TableHead>
                             <TableHead class="text-right font-semibold text-foreground">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -345,7 +345,7 @@ function formatDate(date: string | null): string {
                             @dragleave="handleDragLeave($event, index)"
                             @drop="handleDrop($event, project, index)"
                         >
-                            <TableCell class="p-3 relative">
+                            <TableCell class="hidden sm:table-cell p-3 relative">
                                 <div
                                     class="flex items-center justify-center w-6 h-8 rounded transition-colors"
                                     :class="isDragging && draggedProject?.id === project.id
@@ -371,7 +371,7 @@ function formatDate(date: string | null): string {
                                 ></div>
                             </TableCell>
 
-                            <!-- Project Name -->
+                            <!-- Project Name (+ inline status/priority on mobile) -->
                             <TableCell class="font-medium">
                                 <Link
                                     :href="route('projects.show', project.id)"
@@ -381,17 +381,28 @@ function formatDate(date: string | null): string {
                                 >
                                     {{ project.name }}
                                 </Link>
+                                <div class="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
+                                    <Badge variant="outline" :class="projectStatusBadge(project.status)" class="text-xs font-medium">
+                                        {{ labelize(project.status) }}
+                                    </Badge>
+                                    <Badge variant="outline" :class="priorityBadge(project.priority)" class="text-xs font-medium sm:hidden">
+                                        {{ labelize(project.priority) }}
+                                    </Badge>
+                                    <span v-if="project.completion_percentage !== undefined" class="text-xs text-muted-foreground">
+                                        {{ project.completion_percentage }}%
+                                    </span>
+                                </div>
                             </TableCell>
 
                             <!-- Description -->
-                            <TableCell class="max-w-xs">
+                            <TableCell class="hidden lg:table-cell max-w-xs">
                     <span class="text-muted-foreground line-clamp-2">
                         {{ project.description || 'No description' }}
                     </span>
                             </TableCell>
 
                             <!-- Status -->
-                            <TableCell>
+                            <TableCell class="hidden md:table-cell">
                                 <Badge variant="outline" :class="projectStatusBadge(project.status)" class="font-medium">
                                     <CheckCircle2 v-if="project.status === 'completed'" class="w-3 h-3 mr-1" />
                                     {{ labelize(project.status) }}
@@ -399,14 +410,14 @@ function formatDate(date: string | null): string {
                             </TableCell>
 
                             <!-- Priority -->
-                            <TableCell>
+                            <TableCell class="hidden sm:table-cell">
                                 <Badge variant="outline" :class="priorityBadge(project.priority)" class="font-medium">
                                     {{ labelize(project.priority) }}
                                 </Badge>
                             </TableCell>
 
                             <!-- Progress -->
-                            <TableCell>
+                            <TableCell class="hidden md:table-cell">
                                 <div v-if="project.completion_percentage !== undefined" class="min-w-24">
                                     <div class="flex items-center space-x-2">
                                         <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -426,12 +437,15 @@ function formatDate(date: string | null): string {
 
                             <!-- Actions -->
                             <TableCell class="text-right">
-                                <div class="flex justify-end gap-1">
-                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="text-muted-foreground transition-colors hover:text-primary">
+                                <div class="flex justify-end gap-0.5 sm:gap-1">
+                                    <Button variant="ghost" size="icon" @click.stop="openEditModal(project)" class="h-8 w-8 text-muted-foreground transition-colors hover:text-primary sm:hidden">
+                                        <Edit class="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="hidden text-muted-foreground transition-colors hover:text-primary sm:inline-flex">
                                         <Edit class="w-4 h-4 mr-1" />
                                         Edit
                                     </Button>
-                                    <Button asChild variant="outline" size="sm">
+                                    <Button asChild variant="outline" size="sm" class="hidden sm:inline-flex">
                                         <Link :href="route('projects.show', project.id)" @click.stop>
                                             <Eye class="w-4 h-4 mr-1" />
                                             View
@@ -439,9 +453,9 @@ function formatDate(date: string | null): string {
                                     </Button>
                                     <Button
                                         variant="ghost"
-                                        size="sm"
+                                        size="icon"
                                         @click.stop="openDeleteDialog(project)"
-                                        class="text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                        class="h-8 w-8 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                                     >
                                         <Trash2 class="w-4 h-4" />
                                     </Button>

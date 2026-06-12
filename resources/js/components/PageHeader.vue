@@ -18,7 +18,7 @@ defineProps<{
                 <component :is="icon" class="h-5 w-5" />
             </div>
             <div class="space-y-0.5">
-                <h1 class="font-display text-[1.7rem] font-semibold leading-tight tracking-tight text-foreground">
+                <h1 class="font-display text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.7rem]">
                     {{ title }}
                 </h1>
                 <p v-if="description" class="text-sm text-muted-foreground">{{ description }}</p>

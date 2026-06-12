@@ -182,7 +182,7 @@ const getPriorityClass = (priority: string): string => {
             <div class="mb-7 flex flex-col gap-4 border-b border-border/70 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="text-sm text-muted-foreground">{{ today }}</p>
-                    <h1 class="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">
+                    <h1 class="mt-1 font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                         {{ greeting }}, {{ firstName }}
                     </h1>
                     <p class="mt-1.5 text-sm text-muted-foreground">

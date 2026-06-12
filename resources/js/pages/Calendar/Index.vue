@@ -66,14 +66,23 @@ const loadEvents = async (fetchInfo: any, successCallback: Function, failureCall
 // Restore last-used view
 const storedView = (typeof localStorage !== 'undefined' && localStorage.getItem('calendar_view')) || 'dayGridMonth';
 
+// Track narrow screens so the calendar toolbar can simplify
+const isMobile = ref(typeof window !== 'undefined' && window.innerWidth < 640);
+const onResize = () => { isMobile.value = window.innerWidth < 640; };
+
 // Calendar options with dynamic event loading
 const calendarOptions = computed(() => ({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
-    headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-    },
+    headerToolbar: isMobile.value
+        ? { left: 'prev,next', center: 'title', right: 'today' }
+        : {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+    footerToolbar: isMobile.value
+        ? { center: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }
+        : false,
     initialView: storedView,
     height: '100%',
     expandRows: true,
@@ -457,12 +466,16 @@ const onKeydown = (e: KeyboardEvent) => {
 onMounted(() => {
     fetchUpcoming();
     window.addEventListener('keydown', onKeydown);
+    window.addEventListener('resize', onResize);
 });
-onUnmounted(() => window.removeEventListener('keydown', onKeydown));
+onUnmounted(() => {
+    window.removeEventListener('keydown', onKeydown);
+    window.removeEventListener('resize', onResize);
+});
 
 // Refresh agenda whenever events change
 const afterEventChange = async () => {
-    await afterEventChange();
+    await refreshCalendar();
     await fetchUpcoming();
 };
 </script>
@@ -697,10 +710,20 @@ const afterEventChange = async () => {
 
 :deep(.fc-toolbar-title) {
     font-family: var(--font-serif);
-    font-size: 1.35rem;
+    font-size: 1.15rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--foreground);
+}
+
+@media (min-width: 640px) {
+    :deep(.fc-toolbar-title) {
+        font-size: 1.35rem;
+    }
+}
+
+:deep(.fc-footer-toolbar) {
+    margin-top: 0.75rem;
 }
 
 :deep(.fc-button) {
