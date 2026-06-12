@@ -458,6 +458,21 @@ const openNewEventDialog = () => {
     box-shadow: none !important;
 }
 
+/* Space out buttons within FullCalendar's button groups */
+:deep(.fc-button-group) {
+    gap: 0.375rem;
+}
+
+:deep(.fc-button-group > .fc-button) {
+    border-radius: 0.5rem !important;
+    margin: 0 !important;
+}
+
+/* Gap between the toolbar chunks (prev/next | title | views) */
+:deep(.fc-toolbar > * > :not(:first-child)) {
+    margin-left: 0.5rem;
+}
+
 :deep(.fc-button-primary:not(:disabled).fc-button-active),
 :deep(.fc-button-primary:not(:disabled):active) {
     background-color: var(--primary) !important;
