@@ -135,6 +135,7 @@ const createNewNote = () => {
                                         v-for="item in mainNavItems"
                                         :key="item.title"
                                         :href="item.href"
+                                        prefetch
                                         class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
                                         :class="activeItemStyles(item.href)"
                                     >
@@ -171,7 +172,7 @@ const createNewNote = () => {
                     <NavigationMenu class="ml-10 flex h-full items-stretch">
                         <NavigationMenuList class="flex h-full items-stretch space-x-1">
                             <NavigationMenuItem v-for="(item, index) in mainNavItems" :key="index" class="relative flex h-full items-center">
-                                <Link :href="item.href">
+                                <Link :href="item.href" prefetch>
                                     <NavigationMenuLink
                                         :class="[navigationMenuTriggerStyle(), activeItemStyles(item.href), 'h-9 cursor-pointer px-3']"
                                     >

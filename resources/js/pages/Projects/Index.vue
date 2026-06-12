@@ -375,6 +375,7 @@ function formatDate(date: string | null): string {
                             <TableCell class="font-medium">
                                 <Link
                                     :href="route('projects.show', project.id)"
+                                    prefetch
                                     class="font-semibold text-foreground transition-colors hover:text-primary"
                                     @click.stop
                                 >
