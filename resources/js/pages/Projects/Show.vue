@@ -337,39 +337,39 @@ const handleEditTask = (task) => {
 
             <!-- Toolbar -->
             <Tabs :default-value="viewMode" @update:model-value="(val) => viewMode = val">
-                <div class="mb-4 flex items-center justify-between border-b border-border pb-3">
-                    <div class="flex items-center gap-3">
-                        <TabsList class="h-8 rounded-md bg-muted p-0.5">
-                            <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                                <LayoutList class="h-3.5 w-3.5" />
+                <div class="mb-4 flex flex-col gap-2 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex flex-1 items-center gap-2.5">
+                        <TabsList class="h-9 shrink-0 rounded-lg bg-muted p-1">
+                            <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded-md px-3 text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                                <LayoutList class="h-4 w-4" />
                                 List
                             </TabsTrigger>
-                            <TabsTrigger value="kanban" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                                <Columns3 class="h-3.5 w-3.5" />
+                            <TabsTrigger value="kanban" class="flex h-7 items-center gap-1.5 rounded-md px-3 text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                                <Columns3 class="h-4 w-4" />
                                 Board
                             </TabsTrigger>
                         </TabsList>
 
                         <!-- Filters -->
-                        <div class="hidden items-center gap-2 sm:flex">
-                            <div class="relative">
-                                <Search class="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <div class="flex flex-1 items-center gap-2">
+                            <div class="relative max-w-xs flex-1">
+                                <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     v-model="searchQuery"
-                                    placeholder="Filter tasks..."
-                                    class="h-7 w-44 border-border bg-background pl-7 text-xs shadow-none focus-visible:ring-1"
+                                    placeholder="Filter tasks…"
+                                    class="h-9 w-full rounded-lg border-border bg-background pl-8 pr-8 text-sm shadow-none focus-visible:ring-1"
                                 />
                                 <button
                                     v-if="searchQuery"
                                     @click="searchQuery = ''"
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                 >
-                                    <X class="h-3 w-3" />
+                                    <X class="h-3.5 w-3.5" />
                                 </button>
                             </div>
 
                             <Select v-model="filterPriority">
-                                <SelectTrigger class="h-7 w-28 border-border bg-background text-xs shadow-none">
+                                <SelectTrigger class="h-9 w-32 shrink-0 rounded-lg border-border bg-background text-sm shadow-none">
                                     <SelectValue placeholder="Priority" />
                                 </SelectTrigger>
                                 <SelectContent>
