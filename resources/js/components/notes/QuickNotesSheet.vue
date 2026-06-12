@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
-import { Search, Pin, FileText, ExternalLink, NotebookText } from 'lucide-vue-next';
+import { Search, Pin, FileText, NotebookText } from 'lucide-vue-next';
 import NoteItem from '@/components/notes/NoteItem.vue';
 
 const open = ref(false);
@@ -118,18 +118,10 @@ defineExpose({ openSheet });
     <Sheet :open="open" @update:open="open = $event">
         <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:!max-w-4xl lg:!max-w-5xl">
             <!-- Header -->
-            <div class="flex items-center justify-between border-b border-border px-5 py-3.5">
-                <div class="flex items-center gap-2">
-                    <FileText class="h-4 w-4 text-primary" />
-                    <h2 class="font-display text-lg font-semibold tracking-tight text-foreground">Quick Notes</h2>
-                    <span class="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">read-only</span>
-                </div>
-                <Link
-                    :href="route('notes.index')"
-                    class="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
-                >
-                    Open editor <ExternalLink class="h-3.5 w-3.5" />
-                </Link>
+            <div class="flex items-center gap-2 border-b border-border px-5 py-3.5">
+                <FileText class="h-4 w-4 text-primary" />
+                <h2 class="font-display text-lg font-semibold tracking-tight text-foreground">Quick Notes</h2>
+                <span class="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">read-only</span>
             </div>
 
             <div class="flex min-h-0 flex-1">
