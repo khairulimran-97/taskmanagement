@@ -6,7 +6,7 @@
    ========================================================================== */
 
 .tiptap-prose {
-    color: hsl(var(--foreground)) !important;
+    color: var(--foreground) !important;
     max-width: none !important;
     line-height: 1.7;
 }
@@ -20,7 +20,7 @@
    ========================================================================== */
 
 .ProseMirror p.is-editor-empty:first-child::before {
-    color: #666;
+    color: var(--muted-foreground);
     content: attr(data-placeholder);
     float: left;
     height: 0;
@@ -40,7 +40,7 @@
 .tiptap-prose h4,
 .tiptap-prose h5,
 .tiptap-prose h6 {
-    color: hsl(var(--foreground)) !important;
+    color: var(--foreground) !important;
     font-weight: 600 !important;
     line-height: 1.25;
 }
@@ -48,7 +48,7 @@
 .tiptap-prose h1 {
     font-size: 2em !important;
     margin: 1em 0 0.5em 0 !important;
-    border-bottom: 1px solid #ddd !important;
+    border-bottom: 1px solid var(--border) !important;
     padding-bottom: 0.3em !important;
 }
 
@@ -115,28 +115,41 @@
 .tiptap-prose ul[data-type="taskList"] input[type="checkbox"] {
     width: 1em !important;
     height: 1em !important;
-    accent-color: hsl(var(--primary)) !important;
+    accent-color: var(--primary) !important;
 }
 
 /* Blockquotes
    ========================================================================== */
 
 .tiptap-prose blockquote {
-    border-left: 4px solid hsl(var(--primary)) !important;
-    margin: 1em 0 !important;
+    position: relative !important;
+    border-left: 3px solid var(--primary) !important;
+    margin: 1.25em 0 !important;
+    padding: 0.85em 1.1em 0.85em 1.4em !important;
     font-style: italic !important;
-    color: #666 !important;
-    background-color: #f5f5f5 !important;
-    padding: 1em !important;
-    border-radius: 0.375rem !important;
+    color: var(--foreground) !important;
+    background-color: color-mix(in srgb, var(--primary) 7%, transparent) !important;
+    border-radius: 0 0.5rem 0.5rem 0 !important;
+}
+
+.tiptap-prose blockquote > :first-child {
+    margin-top: 0 !important;
+}
+
+.tiptap-prose blockquote > :last-child {
+    margin-bottom: 0 !important;
+}
+
+.tiptap-prose blockquote p {
+    color: var(--foreground) !important;
 }
 
 /* Code Blocks
    ========================================================================== */
 
 .tiptap-prose code {
-    background-color: #f5f5f5 !important;
-    color: hsl(var(--foreground)) !important;
+    background-color: var(--muted) !important;
+    color: var(--foreground) !important;
     border-radius: 0.25rem !important;
     padding: 0.125em 0.25em !important;
     font-size: 0.875em !important;
@@ -144,14 +157,14 @@
 }
 
 .tiptap-prose pre {
-    background-color: #f5f5f5 !important;
-    color: hsl(var(--foreground)) !important;
+    background-color: var(--muted) !important;
+    color: var(--foreground) !important;
     border-radius: 0.5rem !important;
     padding: 1em !important;
     margin: 1em 0 !important;
     overflow-x: auto !important;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-    border: 1px solid #ddd !important;
+    border: 1px solid var(--border) !important;
 }
 
 .tiptap-prose pre code {
@@ -179,7 +192,7 @@
 
 .tiptap-prose hr {
     border: none !important;
-    border-top: 1px solid #ddd !important;
+    border-top: 1px solid var(--border) !important;
     margin: 2em 0 !important;
 }
 
@@ -198,18 +211,18 @@
 .tiptap-prose td {
     padding: 0.75em !important;
     text-align: left !important;
-    border: 1px solid #ddd !important;
+    border: 1px solid var(--border) !important;
     position: relative;
     vertical-align: top;
 }
 
 .tiptap-prose th {
     font-weight: 600 !important;
-    background-color: #f0f0f0 !important;
+    background-color: var(--muted) !important;
 }
 
 .tiptap-prose tbody tr:nth-child(even) {
-    background-color: #f9f9f9 !important;
+    background-color: color-mix(in srgb, var(--muted) 45%, transparent) !important;
 }
 
 .tiptap-prose .tableWrapper {
@@ -218,7 +231,6 @@
 
 /* Table cell selection */
 .tiptap-prose .selectedCell {
-    background-color: #dbeafe !important;
     position: relative !important;
 }
 
@@ -229,64 +241,24 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    background-color: #3b82f6 !important;
-    opacity: 0.1 !important;
+    background-color: var(--primary) !important;
+    opacity: 0.12 !important;
     pointer-events: none !important;
-}
-
-.tiptap-prose .selectedCell::after {
-    content: '' !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background-color: #3b82f6 !important;
-    opacity: 0.1 !important;
-    pointer-events: none !important;
-}
-
-
-.dark .tiptap-prose table {
-    background-color: #121212 !important;
-}
-
-.dark .tiptap-prose th,
-.dark .tiptap-prose td {
-    border-color: #444 !important;
-    color: #e0e0e0 !important;
-}
-
-.dark .tiptap-prose th {
-    background-color: #2a2a2a !important;
-}
-
-.dark .tiptap-prose tbody tr:nth-child(even) {
-    background-color: #1e1e1e !important;
-}
-
-.dark .tiptap-prose .selectedCell {
-    background-color: #1e3a8a !important;
-}
-
-.dark .tiptap-prose .selectedCell::after {
-    background-color: #3b82f6 !important;
-    opacity: 0.2 !important;
 }
 
 /* Links
    ========================================================================== */
 
 .tiptap-prose a {
-    color: hsl(var(--primary)) !important;
+    color: var(--primary) !important;
     text-decoration: underline !important;
-    text-decoration-color: hsl(var(--primary) / 0.3) !important;
+    text-decoration-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
     text-underline-offset: 0.125em !important;
     transition: text-decoration-color 0.2s !important;
 }
 
 .tiptap-prose a:hover {
-    text-decoration-color: hsl(var(--primary)) !important;
+    text-decoration-color: var(--primary) !important;
 }
 
 /* Text Formatting
@@ -294,7 +266,7 @@
 
 .tiptap-prose strong {
     font-weight: 600 !important;
-    color: hsl(var(--foreground)) !important;
+    color: var(--foreground) !important;
 }
 
 .tiptap-prose em {
@@ -304,16 +276,16 @@
 .tiptap-prose s,
 .tiptap-prose del {
     text-decoration: line-through !important;
-    text-decoration-color: #666 !important;
+    text-decoration-color: var(--muted-foreground) !important;
 }
 
 .tiptap-prose u {
     text-decoration: underline !important;
-    text-decoration-color: #666 !important;
+    text-decoration-color: var(--muted-foreground) !important;
 }
 
 .tiptap-prose .text-muted-foreground {
-    color: #666 !important;
+    color: var(--muted-foreground) !important;
 }
 
 /* Slash Command Menu
@@ -325,10 +297,10 @@
     max-width: 20rem;
     overflow: hidden;
     border-radius: 0.375rem;
-    border: 1px solid #ddd;
-    background: hsl(var(--popover));
+    border: 1px solid var(--border);
+    background: var(--popover);
     padding: 0.25rem;
-    color: hsl(var(--popover-foreground));
+    color: var(--popover-foreground);
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
@@ -353,13 +325,13 @@
 }
 
 .tiptap-slash-menu .menu-item:hover {
-    background-color: hsl(var(--accent));
-    color: hsl(var(--accent-foreground));
+    background-color: var(--accent);
+    color: var(--accent-foreground);
 }
 
 .tiptap-slash-menu .menu-item.selected {
-    background-color: hsl(var(--accent));
-    color: hsl(var(--accent-foreground));
+    background-color: var(--accent);
+    color: var(--accent-foreground);
 }
 
 .tiptap-slash-menu .menu-item-icon {
@@ -385,17 +357,17 @@
 
 .tiptap-slash-menu .menu-item-description {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--muted-foreground);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .tiptap-slash-menu .menu-footer {
-    border-top: 1px solid #ddd;
+    border-top: 1px solid var(--border);
     padding: 0.5rem;
     font-size: 0.75rem;
-    color: #666;
+    color: var(--muted-foreground);
 }
 
 .tiptap-slash-menu .menu-footer-content {
@@ -438,7 +410,7 @@
     display: block !important;
     text-align: center !important;
     font-size: 0.875em !important;
-    color: #666 !important;
+    color: var(--muted-foreground) !important;
     margin-top: -0.5em !important;
     margin-bottom: 1em !important;
 }
@@ -449,7 +421,7 @@
 }
 
 .dark .tiptap-prose img + em {
-    color: #999 !important;
+    color: var(--muted-foreground) !important;
 }
 
 /* Image Gallery Page
@@ -472,7 +444,7 @@
     left: 8px;
     width: 20px;
     height: 20px;
-    background-color: hsl(var(--primary));
+    background-color: var(--primary);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -495,8 +467,8 @@
 
 /* Upload dropzone active state */
 .dropzone-active {
-    border-color: hsl(var(--primary)) !important;
-    background-color: hsl(var(--primary) / 0.05) !important;
+    border-color: var(--primary) !important;
+    background-color: color-mix(in srgb, var(--primary) 6%, transparent) !important;
 }
 
 /* Empty state styling */
@@ -507,15 +479,15 @@
     justify-content: center;
     padding: 3rem;
     text-align: center;
-    background-color: hsl(var(--background));
+    background-color: var(--background);
     border-radius: 0.5rem;
-    border: 1px dashed hsl(var(--border));
+    border: 1px dashed var(--border);
 }
 
 .empty-state-icon {
     width: 4rem;
     height: 4rem;
-    color: hsl(var(--muted-foreground) / 0.3);
+    color: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
     margin-bottom: 1rem;
 }
 
@@ -526,7 +498,7 @@
 }
 
 .empty-state-description {
-    color: hsl(var(--muted-foreground));
+    color: var(--muted-foreground);
     margin-bottom: 1.5rem;
     max-width: 25rem;
 }
