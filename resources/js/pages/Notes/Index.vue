@@ -341,19 +341,11 @@ const toggleTitleEdit = async () => {
 
     if (isTitleEditing.value) {
         await nextTick();
-        setTimeout(() => {
-            try {
-                const titleEl = titleInput.value;
-                if (titleEl) {
-                    const inputElement = titleEl.$el?.querySelector('input') || titleEl;
-                    if (inputElement && typeof inputElement.focus === 'function') {
-                        inputElement.focus();
-                    }
-                }
-            } catch (error) {
-                console.debug('Title input focus not available');
-            }
-        }, 100);
+        const el = titleInput.value as HTMLInputElement | null;
+        if (el) {
+            el.focus();
+            el.select();
+        }
     }
 };
 
@@ -691,11 +683,12 @@ onMounted(() => {
 
                                 <div class="min-w-0 flex-1">
                                     <!-- Title (editable) -->
-                                    <Input
+                                    <input
                                         v-if="isTitleEditing"
                                         ref="titleInput"
                                         v-model="noteForm.title"
-                                        class="-mx-2 h-auto rounded-md border border-primary/40 bg-background px-2 py-0.5 font-display text-2xl font-semibold leading-tight tracking-tight ring-2 ring-primary/15 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 md:text-2xl"
+                                        type="text"
+                                        class="-mx-2 w-full rounded-md border border-primary/50 bg-background px-2 py-0.5 font-display text-2xl font-semibold leading-tight tracking-tight text-foreground outline-none ring-2 ring-primary/20 focus:border-primary focus:ring-primary/30"
                                         placeholder="Untitled"
                                         @blur="isTitleEditing && cancelTitleEdit()"
                                         @keydown.enter.prevent="commitTitleEdit"
