@@ -680,7 +680,7 @@ onMounted(() => {
                                         v-if="isTitleEditing"
                                         ref="titleInput"
                                         v-model="noteForm.title"
-                                        class="h-auto border-none bg-transparent p-0 font-display text-2xl font-semibold leading-tight tracking-tight shadow-none focus-visible:ring-0"
+                                        class="-mx-2 h-auto rounded-md border border-primary/40 bg-background px-2 py-0.5 font-display text-2xl font-semibold leading-tight tracking-tight ring-2 ring-primary/15 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
                                         placeholder="Untitled"
                                         @blur="isTitleEditing = false"
                                         @keydown.enter="isTitleEditing = false"
@@ -689,7 +689,7 @@ onMounted(() => {
                                     <button
                                         v-else
                                         @click="toggleTitleEdit"
-                                        class="group/title -mx-1 flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-accent/40"
+                                        class="group/title -mx-2 flex w-full items-center gap-2 rounded-md px-2 py-0.5 text-left transition-colors hover:bg-accent/40"
                                         title="Click to rename"
                                     >
                                         <span class="truncate font-display text-2xl font-semibold leading-tight tracking-tight text-foreground">

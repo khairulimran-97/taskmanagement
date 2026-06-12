@@ -74,7 +74,8 @@ import {
     Clipboard,
     Link as LinkIcon,
     Unlink,
-    ExternalLink
+    ExternalLink,
+    Code2
 } from 'lucide-vue-next'
 
 interface Props {
@@ -85,6 +86,21 @@ interface Props {
 }
 
 const imageDialogOpen = ref(false)
+const showHtmlSource = ref(false)
+const htmlDraft = ref('')
+
+const toggleHtmlSource = () => {
+    if (!showHtmlSource.value) {
+        // entering source view — snapshot current HTML
+        htmlDraft.value = editor.value?.getHTML() || ''
+        showHtmlSource.value = true
+    } else {
+        // leaving source view — push edited HTML back into the editor
+        editor.value?.commands.setContent(htmlDraft.value, true)
+        emit('update:modelValue', editor.value?.getHTML() || '')
+        showHtmlSource.value = false
+    }
+}
 const linkDialogOpen = ref(false)
 const linkUrl = ref('')
 const linkText = ref('')
@@ -991,11 +1007,44 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                 <ImageIcon class="h-4 w-4" />
             </Button>
 
+            <Separator orientation="vertical" class="mx-1 h-6" />
+
+            <Button
+                @click="toggleHtmlSource"
+                variant="ghost"
+                size="sm"
+                class="h-8 w-8 p-0"
+                :class="showHtmlSource ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground' : ''"
+                :title="showHtmlSource ? 'Back to rich text' : 'View HTML source'"
+            >
+                <Code2 class="h-4 w-4" />
+            </Button>
+
         </div>
 
         <!-- Editor Content with Context Menu -->
         <div class="relative h-screen">
+            <!-- Raw HTML source view (code-editor style) -->
+            <div v-if="showHtmlSource" class="html-source flex h-full flex-col">
+                <div class="flex items-center gap-2 border-b border-[#2a2d3a] bg-[#1a1c24] px-4 py-2">
+                    <span class="flex gap-1.5">
+                        <span class="h-2.5 w-2.5 rounded-full bg-[#ff5f57]"></span>
+                        <span class="h-2.5 w-2.5 rounded-full bg-[#febc2e]"></span>
+                        <span class="h-2.5 w-2.5 rounded-full bg-[#28c840]"></span>
+                    </span>
+                    <span class="ml-1 font-mono text-xs text-[#8b8fa3]">source.html</span>
+                    <span class="ml-auto font-mono text-[11px] text-[#6b6f80]">read-only edits apply on toggle back</span>
+                </div>
+                <textarea
+                    v-model="htmlDraft"
+                    spellcheck="false"
+                    class="flex-1 w-full resize-none bg-[#0f1117] p-5 font-mono text-sm leading-relaxed text-[#c8cdda] outline-none selection:bg-[#2a4a6b]"
+                    placeholder="<p>HTML source…</p>"
+                ></textarea>
+            </div>
+
             <EditorContent
+                v-show="!showHtmlSource"
                 :editor="editor"
                 class="overflow-auto h-full"/>
 
