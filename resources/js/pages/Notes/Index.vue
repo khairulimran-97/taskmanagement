@@ -534,7 +534,7 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Notes" />
 
-        <div class="notes-layout flex h-[calc(100vh-3.5rem)] overflow-hidden border-x border-border">
+        <div class="notes-layout mx-auto flex h-[calc(100vh-3.5rem)] w-full max-w-7xl overflow-hidden border-x border-border">
             <!-- Sidebar -->
             <aside
                 class="flex w-72 flex-col overflow-hidden border-r border-border bg-muted/30 lg:w-80"

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
+import PageContainer from '@/components/PageContainer.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { BreadcrumbItem, Project } from '@/types';
 import { CheckCircle2, Edit, GripVertical, Loader2, Trash2 } from 'lucide-vue-next';
@@ -287,15 +289,15 @@ function getStatusClass(status: string): string {
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Projects" />
-        <div class="container mx-auto px-4 py-6">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Projects</h1>
-
-                <CreateProjectDialog
-                    v-model:open="isCreateModalOpen"
-                    @success="handleCreateSuccess"
-                />
-            </div>
+        <PageContainer>
+            <PageHeader title="Projects" description="Organize your work into projects and track progress.">
+                <template #actions>
+                    <CreateProjectDialog
+                        v-model:open="isCreateModalOpen"
+                        @success="handleCreateSuccess"
+                    />
+                </template>
+            </PageHeader>
 
             <EditProjectDialog
                 :open="isEditModalOpen"
@@ -548,6 +550,6 @@ function getStatusClass(status: string): string {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

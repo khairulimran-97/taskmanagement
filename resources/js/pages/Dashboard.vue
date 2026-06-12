@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
+import PageContainer from '@/components/PageContainer.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { type BreadcrumbItemType } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -169,12 +171,11 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
     <AppLayout :breadcrumbs="breadcrumbs" :notifications="notifications">
         <Head title="Dashboard" />
 
-        <div class="container mx-auto px-4 py-6 max-w-7xl">
-            <!-- Welcome Header -->
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Dashboard</h1>
-                <p class="text-gray-600 dark:text-gray-400">Welcome back! Here's an overview of your projects, tasks, notes, and calendar.</p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                title="Dashboard"
+                description="Welcome back! Here's an overview of your projects, tasks, notes, and calendar."
+            />
 
             <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -507,6 +508,6 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

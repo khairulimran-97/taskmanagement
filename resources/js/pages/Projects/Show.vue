@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ref, watch, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import PageContainer from '@/components/PageContainer.vue';
 import { BreadcrumbItem } from '@/types';
 
 import ProjectHeader from '@/components/project/ProjectHeader.vue';
@@ -325,7 +326,7 @@ const handleEditTask = (task) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="project.name" />
 
-        <div class="px-4 py-4 lg:px-6">
+        <PageContainer>
             <!-- Project Header -->
             <div class="mb-4 space-y-3">
                 <ProjectHeader :project="project" />
@@ -419,7 +420,7 @@ const handleEditTask = (task) => {
                     />
                 </TabsContent>
             </Tabs>
-        </div>
+        </PageContainer>
 
         <!-- Task Detail Sidebar with Subtask Form using slot -->
         <div class="relative">

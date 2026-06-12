@@ -2,6 +2,8 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ref, computed, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import PageContainer from '@/components/PageContainer.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { BreadcrumbItem, CalendarEvent, FullCalendarEvent } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -342,37 +344,29 @@ const openNewEventDialog = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Calendar" />
 
-        <div class="container mx-auto px-4 py-6 max-w-7xl">
-            <!-- Header -->
-            <div class="mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center space-x-3">
-                        <CalendarIcon class="h-8 w-8 text-blue-600" />
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Calendar</h1>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">
-                                Manage your personal events and appointments
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <Button
-                            @click="refreshCalendar"
-                            variant="outline"
-                            size="sm"
-                            :disabled="isLoadingEvents"
-                            class="flex items-center space-x-2"
-                        >
-                            <RefreshCw :class="['h-4 w-4', { 'animate-spin': isLoadingEvents }]" />
-                            <span>{{ isLoadingEvents ? 'Loading...' : 'Refresh' }}</span>
-                        </Button>
-                        <Button @click="openNewEventDialog" class="flex items-center space-x-2">
-                            <Plus class="h-4 w-4" />
-                            <span>New Event</span>
-                        </Button>
-                    </div>
-                </div>
-            </div>
+        <PageContainer>
+            <PageHeader
+                title="Calendar"
+                description="Manage your personal events and appointments"
+                :icon="CalendarIcon"
+            >
+                <template #actions>
+                    <Button
+                        @click="refreshCalendar"
+                        variant="outline"
+                        size="sm"
+                        :disabled="isLoadingEvents"
+                        class="flex items-center space-x-2"
+                    >
+                        <RefreshCw :class="['h-4 w-4', { 'animate-spin': isLoadingEvents }]" />
+                        <span>{{ isLoadingEvents ? 'Loading...' : 'Refresh' }}</span>
+                    </Button>
+                    <Button @click="openNewEventDialog" class="flex items-center space-x-2">
+                        <Plus class="h-4 w-4" />
+                        <span>New Event</span>
+                    </Button>
+                </template>
+            </PageHeader>
 
             <!-- Calendar -->
             <Card>
@@ -397,7 +391,7 @@ const openNewEventDialog = () => {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </PageContainer>
 
         <!-- Event Creation/Edit Dialog -->
         <CalendarEventDialog
