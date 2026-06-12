@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Calendar, Clock } from 'lucide-vue-next';
 
 interface Props {
@@ -252,16 +252,16 @@ const formatDate = (dateString: string): string => {
 </script>
 
 <template>
-    <Dialog :open="isOpen" @update:open="(open) => !open && handleCancel()">
-        <DialogContent class="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-                <DialogTitle>{{ dialogTitle }}</DialogTitle>
-                <DialogDescription>
+    <Sheet :open="isOpen" @update:open="(open) => !open && handleCancel()">
+        <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+            <SheetHeader class="border-b border-border px-5 py-4 text-left">
+                <SheetTitle class="font-display text-xl tracking-tight">{{ dialogTitle }}</SheetTitle>
+                <SheetDescription>
                     {{ editingEvent ? 'Update the event details below.' : 'Fill in the details to create a new event.' }}
-                </DialogDescription>
-            </DialogHeader>
+                </SheetDescription>
+            </SheetHeader>
 
-            <form @submit.prevent="handleSubmit" class="space-y-6">
+            <form @submit.prevent="handleSubmit" class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
                 <!-- Event Title -->
                 <div class="space-y-2">
                     <Label for="event-title">Event Title *</Label>
@@ -269,9 +269,9 @@ const formatDate = (dateString: string): string => {
                         id="event-title"
                         v-model="form.title"
                         placeholder="Enter event title"
-                        :class="{ 'border-red-500': errors.title }"
+                        :class="{ 'border-destructive': errors.title }"
                     />
-                    <p v-if="errors.title" class="text-sm text-red-500">{{ errors.title }}</p>
+                    <p v-if="errors.title" class="text-sm text-destructive">{{ errors.title }}</p>
                 </div>
 
                 <!-- Description -->
@@ -308,10 +308,10 @@ const formatDate = (dateString: string): string => {
                                 type="date"
                                 v-model="form.start_date"
                                 class="pl-10"
-                                :class="{ 'border-red-500': errors.start_date }"
+                                :class="{ 'border-destructive': errors.start_date }"
                             />
                         </div>
-                        <p v-if="errors.start_date" class="text-sm text-red-500">{{ errors.start_date }}</p>
+                        <p v-if="errors.start_date" class="text-sm text-destructive">{{ errors.start_date }}</p>
                         <p v-if="form.start_date" class="text-xs text-muted-foreground">
                             {{ formatDate(form.start_date) }}
                         </p>
@@ -327,10 +327,10 @@ const formatDate = (dateString: string): string => {
                                 type="time"
                                 v-model="form.start_time"
                                 class="pl-10"
-                                :class="{ 'border-red-500': errors.start_time }"
+                                :class="{ 'border-destructive': errors.start_time }"
                             />
                         </div>
-                        <p v-if="errors.start_time" class="text-sm text-red-500">{{ errors.start_time }}</p>
+                        <p v-if="errors.start_time" class="text-sm text-destructive">{{ errors.start_time }}</p>
                     </div>
                 </div>
 
@@ -345,10 +345,10 @@ const formatDate = (dateString: string): string => {
                                 type="date"
                                 v-model="form.end_date"
                                 class="pl-10"
-                                :class="{ 'border-red-500': errors.end_date }"
+                                :class="{ 'border-destructive': errors.end_date }"
                             />
                         </div>
-                        <p v-if="errors.end_date" class="text-sm text-red-500">{{ errors.end_date }}</p>
+                        <p v-if="errors.end_date" class="text-sm text-destructive">{{ errors.end_date }}</p>
                         <p v-if="form.end_date" class="text-xs text-muted-foreground">
                             {{ formatDate(form.end_date) }}
                         </p>
@@ -364,10 +364,10 @@ const formatDate = (dateString: string): string => {
                                 type="time"
                                 v-model="form.end_time"
                                 class="pl-10"
-                                :class="{ 'border-red-500': errors.end_time }"
+                                :class="{ 'border-destructive': errors.end_time }"
                             />
                         </div>
-                        <p v-if="errors.end_time" class="text-sm text-red-500">{{ errors.end_time }}</p>
+                        <p v-if="errors.end_time" class="text-sm text-destructive">{{ errors.end_time }}</p>
                     </div>
                 </div>
 
@@ -399,7 +399,7 @@ const formatDate = (dateString: string): string => {
                 </div>
             </form>
 
-            <DialogFooter>
+            <SheetFooter class="flex-row justify-end gap-2 border-t border-border px-5 py-4">
                 <Button
                     type="button"
                     variant="outline"
@@ -413,10 +413,10 @@ const formatDate = (dateString: string): string => {
                     @click="handleSubmit"
                     :disabled="isSubmitting"
                 >
-                    <span v-if="isSubmitting">{{ editingEvent ? 'Updating...' : 'Creating...' }}</span>
+                    <span v-if="isSubmitting">{{ editingEvent ? 'Updating…' : 'Creating…' }}</span>
                     <span v-else>{{ editingEvent ? 'Update Event' : 'Create Event' }}</span>
                 </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+            </SheetFooter>
+        </SheetContent>
+    </Sheet>
 </template>

@@ -2,11 +2,8 @@
 import { Head, router } from '@inertiajs/vue3';
 import { ref, computed, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import PageContainer from '@/components/PageContainer.vue';
-import PageHeader from '@/components/PageHeader.vue';
 import { BreadcrumbItem, CalendarEvent, FullCalendarEvent } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Calendar as CalendarIcon, RefreshCw } from 'lucide-vue-next';
 
 // FullCalendar imports
@@ -341,57 +338,59 @@ const openNewEventDialog = () => {
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppLayout :breadcrumbs="breadcrumbs" full-bleed>
         <Head title="Calendar" />
 
-        <PageContainer>
-            <PageHeader
-                title="Calendar"
-                description="Manage your personal events and appointments"
-                :icon="CalendarIcon"
-            >
-                <template #actions>
+        <div class="flex h-[calc(100vh-3.5rem)] flex-col">
+            <!-- Header bar -->
+            <div class="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 md:px-6">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/12 text-primary">
+                        <CalendarIcon class="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h1 class="font-display text-xl font-semibold tracking-tight text-foreground">Calendar</h1>
+                        <p class="text-xs text-muted-foreground">Manage your personal events and appointments</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
                     <Button
                         @click="refreshCalendar"
                         variant="outline"
                         size="sm"
                         :disabled="isLoadingEvents"
-                        class="flex items-center space-x-2"
+                        class="h-9 gap-1.5"
                     >
                         <RefreshCw :class="['h-4 w-4', { 'animate-spin': isLoadingEvents }]" />
-                        <span>{{ isLoadingEvents ? 'Loading...' : 'Refresh' }}</span>
+                        <span class="hidden sm:inline">{{ isLoadingEvents ? 'Loading…' : 'Refresh' }}</span>
                     </Button>
-                    <Button @click="openNewEventDialog" class="flex items-center space-x-2">
+                    <Button @click="openNewEventDialog" size="sm" class="h-9 gap-1.5">
                         <Plus class="h-4 w-4" />
                         <span>New Event</span>
                     </Button>
-                </template>
-            </PageHeader>
+                </div>
+            </div>
 
             <!-- Calendar -->
-            <Card>
-                <CardContent class="p-6">
-                    <div class="relative">
-                        <!-- Loading overlay -->
-                        <div
-                            v-if="isLoadingEvents"
-                            class="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-lg"
-                        >
-                            <div class="flex items-center space-x-2 text-muted-foreground">
-                                <RefreshCw class="h-5 w-5 animate-spin" />
-                                <span>Loading events...</span>
-                            </div>
-                        </div>
-
-                        <FullCalendar
-                            ref="calendarRef"
-                            :options="calendarOptions"
-                            class="calendar-container"
-                        />
+            <div class="relative flex-1 overflow-auto px-4 py-4 md:px-6">
+                <!-- Loading overlay -->
+                <div
+                    v-if="isLoadingEvents"
+                    class="absolute inset-0 z-10 flex items-center justify-center bg-background/60"
+                >
+                    <div class="flex items-center gap-2 text-muted-foreground">
+                        <RefreshCw class="h-5 w-5 animate-spin" />
+                        <span>Loading events…</span>
                     </div>
-                </CardContent>
-            </Card>
-        </PageContainer>
+                </div>
+
+                <FullCalendar
+                    ref="calendarRef"
+                    :options="calendarOptions"
+                    class="calendar-container"
+                />
+            </div>
+        </div>
 
         <!-- Event Creation/Edit Dialog -->
         <CalendarEventDialog
@@ -417,65 +416,61 @@ const openNewEventDialog = () => {
 </template>
 
 <style scoped>
-/* Calendar container styles */
+/* Calendar container — driven by theme tokens so it flips automatically */
 .calendar-container {
-    --fc-border-color: #e5e7eb;
-    --fc-button-text-color: #374151;
-    --fc-button-bg-color: #f9fafb;
-    --fc-button-border-color: #d1d5db;
-    --fc-button-hover-bg-color: #f3f4f6;
-    --fc-button-hover-border-color: #9ca3af;
-    --fc-button-active-bg-color: #e5e7eb;
-    --fc-today-bg-color: #fef3c7;
+    --fc-border-color: var(--border);
+    --fc-button-text-color: var(--foreground);
+    --fc-button-bg-color: var(--muted);
+    --fc-button-border-color: var(--border);
+    --fc-button-hover-bg-color: var(--accent);
+    --fc-button-hover-border-color: var(--border);
+    --fc-button-active-bg-color: var(--primary);
+    --fc-today-bg-color: color-mix(in srgb, var(--primary) 10%, transparent);
     --fc-event-text-color: #ffffff;
+    --fc-neutral-bg-color: var(--muted);
+    --fc-page-bg-color: var(--background);
 }
 
-/* Dark mode styles */
-.dark .calendar-container {
-    --fc-border-color: #374151;
-    --fc-button-text-color: #d1d5db;
-    --fc-button-bg-color: #1f2937;
-    --fc-button-border-color: #4b5563;
-    --fc-button-hover-bg-color: #374151;
-    --fc-button-hover-border-color: #6b7280;
-    --fc-button-active-bg-color: #4b5563;
-    --fc-today-bg-color: #451a03;
-    --fc-page-bg-color: #111827;
-    --fc-neutral-bg-color: #1f2937;
-}
-
-/* FullCalendar component styles */
 :deep(.fc) {
     font-family: inherit;
 }
 
 :deep(.fc-toolbar) {
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 :deep(.fc-toolbar-title) {
-    font-size: 1.25rem;
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
     font-weight: 600;
-    color: #111827;
-}
-
-.dark :deep(.fc-toolbar-title) {
-    color: #f9fafb;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
 }
 
 :deep(.fc-button) {
-    border-radius: 0.375rem;
+    border-radius: 0.5rem !important;
     font-weight: 500;
     font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.45rem 0.85rem;
+    text-transform: capitalize;
+    box-shadow: none !important;
+}
+
+:deep(.fc-button-primary:not(:disabled).fc-button-active),
+:deep(.fc-button-primary:not(:disabled):active) {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: var(--primary-foreground) !important;
 }
 
 :deep(.fc-event) {
     border: none;
-    border-radius: 0.25rem;
+    border-radius: 0.375rem;
     font-size: 0.75rem;
     font-weight: 500;
-    padding: 0.125rem 0.25rem;
+    padding: 0.125rem 0.35rem;
     cursor: pointer;
 }
 
@@ -485,7 +480,7 @@ const openNewEventDialog = () => {
 }
 
 :deep(.fc-timegrid-event) {
-    border-radius: 0.25rem;
+    border-radius: 0.375rem;
 }
 
 :deep(.fc-day-today) {
@@ -493,86 +488,67 @@ const openNewEventDialog = () => {
 }
 
 :deep(.fc-scrollgrid) {
-    border: 1px solid var(--fc-border-color);
-    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    overflow: hidden;
 }
 
 :deep(.fc th) {
-    background-color: #f9fafb;
-    border-color: var(--fc-border-color);
-}
-
-.dark :deep(.fc th) {
-    background-color: #1f2937;
-    color: #d1d5db;
+    background-color: var(--muted);
+    border-color: var(--border);
 }
 
 :deep(.fc td) {
-    border-color: var(--fc-border-color);
-}
-
-.dark :deep(.fc td) {
-    color: #d1d5db;
+    border-color: var(--border);
 }
 
 :deep(.fc-col-header-cell) {
     font-weight: 600;
-    color: #374151;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    padding: 0.6rem 0;
 }
 
-.dark :deep(.fc-col-header-cell) {
-    color: #d1d5db;
-}
-
-:deep(.fc-daygrid-day-number) {
-    color: #374151;
+:deep(.fc-daygrid-day-number),
+:deep(.fc-timegrid-axis-cushion),
+:deep(.fc-timegrid-slot-label-cushion),
+:deep(.fc-list-day-text),
+:deep(.fc-list-event-title) {
+    color: var(--foreground);
     font-weight: 500;
 }
 
-.dark :deep(.fc-daygrid-day-number) {
-    color: #d1d5db;
+:deep(.fc-list-event:hover td) {
+    background-color: var(--accent);
 }
 
-/* Event hover effects */
 :deep(.fc-event:hover) {
-    opacity: 0.8;
+    opacity: 0.85;
     transition: opacity 0.2s ease;
 }
 
-/* Selection styles */
 :deep(.fc-highlight) {
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
-/* Scrollbar styles for calendar */
+/* Slim scrollbar to match the app */
 :deep(.fc-scroller::-webkit-scrollbar) {
-    width: 8px;
-    height: 8px;
+    width: 5px;
+    height: 5px;
 }
 
 :deep(.fc-scroller::-webkit-scrollbar-track) {
-    background: #f1f1f1;
-    border-radius: 4px;
+    background: transparent;
 }
 
 :deep(.fc-scroller::-webkit-scrollbar-thumb) {
-    background: #c1c1c1;
-    border-radius: 4px;
+    background: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
+    border-radius: 9999px;
 }
 
 :deep(.fc-scroller::-webkit-scrollbar-thumb:hover) {
-    background: #a1a1a1;
-}
-
-.dark :deep(.fc-scroller::-webkit-scrollbar-track) {
-    background: #374151;
-}
-
-.dark :deep(.fc-scroller::-webkit-scrollbar-thumb) {
-    background: #6b7280;
-}
-
-.dark :deep(.fc-scroller::-webkit-scrollbar-thumb:hover) {
-    background: #9ca3af;
+    background: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
 }
 </style>

@@ -2,9 +2,9 @@
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Calendar, Clock, Edit, Trash2, X } from 'lucide-vue-next';
+import { Calendar, Clock, Edit, Trash2 } from 'lucide-vue-next';
 
 interface Props {
     isOpen: boolean;
@@ -160,24 +160,22 @@ const handleClose = () => {
 </script>
 
 <template>
-    <Dialog :open="isOpen" @update:open="(open) => !open && handleClose()">
-        <DialogContent class="sm:max-w-[500px]">
-            <DialogHeader>
-                <div class="flex items-center justify-between">
-                    <DialogTitle class="flex items-center space-x-2">
-                        <div
-                            class="w-4 h-4 rounded-full border border-card shadow-sm"
-                            :style="{ backgroundColor: event?.backgroundColor || '#3B82F6' }"
-                        />
-                        <span>{{ event?.title || 'Event Details' }}</span>
-                    </DialogTitle>
-                </div>
-                <DialogDescription>
-                    {{ event?.extendedProps?.description || 'View and manage this calendar event.' }}
-                </DialogDescription>
-            </DialogHeader>
+    <Sheet :open="isOpen" @update:open="(open) => !open && handleClose()">
+        <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+            <SheetHeader class="border-b border-border px-5 py-4 text-left">
+                <SheetTitle class="flex items-center gap-2.5">
+                    <span
+                        class="h-4 w-4 shrink-0 rounded-full ring-1 ring-border"
+                        :style="{ backgroundColor: event?.backgroundColor || 'var(--primary)' }"
+                    />
+                    <span class="truncate font-display text-xl tracking-tight">{{ event?.title || 'Event Details' }}</span>
+                </SheetTitle>
+                <SheetDescription>
+                    View and manage this calendar event.
+                </SheetDescription>
+            </SheetHeader>
 
-            <div v-if="event" class="space-y-6">
+            <div v-if="event" class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
                 <!-- Event Times -->
                 <div class="space-y-3">
                     <!-- Start Time -->
@@ -236,16 +234,16 @@ const handleClose = () => {
                 </div>
             </div>
 
-            <DialogFooter class="flex justify-between">
-                <div class="flex space-x-2">
-                    <Button variant="outline" @click="handleEdit" class="flex items-center space-x-2">
+            <SheetFooter class="flex-row items-center justify-between gap-2 border-t border-border px-5 py-4">
+                <div class="flex gap-2">
+                    <Button variant="outline" size="sm" @click="handleEdit" class="gap-1.5">
                         <Edit class="h-4 w-4" />
                         <span>Edit</span>
                     </Button>
 
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="outline" class="flex items-center space-x-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950">
+                            <Button variant="ghost" size="sm" class="gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
                                 <Trash2 class="h-4 w-4" />
                                 <span>Delete</span>
                             </Button>
@@ -261,7 +259,7 @@ const handleClose = () => {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
                                     @click="handleDelete"
-                                    class="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
                                 >
                                     Delete Event
                                 </AlertDialogAction>
@@ -270,10 +268,10 @@ const handleClose = () => {
                     </AlertDialog>
                 </div>
 
-                <Button @click="handleClose">
+                <Button size="sm" @click="handleClose">
                     Close
                 </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+            </SheetFooter>
+        </SheetContent>
+    </Sheet>
 </template>
