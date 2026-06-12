@@ -10,26 +10,15 @@ import { type BreadcrumbItemType } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
     FolderOpen,
     CheckCircle2,
-    Clock,
     AlertTriangle,
-    TrendingUp,
-    Calendar,
-    Target,
     Activity,
-    Users,
     Plus,
     ArrowRight,
-    ExternalLink,
     FileText,
-    Pin,
     CalendarDays,
-    Eye,
-    BookOpen,
-    Zap
 } from 'lucide-vue-next';
 
 interface Props {
@@ -121,7 +110,7 @@ const createNote = () => router.post(route('notes.create-empty'));
 const taskSegments = computed(() => [
     { key: 'completed', label: 'Completed', count: props.taskStats.completed, class: 'bg-primary' },
     { key: 'in_progress', label: 'In progress', count: props.taskStats.in_progress, class: 'bg-chart-2' },
-    { key: 'todo', label: 'To do', count: props.taskStats.todo, class: 'bg-muted-foreground/50' },
+    { key: 'todo', label: 'To do', count: props.taskStats.todo, class: 'bg-chart-5' },
     { key: 'overdue', label: 'Overdue', count: props.taskStats.overdue, class: 'bg-destructive' },
     { key: 'cancelled', label: 'Cancelled', count: props.taskStats.cancelled, class: 'bg-muted-foreground/30' },
 ]);
@@ -182,21 +171,6 @@ const getPriorityClass = (priority: string): string => {
     }
 };
 
-const formatEventDate = (dateString: string, allDay: boolean = false): string => {
-    const date = new Date(dateString);
-    if (allDay) {
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-        });
-    }
-    return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-    });
-};
 </script>
 
 <template>
@@ -324,10 +298,10 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                 </CardContent>
             </Card>
 
-            <!-- Main: Recent Tasks (primary) + side rail -->
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <!-- Main: Recent Tasks + Projects (balanced) -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <!-- Recent Tasks -->
-                <Card class="lg:col-span-2">
+                <Card>
                     <CardHeader>
                         <div class="flex items-center justify-between">
                             <div>
@@ -336,19 +310,24 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                             </div>
                             <Button variant="ghost" size="sm" asChild>
                                 <Link :href="route('projects.index')" class="text-sm text-primary hover:underline">
-                                    All projects <ArrowRight class="ml-1 h-3 w-3" />
+                                    View all <ArrowRight class="ml-1 h-3 w-3" />
                                 </Link>
                             </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div v-if="recentTasks.length > 0" class="divide-y divide-border">
-                            <div v-for="task in recentTasks.slice(0, 6)" :key="task.id" class="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                        <div v-if="recentTasks.length > 0" class="-mx-2 flex flex-col">
+                            <Link
+                                v-for="task in recentTasks.slice(0, 6)"
+                                :key="task.id"
+                                :href="task.project ? route('projects.show', task.project.id) : route('projects.index')"
+                                class="group flex items-start gap-3 rounded-lg border border-transparent px-2 py-2.5 transition-colors hover:border-border hover:bg-muted/50"
+                            >
                                 <span v-if="task.project" class="mt-1.5 h-2 w-2 shrink-0 rounded-full" :style="`background-color: ${task.project.color}`"></span>
                                 <span v-else class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40"></span>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-2">
-                                        <span class="truncate text-sm font-medium text-foreground">{{ task.title }}</span>
+                                        <span class="truncate text-sm font-medium text-foreground group-hover:text-primary">{{ task.title }}</span>
                                         <Badge :class="getStatusClass(task.status, 'task')" class="shrink-0 px-1.5 py-0.5 text-xs">
                                             {{ task.status.replace('_', ' ') }}
                                         </Badge>
@@ -363,7 +342,8 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                         </Badge>
                                     </div>
                                 </div>
-                            </div>
+                                <ArrowRight class="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:text-primary group-hover:opacity-100" />
+                            </Link>
                         </div>
                         <div v-else class="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
                             <Activity class="mb-2 h-8 w-8 opacity-40" />
@@ -372,95 +352,56 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                     </CardContent>
                 </Card>
 
-                <!-- Side rail -->
-                <div class="space-y-6">
-                    <!-- Upcoming events -->
-                    <Card>
-                        <CardHeader class="pb-3">
-                            <div class="flex items-center justify-between">
-                                <CardTitle class="text-base">Upcoming</CardTitle>
-                                <Link :href="route('calendar.index')" class="text-xs text-primary hover:underline">View all</Link>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div v-if="upcomingEvents.length > 0" class="space-y-3">
-                                <Link
-                                    v-for="event in upcomingEvents.slice(0, 4)"
-                                    :key="event.id"
-                                    :href="route('calendar.index')"
-                                    class="flex items-start gap-2.5"
-                                >
-                                    <span class="mt-1 h-2 w-2 shrink-0 rounded-full" :style="`background-color: ${event.color}`"></span>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm font-medium text-foreground">{{ event.title }}</p>
-                                        <p class="text-xs text-muted-foreground">
-                                            {{ formatEventDate(event.start_date, event.all_day) }}
-                                            <span v-if="event.days_until_event >= 0" class="text-primary">
-                                                · {{ event.days_until_event === 0 ? 'Today' : `${event.days_until_event}d` }}
-                                            </span>
-                                        </p>
-                                    </div>
-                                </Link>
-                            </div>
-                            <p v-else class="py-4 text-center text-sm text-muted-foreground">No upcoming events</p>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Active projects -->
-                    <Card>
-                        <CardHeader class="pb-3">
-                            <div class="flex items-center justify-between">
+                <!-- Projects -->
+                <Card>
+                    <CardHeader>
+                        <div class="flex items-center justify-between">
+                            <div>
                                 <CardTitle class="text-base">Projects</CardTitle>
-                                <Link :href="route('projects.index')" class="text-xs text-primary hover:underline">View all</Link>
+                                <CardDescription>Your most recent projects</CardDescription>
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div v-if="recentProjects.length > 0" class="space-y-3">
-                                <Link
-                                    v-for="project in recentProjects.slice(0, 4)"
-                                    :key="project.id"
-                                    :href="route('projects.show', project.id)"
-                                    class="flex items-center gap-2.5"
-                                >
-                                    <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="`background-color: ${project.color}`"></span>
-                                    <span class="truncate text-sm font-medium text-foreground">{{ project.name }}</span>
-                                    <span v-if="typeof project.completion_percentage === 'number'" class="ml-auto text-xs text-muted-foreground">
-                                        {{ project.completion_percentage }}%
-                                    </span>
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link :href="route('projects.index')" class="text-sm text-primary hover:underline">
+                                    View all <ArrowRight class="ml-1 h-3 w-3" />
                                 </Link>
-                            </div>
-                            <p v-else class="py-4 text-center text-sm text-muted-foreground">No projects yet</p>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Latest notes -->
-                    <Card>
-                        <CardHeader class="pb-3">
-                            <div class="flex items-center justify-between">
-                                <CardTitle class="text-base">Notes</CardTitle>
-                                <Link :href="route('notes.index')" class="text-xs text-primary hover:underline">View all</Link>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div v-if="latestNotes.length > 0" class="space-y-3">
-                                <Link
-                                    v-for="note in latestNotes.slice(0, 4)"
-                                    :key="note.id"
-                                    :href="route('notes.show', note.id)"
-                                    class="flex items-start gap-2"
-                                >
-                                    <Pin v-if="note.is_pinned" class="mt-0.5 h-3 w-3 shrink-0 text-primary" />
-                                    <FileText v-else class="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
-                                    <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm font-medium text-foreground">{{ note.title }}</p>
-                                        <p class="text-xs text-muted-foreground">{{ getRelativeTime(note.updated_at) }}</p>
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="recentProjects.length > 0" class="-mx-2 flex flex-col">
+                            <Link
+                                v-for="project in recentProjects.slice(0, 6)"
+                                :key="project.id"
+                                :href="route('projects.show', project.id)"
+                                class="group flex items-center gap-3 rounded-lg border border-transparent px-2 py-2.5 transition-colors hover:border-border hover:bg-muted/50"
+                            >
+                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="`background-color: ${project.color}`"></span>
+                                <div class="min-w-0 flex-1">
+                                    <span class="truncate text-sm font-medium text-foreground group-hover:text-primary">{{ project.name }}</span>
+                                    <div class="mt-1 flex items-center gap-2">
+                                        <Badge :class="getStatusClass(project.status, 'project')" class="px-1.5 py-0.5 text-xs">
+                                            {{ project.status }}
+                                        </Badge>
+                                        <span class="text-xs text-muted-foreground">{{ getRelativeTime(project.created_at) }}</span>
                                     </div>
+                                </div>
+                                <span v-if="typeof project.completion_percentage === 'number'" class="shrink-0 text-xs font-semibold text-muted-foreground">
+                                    {{ project.completion_percentage }}%
+                                </span>
+                                <ArrowRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:text-primary group-hover:opacity-100" />
+                            </Link>
+                        </div>
+                        <div v-else class="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                            <FolderOpen class="mb-2 h-8 w-8 opacity-40" />
+                            <p class="text-sm">No projects yet</p>
+                            <Button variant="outline" size="sm" asChild class="mt-3">
+                                <Link :href="route('projects.index')">
+                                    <Plus class="mr-1 h-3 w-3" /> Create project
                                 </Link>
-                            </div>
-                            <p v-else class="py-4 text-center text-sm text-muted-foreground">No notes yet</p>
-                        </CardContent>
-                    </Card>
-                </div>
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </PageContainer>
     </AppLayout>
