@@ -598,10 +598,13 @@ onMounted(() => {
                     <!-- Note Items -->
                     <template v-else>
                         <!-- Pinned -->
-                        <div v-if="pinnedNotes.length" class="pb-1">
-                            <p class="flex items-center gap-1.5 px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                <Pin class="h-3 w-3 text-amber-500" /> Pinned
-                            </p>
+                        <section v-if="pinnedNotes.length" class="bg-amber-500/[0.04]">
+                            <div class="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-muted/60 px-4 py-1.5 backdrop-blur-sm">
+                                <span class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <Pin class="h-3 w-3 text-amber-500" /> Pinned
+                                </span>
+                                <span class="text-[11px] font-medium text-muted-foreground/70">{{ pinnedNotes.length }}</span>
+                            </div>
                             <NoteItem
                                 v-for="note in pinnedNotes"
                                 :key="note.id"
@@ -609,13 +612,17 @@ onMounted(() => {
                                 :active="currentNote?.id === note.id"
                                 @select="selectNote(note)"
                             />
-                        </div>
+                        </section>
 
                         <!-- All -->
-                        <div>
-                            <p v-if="pinnedNotes.length" class="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                All notes
-                            </p>
+                        <section>
+                            <div
+                                v-if="pinnedNotes.length"
+                                class="sticky top-0 z-10 flex items-center justify-between border-y border-border bg-muted/60 px-4 py-1.5 backdrop-blur-sm"
+                            >
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">All notes</span>
+                                <span class="text-[11px] font-medium text-muted-foreground/70">{{ unpinnedNotes.length }}</span>
+                            </div>
                             <NoteItem
                                 v-for="note in unpinnedNotes"
                                 :key="note.id"
@@ -623,7 +630,7 @@ onMounted(() => {
                                 :active="currentNote?.id === note.id"
                                 @select="selectNote(note)"
                             />
-                        </div>
+                        </section>
                     </template>
                 </div>
             </aside>
