@@ -514,13 +514,17 @@ const formatDate = (dateString: string): string => {
     }
 };
 
-// Cancel title editing
-const cancelTitleEdit = () => {
+// Commit title edit (Enter / explicit save)
+const commitTitleEdit = () => {
     isTitleEditing.value = false;
-    // Reset title to original value
+};
+
+// Cancel title editing — restore original (Esc / click away)
+const cancelTitleEdit = () => {
     if (currentNote.value) {
         noteForm.value.title = currentNote.value.title || 'Untitled';
     }
+    isTitleEditing.value = false;
 };
 
 // Handle before unload to warn about unsaved changes
@@ -682,8 +686,8 @@ onMounted(() => {
                                         v-model="noteForm.title"
                                         class="-mx-2 h-auto rounded-md border border-primary/40 bg-background px-2 py-0.5 font-display text-2xl font-semibold leading-tight tracking-tight ring-2 ring-primary/15 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 md:text-2xl"
                                         placeholder="Untitled"
-                                        @blur="isTitleEditing = false"
-                                        @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+                                        @blur="isTitleEditing && cancelTitleEdit()"
+                                        @keydown.enter.prevent="commitTitleEdit"
                                         @keydown.esc.prevent="cancelTitleEdit"
                                     />
                                     <button
