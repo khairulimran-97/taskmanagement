@@ -84,7 +84,7 @@ const contentChanged = computed(() => {
 const autoSaveStatus = computed(() => {
     if (!isOnline.value) return { text: 'Offline', icon: CloudOff, class: 'text-orange-500' };
     if (autoSaveError.value) return { text: 'Save failed', icon: AlertCircle, class: 'text-red-500' };
-    if (isAutoSaving.value) return { text: 'Saving...', icon: Loader2, class: 'text-blue-500' };
+    if (isAutoSaving.value) return { text: 'Saving...', icon: Loader2, class: 'text-primary' };
     if (hasUnsavedChanges.value) return { text: 'Unsaved changes', icon: AlertCircle, class: 'text-yellow-500' };
     if (lastSaveTime.value) {
         const timeSince = getTimeSince(lastSaveTime.value);

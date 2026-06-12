@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 </script>
 
 <template>
-    <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-gradient-to-b from-blue-500 to-blue-600">
-        <AppLogoIcon class="size-5 fill-current text-blue dark:text-black" />
-    </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate font-semibold leading-none text-blue-800">My Task</span>
+    <div class="flex items-center gap-2.5">
+        <span class="relative flex h-3 w-3 items-center justify-center">
+            <span class="h-3 w-3 rounded-full bg-primary"></span>
+            <span class="absolute h-3 w-3 rounded-full bg-primary/40 ring-4 ring-primary/15"></span>
+        </span>
+        <span class="font-display text-lg font-semibold leading-none tracking-tight text-foreground">
+            Taskflow
+        </span>
     </div>
 </template>

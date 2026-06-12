@@ -307,22 +307,22 @@ function getStatusClass(status: string): string {
             />
 
             <div class="mt-6 mb-10 grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Projects</div>
-                            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ props.projects.length }}</div>
+                            <div class="text-sm font-medium text-muted-foreground mb-1">Total Projects</div>
+                            <div class="text-3xl font-bold text-foreground">{{ props.projects.length }}</div>
                         </div>
-                        <div class="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                            <GripVertical class="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                        <div class="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+                            <GripVertical class="w-6 h-6 text-muted-foreground" />
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Active</div>
+                            <div class="text-sm font-medium text-muted-foreground mb-1">Active</div>
                             <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
                                 {{ props.projects.filter(p => p.status === 'active').length }}
                             </div>
@@ -333,10 +333,10 @@ function getStatusClass(status: string): string {
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Completed</div>
+                            <div class="text-sm font-medium text-muted-foreground mb-1">Completed</div>
                             <div class="text-3xl font-bold text-green-600 dark:text-green-400">
                                 {{ props.projects.filter(p => p.status === 'completed').length }}
                             </div>
@@ -347,10 +347,10 @@ function getStatusClass(status: string): string {
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                <div class="bg-card p-6 rounded-lg border border-border hover:shadow-md transition-shadow">
                     <div class="flex items-center justify-between">
                         <div>
-                            <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">High Priority</div>
+                            <div class="text-sm font-medium text-muted-foreground mb-1">High Priority</div>
                             <div class="text-3xl font-bold text-red-600 dark:text-red-400">
                                 {{ props.projects.filter(p => p.priority === 'high').length }}
                             </div>
@@ -362,13 +362,13 @@ function getStatusClass(status: string): string {
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border-b border-blue-100 dark:border-gray-600 flex items-center justify-between">
-                    <div class="flex items-center text-sm text-blue-700 dark:text-blue-300">
+            <div class="bg-card rounded-lg border border-border overflow-hidden">
+                <div class="px-4 py-3 bg-primary/8 border-b border-border flex items-center justify-between">
+                    <div class="flex items-center text-sm text-primary">
                         <GripVertical class="w-4 h-4 mr-2" />
                         <span class="font-medium">Drag & Drop to Reorder Projects</span>
                     </div>
-                    <div v-if="isReordering" class="flex items-center text-sm text-blue-600 dark:text-blue-300">
+                    <div v-if="isReordering" class="flex items-center text-sm text-primary">
                         <Loader2 class="w-4 h-4 mr-2 animate-spin" />
                         <span>Saving order...</span>
                     </div>
@@ -376,24 +376,24 @@ function getStatusClass(status: string): string {
 
                 <Table>
                     <TableHeader>
-                        <TableRow class="bg-gray-50 dark:bg-gray-800">
+                        <TableRow class="bg-muted/50">
                             <TableHead class="w-8"></TableHead>
                             <TableHead class="w-8"></TableHead>
-                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Project Name</TableHead>
-                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Description</TableHead>
-                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Status</TableHead>
-                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Priority</TableHead>
-                            <TableHead class="font-semibold text-gray-700 dark:text-gray-200">Progress</TableHead>
-                            <TableHead class="text-right font-semibold text-gray-700 dark:text-gray-200">Actions</TableHead>
+                            <TableHead class="font-semibold text-foreground">Project Name</TableHead>
+                            <TableHead class="font-semibold text-foreground">Description</TableHead>
+                            <TableHead class="font-semibold text-foreground">Status</TableHead>
+                            <TableHead class="font-semibold text-foreground">Priority</TableHead>
+                            <TableHead class="font-semibold text-foreground">Progress</TableHead>
+                            <TableHead class="text-right font-semibold text-foreground">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
 
                     <TableBody>
                         <TableRow v-if="sortedProjects.length === 0">
-                            <TableCell :colspan="10" class="text-center py-12 text-gray-500 dark:text-gray-400">
+                            <TableCell :colspan="10" class="text-center py-12 text-muted-foreground">
                                 <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                                        <GripVertical class="w-8 h-8 text-gray-300 dark:text-gray-500" />
+                                    <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                                        <GripVertical class="w-8 h-8 text-muted-foreground/60" />
                                     </div>
                                     <span class="text-lg font-medium">No projects yet</span>
                                     <span class="text-sm">Create your first project to get started</span>
@@ -408,7 +408,7 @@ function getStatusClass(status: string): string {
                     'group transition-all duration-200 relative',
                     isDragging && draggedProject?.id === project.id
                         ? 'opacity-50 scale-95 bg-blue-50 dark:bg-blue-900 shadow-lg border-2 border-blue-200 dark:border-blue-700'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800',
+                        : 'hover:bg-muted/50',
                     dragOverIndex === index && draggedProject?.id !== project.id
                         ? 'bg-blue-50 dark:bg-blue-900 border-l-4 border-blue-500 dark:border-blue-400 shadow-sm transform scale-[1.01]'
                         : '',
@@ -427,7 +427,7 @@ function getStatusClass(status: string): string {
                                     class="flex items-center justify-center w-6 h-8 rounded transition-colors"
                                     :class="isDragging && draggedProject?.id === project.id
                             ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800'
-                            : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 group-hover:bg-gray-100 dark:group-hover:bg-gray-800'"
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted group-hover:bg-muted'"
                                 >
                                     <GripVertical class="w-4 h-4" />
                                 </div>
@@ -443,7 +443,7 @@ function getStatusClass(status: string): string {
 
                             <TableCell class="p-3">
                                 <div
-                                    class="w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 shadow-sm"
+                                    class="w-4 h-4 rounded-full border-2 border-card shadow-sm"
                                     :style="`background-color: ${project.color || '#3B82F6'}`"
                                 ></div>
                             </TableCell>
@@ -461,7 +461,7 @@ function getStatusClass(status: string): string {
 
                             <!-- Description -->
                             <TableCell class="max-w-xs">
-                    <span class="text-gray-600 dark:text-gray-400 line-clamp-2">
+                    <span class="text-muted-foreground line-clamp-2">
                         {{ project.description || 'No description' }}
                     </span>
                             </TableCell>
@@ -494,23 +494,23 @@ function getStatusClass(status: string): string {
                                     'bg-yellow-200 dark:bg-yellow-800 [&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-400': project.completion_percentage >= 50 && project.completion_percentage < 75,
                                     'bg-green-200 dark:bg-green-800 [&>div]:bg-green-500 dark:[&>div]:bg-green-400': project.completion_percentage >= 75
                                 }" />
-                                        <span class="text-xs text-gray-500 dark:text-gray-400 font-medium min-w-8 text-right">
+                                        <span class="text-xs text-muted-foreground font-medium min-w-8 text-right">
                                 {{ project.completion_percentage }}%
                             </span>
                                     </div>
                                 </div>
-                                <span v-else class="text-gray-400 dark:text-gray-500 text-sm">-</span>
+                                <span v-else class="text-muted-foreground text-sm">-</span>
                             </TableCell>
 
                             <!-- Actions -->
                             <TableCell class="text-right">
                                 <div class="flex justify-end space-x-2">
-                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="transition-colors text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
+                                    <Button variant="ghost" size="sm" @click.stop="openEditModal(project)" class="transition-colors text-foreground hover:text-blue-600 dark:hover:text-blue-400">
                                         <Edit class="w-4 h-4 mr-1" />
                                         Edit
                                     </Button>
                                     <Button asChild variant="outline" size="sm" class="transition-colors">
-                                        <Link :href="route('projects.show', project.id)" @click.stop class="text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
+                                        <Link :href="route('projects.show', project.id)" @click.stop class="text-foreground hover:text-blue-600 dark:hover:text-blue-400">
                                             View
                                         </Link>
                                     </Button>

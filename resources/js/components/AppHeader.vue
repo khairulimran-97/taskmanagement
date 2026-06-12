@@ -35,7 +35,8 @@ import {
     CalendarDays,
     PenTool
 } from 'lucide-vue-next';
-import { computed, ref, onMounted } from 'vue';
+import { useAppearance } from '@/composables/useAppearance';
+import { computed } from 'vue';
 
 interface Props {
     breadcrumbs?: BreadcrumbItem[];
@@ -60,36 +61,23 @@ const props = withDefaults(defineProps<Props>(), {
 const page = usePage();
 const auth = computed(() => page.props.auth);
 
-// Dark mode functionality
-const isDark = ref(false);
-
-onMounted(() => {
-    // Check for saved theme preference or default to 'light'
-    const savedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    isDark.value = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
-    updateTheme();
+// Dark mode — single source of truth via useAppearance (localStorage 'appearance')
+const { appearance, updateAppearance } = useAppearance();
+const isDark = computed(() => {
+    if (appearance.value === 'system') {
+        return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return appearance.value === 'dark';
 });
 
 const toggleTheme = () => {
-    isDark.value = !isDark.value;
-    updateTheme();
-    localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
-};
-
-const updateTheme = () => {
-    if (isDark.value) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
+    updateAppearance(isDark.value ? 'light' : 'dark');
 };
 
 const isCurrentRoute = computed(() => (url: string) => page.url === url);
 
 const activeItemStyles = computed(
-    () => (url: string) => (isCurrentRoute.value(url) ? 'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100' : ''),
+    () => (url: string) => (isCurrentRoute.value(url) ? 'bg-accent text-foreground' : 'text-muted-foreground'),
 );
 
 const mainNavItems: NavItem[] = [
@@ -123,7 +111,7 @@ const createNewNote = () => {
 
 <template>
     <div>
-        <div class="border-b border-sidebar-border/80 bg-white dark:bg-neutral-900">
+        <div class="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
             <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                 <!-- Mobile Menu -->
                 <div class="lg:hidden">
@@ -136,7 +124,7 @@ const createNewNote = () => {
                         <SheetContent side="left" class="w-[300px] p-6">
                             <SheetTitle class="sr-only">Navigation Menu</SheetTitle>
                             <SheetHeader class="flex justify-start text-left">
-                                <AppLogoIcon class="size-6 fill-current text-black dark:text-white" />
+                                <AppLogoIcon class="size-6 fill-current text-primary" />
                             </SheetHeader>
                             <div class="flex h-full flex-1 flex-col justify-between space-y-4 py-6">
                                 <nav class="-mx-3 space-y-1">
@@ -224,7 +212,7 @@ const createNewNote = () => {
                                     <Badge
                                         v-if="props.notifications.total > 0"
                                         class="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
-                                        :class="props.notifications.overdue_tasks > 0 ? 'bg-red-500 hover:bg-red-600' : 'bg-primary'"
+                                        :class="props.notifications.overdue_tasks > 0 ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : 'bg-primary'"
                                     >
                                         {{ props.notifications.total > 9 ? '9+' : props.notifications.total }}
                                     </Badge>
@@ -289,7 +277,7 @@ const createNewNote = () => {
                                         </div>
 
                                         <!-- No Notifications -->
-                                        <div v-if="props.notifications.total === 0" class="text-center py-6 text-gray-500 dark:text-gray-400">
+                                        <div v-if="props.notifications.total === 0" class="text-center py-6 text-muted-foreground">
                                             <Bell class="h-8 w-8 mx-auto mb-2 opacity-50" />
                                             <p class="text-sm">No new notifications</p>
                                         </div>
@@ -309,7 +297,7 @@ const createNewNote = () => {
                             >
                                 <Avatar class="size-8 overflow-hidden rounded-full">
                                     <AvatarImage v-if="auth.user.avatar" :src="auth.user.avatar" :alt="auth.user.name" />
-                                    <AvatarFallback class="rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white">
+                                    <AvatarFallback class="rounded-lg bg-primary/15 font-semibold text-primary">
                                         {{ getInitials(auth.user?.name) }}
                                     </AvatarFallback>
                                 </Avatar>
@@ -323,8 +311,8 @@ const createNewNote = () => {
             </div>
         </div>
 
-        <div v-if="props.breadcrumbs.length > 1" class="flex w-full border-b border-sidebar-border/70 bg-neutral-50/50 dark:bg-neutral-900/50">
-            <div class="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
+        <div v-if="props.breadcrumbs.length > 1" class="flex w-full border-b border-border bg-muted/40">
+            <div class="mx-auto flex h-12 w-full items-center justify-start px-4 text-muted-foreground md:max-w-7xl">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </div>
         </div>

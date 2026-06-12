@@ -375,9 +375,9 @@ const openNewEventDialog = () => {
                         <!-- Loading overlay -->
                         <div
                             v-if="isLoadingEvents"
-                            class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center z-10 rounded-lg"
+                            class="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-lg"
                         >
-                            <div class="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                            <div class="flex items-center space-x-2 text-muted-foreground">
                                 <RefreshCw class="h-5 w-5 animate-spin" />
                                 <span>Loading events...</span>
                             </div>

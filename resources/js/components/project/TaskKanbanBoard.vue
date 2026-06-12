@@ -108,7 +108,7 @@ const getPriorityClass = (priority: string) => {
         medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
         low: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     };
-    return classes[priority] || 'bg-gray-100 text-gray-700';
+    return classes[priority] || 'bg-muted text-foreground';
 };
 
 const getPriorityDot = (priority: string) => {
@@ -128,14 +128,14 @@ const formatDueDate = (date: string | null) => {
 };
 
 const getDueDateClass = (task: any) => {
-    if (!task.due_date || task.status === 'completed') return 'text-gray-500 dark:text-gray-400';
+    if (!task.due_date || task.status === 'completed') return 'text-muted-foreground';
     const due = new Date(task.due_date);
     const now = new Date();
     const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) return 'text-red-600 dark:text-red-400';
     if (diffDays <= 1) return 'text-orange-600 dark:text-orange-400';
     if (diffDays <= 3) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-gray-500 dark:text-gray-400';
+    return 'text-muted-foreground';
 };
 
 // Load-more: show CARDS_PER_BATCH initially, reveal more on click
@@ -189,7 +189,7 @@ const loadMore = (statusKey: string) => {
             <div class="mb-3 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <component :is="col.icon" class="h-4 w-4" :class="col.iconClass" />
-                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ col.label }}</span>
+                    <span class="text-sm font-semibold text-foreground">{{ col.label }}</span>
                     <Badge variant="secondary" class="h-5 px-1.5 text-xs">
                         {{ tasksByStatus[col.key]?.length || 0 }}
                     </Badge>
@@ -201,7 +201,7 @@ const loadMore = (statusKey: string) => {
                 <Card
                     v-for="task in visibleTasks(col.key)"
                     :key="task.id"
-                    class="cursor-pointer border border-gray-200 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700"
+                    class="cursor-pointer border border-border shadow-sm transition-shadow hover:shadow-md dark:border-border"
                     @click="$emit('view-task', task)"
                 >
                     <CardContent class="p-3">
@@ -214,15 +214,15 @@ const loadMore = (statusKey: string) => {
                                     class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full transition-all hover:scale-110"
                                     :class="task.status === 'completed'
                                         ? 'bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800'
-                                        : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600'"
+                                        : 'bg-muted hover:bg-muted dark:hover:bg-accent'"
                                 >
-                                    <Loader2 v-if="updatingTasks.has(task.id)" class="h-3 w-3 animate-spin text-gray-400" />
+                                    <Loader2 v-if="updatingTasks.has(task.id)" class="h-3 w-3 animate-spin text-muted-foreground" />
                                     <CheckCircle2 v-else-if="task.status === 'completed'" class="h-3 w-3 text-green-600 dark:text-green-400" />
-                                    <Circle v-else class="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                                    <Circle v-else class="h-3 w-3 text-muted-foreground" />
                                 </button>
                                 <span
                                     class="line-clamp-2 text-sm font-medium leading-tight"
-                                    :class="task.status === 'completed' ? 'text-gray-400 line-through dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'"
+                                    :class="task.status === 'completed' ? 'text-muted-foreground line-through dark:text-muted-foreground' : 'text-foreground'"
                                     :title="task.title"
                                 >
                                     {{ task.title }}
@@ -231,10 +231,10 @@ const loadMore = (statusKey: string) => {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="sm" class="h-6 w-6 flex-shrink-0 p-0" @click.stop>
-                                        <MoreVertical class="h-3.5 w-3.5 text-gray-400" />
+                                        <MoreVertical class="h-3.5 w-3.5 text-muted-foreground" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" class="w-36 dark:bg-gray-800">
+                                <DropdownMenuContent align="end" class="w-36 dark:bg-card">
                                     <DropdownMenuItem @click.stop="$emit('view-task', task)">
                                         <Eye class="mr-2 h-3 w-3" />
                                         <span class="text-xs">View</span>
@@ -252,7 +252,7 @@ const loadMore = (statusKey: string) => {
                         </div>
 
                         <!-- Description -->
-                        <p v-if="task.description" class="mb-2 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                        <p v-if="task.description" class="mb-2 line-clamp-2 text-xs text-muted-foreground">
                             {{ task.description }}
                         </p>
 
@@ -270,7 +270,7 @@ const loadMore = (statusKey: string) => {
                             </div>
 
                             <!-- Subtask count -->
-                            <span v-if="subtaskCountMap[task.id]" class="text-xs text-gray-400 dark:text-gray-500">
+                            <span v-if="subtaskCountMap[task.id]" class="text-xs text-muted-foreground">
                                 {{ subtaskCountMap[task.id] }} sub
                             </span>
                         </div>
@@ -289,7 +289,7 @@ const loadMore = (statusKey: string) => {
                             <Badge
                                 v-if="task.tags.length > 3"
                                 variant="outline"
-                                class="h-5 cursor-pointer px-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                                class="h-5 cursor-pointer px-1.5 text-xs hover:bg-muted"
                                 @click.stop="$emit('view-tags', task)"
                             >
                                 +{{ task.tags.length - 3 }}
@@ -302,7 +302,7 @@ const loadMore = (statusKey: string) => {
                 <button
                     v-if="hasMore(col.key)"
                     @click="loadMore(col.key)"
-                    class="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-gray-300 py-2 text-xs text-gray-500 transition-colors hover:border-gray-400 hover:bg-white hover:text-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                    class="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-input py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-card hover:text-foreground dark:border-input dark:hover:border-primary/40 dark:hover:bg-muted/50 dark:hover:text-muted-foreground/70"
                 >
                     <ChevronsDown class="h-3.5 w-3.5" />
                     Show more ({{ remainingCount(col.key) }} remaining)
@@ -310,7 +310,7 @@ const loadMore = (statusKey: string) => {
 
                 <!-- Empty column -->
                 <div v-if="!tasksByStatus[col.key]?.length" class="py-8 text-center">
-                    <p class="text-xs text-gray-400 dark:text-gray-500">No tasks</p>
+                    <p class="text-xs text-muted-foreground">No tasks</p>
                 </div>
             </div>
         </div>

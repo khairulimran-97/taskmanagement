@@ -176,43 +176,43 @@ watch(subtaskDueDateValue, (newValue) => {
 <template>
     <div
         v-if="isOpen"
-        class="mt-5 mb-4 rounded-lg border bg-gray-50 p-3 dark:bg-gray-800 dark:border-gray-700"
+        class="mt-5 mb-4 rounded-lg border bg-muted/50 p-3 dark:bg-card dark:border-border"
     >
-        <h5 class="mb-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+        <h5 class="mb-3 text-sm font-medium text-foreground">
             {{ editingSubtask ? 'Edit Subtask' : 'Create Subtask' }}
         </h5>
 
         <div class="space-y-3">
             <div>
-                <Label for="subtask-title" class="text-xs text-gray-700 dark:text-gray-300">Title *</Label>
+                <Label for="subtask-title" class="text-xs text-foreground">Title *</Label>
                 <Input
                     id="subtask-title"
                     v-model="subtaskForm.title"
                     placeholder="Enter subtask title"
                     required
-                    class="h-8 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600"
+                    class="h-8 text-xs bg-background text-foreground border border-input"
                 />
             </div>
 
             <div>
-                <Label for="subtask-description" class="text-xs text-gray-700 dark:text-gray-300">Description</Label>
+                <Label for="subtask-description" class="text-xs text-foreground">Description</Label>
                 <Textarea
                     id="subtask-description"
                     v-model="subtaskForm.description"
                     placeholder="Enter subtask description"
                     rows="2"
-                    class="text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600"
+                    class="text-xs bg-background text-foreground border border-input"
                 />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="w-full">
-                    <Label class="text-xs text-gray-700 dark:text-gray-300">Status</Label>
+                    <Label class="text-xs text-foreground">Status</Label>
                     <Select v-model="subtaskForm.status">
-                        <SelectTrigger class="h-8 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600">
+                        <SelectTrigger class="h-8 text-xs bg-background text-foreground border border-input">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <SelectContent class="bg-background text-foreground">
                             <SelectItem value="todo">To Do</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
@@ -222,12 +222,12 @@ watch(subtaskDueDateValue, (newValue) => {
                 </div>
 
                 <div class="w-full">
-                    <Label class="text-xs text-gray-700 dark:text-gray-300">Priority</Label>
+                    <Label class="text-xs text-foreground">Priority</Label>
                     <Select v-model="subtaskForm.priority">
-                        <SelectTrigger class="h-8 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600">
+                        <SelectTrigger class="h-8 text-xs bg-background text-foreground border border-input">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <SelectContent class="bg-background text-foreground">
                             <SelectItem value="low">Low</SelectItem>
                             <SelectItem value="medium">Medium</SelectItem>
                             <SelectItem value="high">High</SelectItem>
@@ -239,12 +239,12 @@ watch(subtaskDueDateValue, (newValue) => {
 
             <!-- Tags Section -->
             <div class="space-y-2">
-                <Label class="text-xs text-gray-700 dark:text-gray-300">Tags</Label>
+                <Label class="text-xs text-foreground">Tags</Label>
 
                 <!-- Selected Tags Display -->
                 <div
                     v-if="subtaskForm.tag_ids.length > 0"
-                    class="flex flex-wrap gap-1 rounded-md border bg-white p-2 dark:bg-gray-700 dark:border-gray-600"
+                    class="flex flex-wrap gap-1 rounded-md border bg-card p-2 dark:bg-muted dark:border-input"
                 >
                     <Badge
                         v-for="tagId in subtaskForm.tag_ids"
@@ -269,13 +269,13 @@ watch(subtaskDueDateValue, (newValue) => {
                 <!-- Available Tags Selection -->
                 <div v-if="props.availableTags.length > 0">
                     <div
-                        class="flex max-h-20 flex-wrap gap-1 overflow-y-auto rounded-md border bg-white p-2 dark:bg-gray-700 dark:border-gray-600"
+                        class="flex max-h-20 flex-wrap gap-1 overflow-y-auto rounded-md border bg-card p-2 dark:bg-muted dark:border-input"
                     >
                         <Badge
                             v-for="tag in props.availableTags.filter((t) => !subtaskForm.tag_ids.includes(t.id))"
                             :key="tag.id"
                             variant="outline"
-                            class="cursor-pointer px-1.5 py-0.5 text-xs transition-colors hover:bg-gray-50 dark:hover:bg-gray-600"
+                            class="cursor-pointer px-1.5 py-0.5 text-xs transition-colors hover:bg-muted/50 dark:hover:bg-accent"
                             @click="
                                 () => {
                                   if (!subtaskForm.tag_ids.includes(tag.id)) {
@@ -292,12 +292,12 @@ watch(subtaskDueDateValue, (newValue) => {
 
                 <!-- Create New Tag -->
                 <div class="mt-3 space-y-1">
-                    <Label class="text-xs font-medium text-gray-600 dark:text-gray-400">Create new tag</Label>
+                    <Label class="text-xs font-medium text-muted-foreground">Create new tag</Label>
                     <div class="flex items-center space-x-2">
                         <Input
                             v-model="newTagName"
                             placeholder="New tag name"
-                            class="h-7 flex-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600"
+                            class="h-7 flex-1 text-xs bg-background text-foreground border border-input"
                             @keyup.enter="createTag"
                         />
                         <Button
@@ -306,12 +306,12 @@ watch(subtaskDueDateValue, (newValue) => {
                             size="sm"
                             @click="createTag"
                             :disabled="!newTagName.trim() || isCreatingTag"
-                            class="h-7 px-2 text-xs whitespace-nowrap dark:text-gray-100 dark:border-gray-600 dark:hover:bg-gray-600"
+                            class="h-7 px-2 text-xs whitespace-nowrap dark:text-foreground dark:border-input dark:hover:bg-accent"
                         >
                             {{ isCreatingTag ? 'Creating...' : 'Create' }}
                         </Button>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                    <p class="text-xs text-muted-foreground">
                         New tag will appear in the selection list above
                     </p>
                 </div>
@@ -322,7 +322,7 @@ watch(subtaskDueDateValue, (newValue) => {
                     @click="handleSubmit"
                     :disabled="isSubmitting"
                     size="sm"
-                    class="h-7 px-3 text-xs dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                    class="h-7 px-3 text-xs dark:bg-muted dark:text-foreground dark:hover:bg-accent"
                 >
                     {{ isSubmitting ? 'Saving...' : editingSubtask ? 'Update' : 'Create' }}
                 </Button>
@@ -330,7 +330,7 @@ watch(subtaskDueDateValue, (newValue) => {
                     variant="outline"
                     size="sm"
                     @click="$emit('cancel')"
-                    class="h-7 px-3 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                    class="h-7 px-3 text-xs dark:border-input dark:text-muted-foreground dark:hover:bg-muted"
                 >
                     Cancel
                 </Button>

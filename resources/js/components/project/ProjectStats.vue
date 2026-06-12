@@ -32,37 +32,37 @@ const progressColor = computed(() => {
 </script>
 
 <template>
-    <div class="flex items-center gap-6 rounded-lg border border-gray-100 bg-gray-50/50 px-4 py-3 dark:border-gray-800 dark:bg-gray-800/30">
+    <div class="flex items-center gap-6 rounded-lg border border-border bg-muted/50/50 px-4 py-3 dark:border-border dark:bg-card/30">
         <!-- Progress bar -->
         <div class="flex min-w-[140px] items-center gap-3">
-            <div class="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+            <div class="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
                 <div class="h-full rounded-full transition-all duration-300" :class="progressColor" :style="`width: ${pct}%`"></div>
             </div>
-            <span class="text-xs font-medium text-gray-700 dark:text-gray-300">{{ pct }}%</span>
+            <span class="text-xs font-medium text-foreground">{{ pct }}%</span>
         </div>
 
-        <div class="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+        <div class="h-4 w-px bg-muted"></div>
 
         <!-- Stats -->
-        <div class="flex items-center gap-5 text-xs text-gray-500 dark:text-gray-400">
+        <div class="flex items-center gap-5 text-xs text-muted-foreground">
             <div class="flex items-center gap-1.5">
                 <ListTodo class="h-3.5 w-3.5" />
-                <span><span class="font-medium text-gray-700 dark:text-gray-300">{{ totalTasks }}</span> tasks</span>
+                <span><span class="font-medium text-foreground">{{ totalTasks }}</span> tasks</span>
             </div>
             <div class="flex items-center gap-1.5">
                 <CheckCircle2 class="h-3.5 w-3.5 text-green-500" />
-                <span><span class="font-medium text-gray-700 dark:text-gray-300">{{ completedTasks }}</span> done</span>
+                <span><span class="font-medium text-foreground">{{ completedTasks }}</span> done</span>
             </div>
             <div class="flex items-center gap-1.5">
                 <Clock class="h-3.5 w-3.5 text-blue-500" />
-                <span><span class="font-medium text-gray-700 dark:text-gray-300">{{ inProgressTasks }}</span> active</span>
+                <span><span class="font-medium text-foreground">{{ inProgressTasks }}</span> active</span>
             </div>
         </div>
 
-        <div class="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+        <div class="h-4 w-px bg-muted"></div>
 
         <!-- Timeline -->
-        <div class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+        <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarDays class="h-3.5 w-3.5" />
             <span>{{ formatDate(project.start_date) }}</span>
             <span v-if="project.start_date && project.due_date">→</span>

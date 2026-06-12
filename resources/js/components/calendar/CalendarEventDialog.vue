@@ -302,7 +302,7 @@ const formatDate = (dateString: string): string => {
                     <div class="space-y-2">
                         <Label for="start-date">Start Date *</Label>
                         <div class="relative">
-                            <Calendar class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Calendar class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="start-date"
                                 type="date"
@@ -312,7 +312,7 @@ const formatDate = (dateString: string): string => {
                             />
                         </div>
                         <p v-if="errors.start_date" class="text-sm text-red-500">{{ errors.start_date }}</p>
-                        <p v-if="form.start_date" class="text-xs text-gray-500">
+                        <p v-if="form.start_date" class="text-xs text-muted-foreground">
                             {{ formatDate(form.start_date) }}
                         </p>
                     </div>
@@ -321,7 +321,7 @@ const formatDate = (dateString: string): string => {
                     <div v-if="!form.all_day" class="space-y-2">
                         <Label for="start-time">Start Time *</Label>
                         <div class="relative">
-                            <Clock class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Clock class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="start-time"
                                 type="time"
@@ -339,7 +339,7 @@ const formatDate = (dateString: string): string => {
                     <div class="space-y-2">
                         <Label for="end-date">End Date</Label>
                         <div class="relative">
-                            <Calendar class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Calendar class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="end-date"
                                 type="date"
@@ -349,7 +349,7 @@ const formatDate = (dateString: string): string => {
                             />
                         </div>
                         <p v-if="errors.end_date" class="text-sm text-red-500">{{ errors.end_date }}</p>
-                        <p v-if="form.end_date" class="text-xs text-gray-500">
+                        <p v-if="form.end_date" class="text-xs text-muted-foreground">
                             {{ formatDate(form.end_date) }}
                         </p>
                     </div>
@@ -358,7 +358,7 @@ const formatDate = (dateString: string): string => {
                     <div v-if="!form.all_day" class="space-y-2">
                         <Label for="end-time">End Time</Label>
                         <div class="relative">
-                            <Clock class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Clock class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 id="end-time"
                                 type="time"
@@ -381,7 +381,7 @@ const formatDate = (dateString: string): string => {
                             type="button"
                             @click="form.color = color"
                             class="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
-                            :class="form.color === color ? 'border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'"
+                            :class="form.color === color ? 'border-border dark:border-card' : 'border-input'"
                             :style="{ backgroundColor: color }"
                             :title="color"
                         />
@@ -394,7 +394,7 @@ const formatDate = (dateString: string): string => {
                             v-model="form.color"
                             class="w-12 h-8 p-1 border-0"
                         />
-                        <span class="text-sm text-gray-500">{{ form.color }}</span>
+                        <span class="text-sm text-muted-foreground">{{ form.color }}</span>
                     </div>
                 </div>
             </form>

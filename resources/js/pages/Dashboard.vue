@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import PageContainer from '@/components/PageContainer.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import StatCard from '@/components/StatCard.vue';
 import { type BreadcrumbItemType } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -179,61 +180,10 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
 
             <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <!-- Total Projects -->
-                <Card class="hover:shadow-md transition-shadow">
-                    <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Projects</CardTitle>
-                        <FolderOpen class="h-4 w-4 text-blue-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ projectStats.total }}</div>
-                        <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            <span class="text-green-600 dark:text-green-400">{{ projectStats.active }} active</span>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <!-- Total Tasks -->
-                <Card class="hover:shadow-md transition-shadow">
-                    <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Tasks</CardTitle>
-                        <CheckCircle2 class="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ taskStats.total }}</div>
-                        <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            <span class="text-blue-600 dark:text-blue-400">{{ taskStats.in_progress }} active</span>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <!-- Total Notes -->
-                <Card class="hover:shadow-md transition-shadow">
-                    <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Notes</CardTitle>
-                        <FileText class="h-4 w-4 text-purple-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ noteStats.total }}</div>
-                        <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            <span class="text-purple-600 dark:text-purple-400">{{ noteStats.pinned }} pinned</span>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <!-- Events -->
-                <Card class="hover:shadow-md transition-shadow">
-                    <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Events</CardTitle>
-                        <CalendarDays class="h-4 w-4 text-indigo-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ calendarStats.total }}</div>
-                        <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            <span class="text-indigo-600 dark:text-indigo-400">{{ calendarStats.today }} today</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                <StatCard :icon="FolderOpen" label="Projects" :value="projectStats.total" :hint="`${projectStats.active} active`" accent />
+                <StatCard :icon="CheckCircle2" label="Tasks" :value="taskStats.total" :hint="`${taskStats.in_progress} in progress`" />
+                <StatCard :icon="FileText" label="Notes" :value="noteStats.total" :hint="`${noteStats.pinned} pinned`" />
+                <StatCard :icon="CalendarDays" label="Events" :value="calendarStats.total" :hint="`${calendarStats.today} today`" />
             </div>
 
             <!-- Alert Sections -->
@@ -255,7 +205,7 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                         <div v-if="task.project" class="w-2 h-2 rounded-full" :style="`background-color: ${task.project.color}`"></div>
                                         <span class="font-medium text-sm truncate">{{ task.title }}</span>
                                     </div>
-                                    <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                    <div class="flex items-center text-xs text-muted-foreground mt-1">
                                         <span v-if="task.project">{{ task.project.name }}</span>
                                         <span class="mx-1" v-if="task.project">•</span>
                                         <span class="text-red-600 dark:text-red-400">{{ Math.abs(task.days_overdue) }} days overdue</span>
@@ -288,7 +238,7 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                         <div v-if="task.project" class="w-2 h-2 rounded-full" :style="`background-color: ${task.project.color}`"></div>
                                         <span class="font-medium text-sm truncate">{{ task.title }}</span>
                                     </div>
-                                    <div class="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                    <div class="flex items-center text-xs text-muted-foreground mt-1">
                                         <span v-if="task.project">{{ task.project.name }}</span>
                                         <span class="mx-1" v-if="task.project">•</span>
                                         <span class="text-orange-600 dark:text-orange-400">Due in {{ task.days_until_due }} day{{ task.days_until_due !== 1 ? 's' : '' }}</span>
@@ -333,15 +283,15 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                         <Badge :class="getStatusClass(project.status, 'project')" class="text-xs px-1.5 py-0.5">
                                             {{ project.status }}
                                         </Badge>
-                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ getRelativeTime(project.created_at) }}</span>
+                                        <span class="text-xs text-muted-foreground">{{ getRelativeTime(project.created_at) }}</span>
                                     </div>
                                 </div>
-                                <div v-if="typeof project.completion_percentage === 'number'" class="text-xs text-gray-500 dark:text-gray-400">
+                                <div v-if="typeof project.completion_percentage === 'number'" class="text-xs text-muted-foreground">
                                     {{ project.completion_percentage }}%
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
+                        <div v-else class="text-center py-6 text-muted-foreground flex-1 flex flex-col justify-center">
                             <FolderOpen class="h-8 w-8 mx-auto mb-2 opacity-50" />
                             <p class="text-sm">No projects yet</p>
                             <Button variant="outline" size="sm" asChild class="mt-2">
@@ -381,7 +331,7 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                             </Badge>
                                         </div>
                                         <div class="flex items-center space-x-2 mt-1">
-                                            <span v-if="task.project" class="text-xs text-gray-500 dark:text-gray-400">{{ task.project.name }}</span>
+                                            <span v-if="task.project" class="text-xs text-muted-foreground">{{ task.project.name }}</span>
                                             <Badge v-if="task.priority" :class="getPriorityClass(task.priority)" variant="outline" class="text-xs px-1 py-0">
                                                 {{ task.priority }}
                                             </Badge>
@@ -398,7 +348,7 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
+                        <div v-else class="text-center py-6 text-muted-foreground flex-1 flex flex-col justify-center">
                             <Activity class="h-8 w-8 mx-auto mb-2 opacity-50" />
                             <p class="text-sm">No recent tasks</p>
                         </div>
@@ -428,13 +378,13 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                         <Link :href="route('notes.show', note.id)" class="text-sm font-medium text-purple-600 dark:text-purple-400 hover:underline block truncate">
                                             {{ note.title }}
                                         </Link>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                        <p class="text-xs text-muted-foreground mt-1 line-clamp-2">
                                             {{ note.content_preview }}
                                         </p>
                                         <div class="flex items-center space-x-2 mt-1">
-                                            <span class="text-xs text-gray-400">{{ note.word_count }} words</span>
-                                            <span class="text-xs text-gray-400">•</span>
-                                            <span class="text-xs text-gray-400">{{ getRelativeTime(note.updated_at) }}</span>
+                                            <span class="text-xs text-muted-foreground">{{ note.word_count }} words</span>
+                                            <span class="text-xs text-muted-foreground">•</span>
+                                            <span class="text-xs text-muted-foreground">{{ getRelativeTime(note.updated_at) }}</span>
                                         </div>
                                         <div v-if="note.tags_array.length > 0" class="flex flex-wrap gap-1 mt-1">
                                             <Badge v-for="tag in note.tags_array.slice(0, 2)" :key="tag" variant="outline" class="text-xs px-1 py-0">
@@ -448,7 +398,7 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
+                        <div v-else class="text-center py-6 text-muted-foreground flex-1 flex flex-col justify-center">
                             <FileText class="h-8 w-8 mx-auto mb-2 opacity-50" />
                             <p class="text-sm">No notes yet</p>
                             <Button variant="outline" size="sm" asChild class="mt-2">
@@ -483,11 +433,11 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                     <Link :href="route('calendar.index')" class="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline block truncate">
                                         {{ event.title }}
                                     </Link>
-                                    <p v-if="event.description" class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                                    <p v-if="event.description" class="text-xs text-muted-foreground mt-1 line-clamp-1">
                                         {{ event.description }}
                                     </p>
                                     <div class="flex items-center space-x-2 mt-1">
-                                        <span class="text-xs text-gray-400">{{ formatEventDate(event.start_date, event.all_day) }}</span>
+                                        <span class="text-xs text-muted-foreground">{{ formatEventDate(event.start_date, event.all_day) }}</span>
                                         <span v-if="event.days_until_event >= 0" class="text-xs text-indigo-600 dark:text-indigo-400">
                                             • {{ event.days_until_event === 0 ? 'Today' : `In ${event.days_until_event} day${event.days_until_event > 1 ? 's' : ''}` }}
                                         </span>
@@ -495,7 +445,7 @@ const formatEventDate = (dateString: string, allDay: boolean = false): string =>
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400 flex-1 flex flex-col justify-center">
+                        <div v-else class="text-center py-6 text-muted-foreground flex-1 flex flex-col justify-center">
                             <CalendarDays class="h-8 w-8 mx-auto mb-2 opacity-50" />
                             <p class="text-sm">No upcoming events</p>
                             <Button variant="outline" size="sm" asChild class="mt-2">

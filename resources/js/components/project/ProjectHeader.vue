@@ -26,7 +26,7 @@ const priorityLabel = (priority: string) => {
 
 const priorityColor = (priority: string) => {
     const colors: Record<string, string> = { high: 'text-orange-600 dark:text-orange-400', medium: 'text-yellow-600 dark:text-yellow-400', low: 'text-green-600 dark:text-green-400' };
-    return colors[priority] || 'text-gray-500';
+    return colors[priority] || 'text-muted-foreground';
 };
 
 const formatDate = (date: string | null) => {
@@ -40,16 +40,16 @@ const formatDate = (date: string | null) => {
         <div class="min-w-0 flex-1">
             <div class="flex items-center gap-3">
                 <div class="h-4 w-4 flex-shrink-0 rounded" :style="`background-color: ${project.color}`"></div>
-                <h1 class="truncate text-lg font-semibold text-gray-900 dark:text-white">{{ project.name }}</h1>
-                <div class="flex items-center gap-1.5 rounded-full border border-gray-200 px-2 py-0.5 dark:border-gray-700">
+                <h1 class="truncate text-lg font-semibold text-foreground">{{ project.name }}</h1>
+                <div class="flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 dark:border-border">
                     <span class="h-1.5 w-1.5 rounded-full" :class="statusDot(project.status)"></span>
-                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ statusLabel(project.status) }}</span>
+                    <span class="text-xs text-muted-foreground">{{ statusLabel(project.status) }}</span>
                 </div>
             </div>
-            <p v-if="project.description" class="mt-1 pl-7 text-sm text-gray-500 dark:text-gray-400">{{ project.description }}</p>
+            <p v-if="project.description" class="mt-1 pl-7 text-sm text-muted-foreground">{{ project.description }}</p>
         </div>
 
-        <div class="flex flex-shrink-0 items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <div class="flex flex-shrink-0 items-center gap-3 text-xs text-muted-foreground">
             <div class="flex items-center gap-1" :class="priorityColor(project.priority)">
                 <Flag class="h-3 w-3" />
                 <span>{{ priorityLabel(project.priority) }}</span>

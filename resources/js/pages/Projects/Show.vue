@@ -335,14 +335,14 @@ const handleEditTask = (task) => {
 
             <!-- Toolbar -->
             <Tabs :default-value="viewMode" @update:model-value="(val) => viewMode = val">
-                <div class="mb-3 flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-800">
+                <div class="mb-3 flex items-center justify-between border-b border-border pb-3">
                     <div class="flex items-center gap-3">
-                        <TabsList class="h-8 rounded-md bg-gray-100 p-0.5 dark:bg-gray-800">
-                            <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700">
+                        <TabsList class="h-8 rounded-md bg-muted p-0.5">
+                            <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm">
                                 <LayoutList class="h-3.5 w-3.5" />
                                 List
                             </TabsTrigger>
-                            <TabsTrigger value="kanban" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-700">
+                            <TabsTrigger value="kanban" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm">
                                 <Columns3 class="h-3.5 w-3.5" />
                                 Board
                             </TabsTrigger>
@@ -351,23 +351,23 @@ const handleEditTask = (task) => {
                         <!-- Filters -->
                         <div class="hidden items-center gap-2 sm:flex">
                             <div class="relative">
-                                <Search class="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                                <Search class="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     v-model="searchQuery"
                                     placeholder="Filter tasks..."
-                                    class="h-7 w-44 border-gray-200 bg-white pl-7 text-xs shadow-none focus-visible:ring-1 dark:border-gray-700 dark:bg-gray-800"
+                                    class="h-7 w-44 border-border bg-background pl-7 text-xs shadow-none focus-visible:ring-1"
                                 />
                                 <button
                                     v-if="searchQuery"
                                     @click="searchQuery = ''"
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                 >
                                     <X class="h-3 w-3" />
                                 </button>
                             </div>
 
                             <Select v-model="filterPriority">
-                                <SelectTrigger class="h-7 w-28 border-gray-200 bg-white text-xs shadow-none dark:border-gray-700 dark:bg-gray-800">
+                                <SelectTrigger class="h-7 w-28 border-border bg-background text-xs shadow-none">
                                     <SelectValue placeholder="Priority" />
                                 </SelectTrigger>
                                 <SelectContent>

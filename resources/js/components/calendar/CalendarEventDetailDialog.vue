@@ -166,7 +166,7 @@ const handleClose = () => {
                 <div class="flex items-center justify-between">
                     <DialogTitle class="flex items-center space-x-2">
                         <div
-                            class="w-4 h-4 rounded-full border border-white shadow-sm"
+                            class="w-4 h-4 rounded-full border border-card shadow-sm"
                             :style="{ backgroundColor: event?.backgroundColor || '#3B82F6' }"
                         />
                         <span>{{ event?.title || 'Event Details' }}</span>
@@ -182,12 +182,12 @@ const handleClose = () => {
                 <div class="space-y-3">
                     <!-- Start Time -->
                     <div class="flex items-start space-x-3">
-                        <Calendar class="h-5 w-5 text-gray-400 mt-0.5" />
+                        <Calendar class="h-5 w-5 text-muted-foreground mt-0.5" />
                         <div>
-                            <p class="font-medium text-gray-900 dark:text-gray-100">
+                            <p class="font-medium text-foreground">
                                 {{ formatDateTime(event.start, event.allDay) }}
                             </p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <p class="text-sm text-muted-foreground">
                                 Start {{ getRelativeTime }}
                             </p>
                         </div>
@@ -195,12 +195,12 @@ const handleClose = () => {
 
                     <!-- End Time -->
                     <div v-if="event.end" class="flex items-start space-x-3">
-                        <Clock class="h-5 w-5 text-gray-400 mt-0.5" />
+                        <Clock class="h-5 w-5 text-muted-foreground mt-0.5" />
                         <div>
-                            <p class="font-medium text-gray-900 dark:text-gray-100">
+                            <p class="font-medium text-foreground">
                                 {{ formatDateTime(event.end, event.allDay) }}
                             </p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <p class="text-sm text-muted-foreground">
                                 Duration: {{ getDurationText }}
                             </p>
                         </div>
@@ -229,8 +229,8 @@ const handleClose = () => {
 
                 <!-- Description -->
                 <div v-if="event.extendedProps?.description" class="space-y-2">
-                    <h4 class="font-medium text-gray-900 dark:text-gray-100">Description</h4>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                    <h4 class="font-medium text-foreground">Description</h4>
+                    <p class="text-sm text-muted-foreground whitespace-pre-wrap">
                         {{ event.extendedProps.description }}
                     </p>
                 </div>

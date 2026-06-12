@@ -9,11 +9,18 @@ defineProps<{
 </script>
 
 <template>
-    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-center gap-3">
-            <component :is="icon" v-if="icon" class="h-7 w-7 shrink-0 text-primary" />
-            <div class="space-y-1">
-                <h1 class="text-2xl font-bold tracking-tight text-foreground">{{ title }}</h1>
+    <div class="mb-7 flex flex-col gap-3 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3.5">
+            <div
+                v-if="icon"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary"
+            >
+                <component :is="icon" class="h-5 w-5" />
+            </div>
+            <div class="space-y-0.5">
+                <h1 class="font-display text-[1.7rem] font-semibold leading-tight tracking-tight text-foreground">
+                    {{ title }}
+                </h1>
                 <p v-if="description" class="text-sm text-muted-foreground">{{ description }}</p>
             </div>
         </div>

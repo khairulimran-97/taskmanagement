@@ -263,13 +263,13 @@ const createTag = () => {
 
                         <!-- Available Tags Selection -->
                         <div v-if="props.availableTags.length > 0" class="mb-3">
-                            <Label class="text-xs font-medium text-gray-600 mb-1 block">Select existing tags</Label>
-                            <div class="flex max-h-20 flex-wrap gap-1 overflow-y-auto rounded-md border bg-white p-2">
+                            <Label class="text-xs font-medium text-muted-foreground mb-1 block">Select existing tags</Label>
+                            <div class="flex max-h-20 flex-wrap gap-1 overflow-y-auto rounded-md border bg-card p-2">
                                 <Badge
                                     v-for="tag in props.availableTags.filter(t => !taskForm.tag_ids.includes(t.id))"
                                     :key="tag.id"
                                     variant="outline"
-                                    class="cursor-pointer px-1.5 py-0.5 text-xs transition-colors hover:bg-gray-50"
+                                    class="cursor-pointer px-1.5 py-0.5 text-xs transition-colors hover:bg-muted/50"
                                     :style="`border-color: ${tag.color}; color: ${tag.color}`"
                                     @click="() => {
                                         if (!taskForm.tag_ids.includes(tag.id)) {
@@ -285,7 +285,7 @@ const createTag = () => {
 
                         <!-- Create New Tag -->
                         <div>
-                            <Label class="text-xs font-medium text-gray-600 mb-1 block">Create new tag</Label>
+                            <Label class="text-xs font-medium text-muted-foreground mb-1 block">Create new tag</Label>
                             <div class="flex items-center space-x-2">
                                 <Input
                                     v-model="newTagName"
@@ -303,7 +303,7 @@ const createTag = () => {
                                     {{ isCreatingTag ? 'Creating...' : 'Create' }}
                                 </Button>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">
+                            <p class="text-xs text-muted-foreground mt-1">
                                 New tag will appear in the selection list above
                             </p>
                         </div>
