@@ -3,6 +3,7 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
+import NoteItem from '@/components/notes/NoteItem.vue';
 import { BreadcrumbItem, Note } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,6 +74,8 @@ const titleInput = ref<HTMLInputElement>();
 // Computed
 const hasNotes = computed(() => filteredNotes.value.length > 0);
 const hasSelectedNote = computed(() => currentNote.value !== null);
+const pinnedNotes = computed(() => filteredNotes.value.filter((n: any) => n.is_pinned));
+const unpinnedNotes = computed(() => filteredNotes.value.filter((n: any) => !n.is_pinned));
 
 // Check if content has changed
 const contentChanged = computed(() => {
@@ -534,32 +537,30 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Notes" />
 
-        <div class="notes-layout mx-auto flex h-[calc(100vh-3.5rem)] w-full max-w-7xl overflow-hidden border-x border-border">
+        <div class="notes-layout flex h-[calc(100vh-3.5rem)] w-full overflow-hidden border-t border-border">
             <!-- Sidebar -->
             <aside
-                class="flex w-72 flex-col overflow-hidden border-r border-border bg-muted/30 lg:w-80"
+                class="flex w-80 flex-col overflow-hidden border-r border-border bg-muted/20 xl:w-96"
                 :class="{ 'hidden md:flex': hasSelectedNote, 'flex': !hasSelectedNote }"
             >
                 <!-- Sidebar Header -->
                 <div class="flex flex-col gap-3 border-b border-border p-4">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <h1 class="font-display text-lg font-semibold tracking-tight text-foreground">Notes</h1>
-                            <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">
-                                {{ filteredNotes.length }}
-                            </span>
+                        <div class="flex items-baseline gap-2">
+                            <h1 class="font-display text-xl font-semibold tracking-tight text-foreground">Notes</h1>
+                            <span class="text-sm text-muted-foreground">{{ filteredNotes.length }}</span>
                         </div>
-                        <Button @click="createNewNote" size="sm" class="h-8 gap-1.5 px-2.5 text-xs">
-                            <Plus class="h-3.5 w-3.5" />
+                        <Button @click="createNewNote" size="sm" class="h-8 gap-1.5 px-3">
+                            <Plus class="h-4 w-4" />
                             New
                         </Button>
                     </div>
                     <div class="relative">
-                        <Search class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             v-model="searchQuery"
-                            placeholder="Search notes..."
-                            class="h-8 pl-8 text-xs"
+                            placeholder="Search notes…"
+                            class="h-9 rounded-lg pl-8 text-sm"
                         />
                     </div>
                 </div>
@@ -567,54 +568,50 @@ onMounted(() => {
                 <!-- Notes List -->
                 <div class="min-h-0 flex-1 overflow-y-auto">
                     <!-- Empty State -->
-                    <div v-if="!hasNotes" class="flex flex-col items-center justify-center px-4 py-12 text-center">
-                        <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                            <FileText class="h-5 w-5 text-muted-foreground" />
+                    <div v-if="!hasNotes" class="flex flex-col items-center justify-center px-6 py-16 text-center">
+                        <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                            <FileText class="h-7 w-7 text-primary" />
                         </div>
-                        <p class="text-sm font-medium text-foreground">No notes yet</p>
-                        <p class="mt-1 text-xs text-muted-foreground">Create your first note to get started</p>
-                        <Button @click="createNewNote" variant="outline" size="sm" class="mt-3 h-7 text-xs">
-                            <Plus class="mr-1.5 h-3 w-3" />
-                            Create Note
+                        <p class="font-display text-base font-semibold text-foreground">{{ searchQuery ? 'No matches' : 'No notes yet' }}</p>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            {{ searchQuery ? 'Try a different search.' : 'Create your first note to get started.' }}
+                        </p>
+                        <Button v-if="!searchQuery" @click="createNewNote" variant="outline" size="sm" class="mt-4">
+                            <Plus class="mr-1.5 h-4 w-4" />
+                            Create note
                         </Button>
                     </div>
 
                     <!-- Note Items -->
-                    <div v-else class="divide-y divide-border">
-                        <button
-                            v-for="note in filteredNotes"
-                            :key="note.id"
-                            @click="selectNote(note)"
-                            class="group flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors hover:bg-accent/50"
-                            :class="currentNote?.id === note.id ? 'bg-accent border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'"
-                        >
-                            <!-- Title Row -->
-                            <div class="flex items-center gap-2">
-                                <Pin v-if="note.is_pinned" class="h-3 w-3 flex-shrink-0 text-amber-500" />
-                                <span class="truncate text-sm font-medium text-foreground">
-                                    {{ note.title || 'Untitled' }}
-                                </span>
-                            </div>
-
-                            <!-- Preview -->
-                            <p v-if="note.content_preview" class="line-clamp-2 text-xs text-muted-foreground">
-                                {{ note.content_preview }}
+                    <template v-else>
+                        <!-- Pinned -->
+                        <div v-if="pinnedNotes.length" class="pb-1">
+                            <p class="flex items-center gap-1.5 px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                <Pin class="h-3 w-3 text-amber-500" /> Pinned
                             </p>
+                            <NoteItem
+                                v-for="note in pinnedNotes"
+                                :key="note.id"
+                                :note="note"
+                                :active="currentNote?.id === note.id"
+                                @select="selectNote(note)"
+                            />
+                        </div>
 
-                            <!-- Meta Row -->
-                            <div class="flex items-center gap-3 text-[11px] text-muted-foreground">
-                                <span>{{ formatDate(note.updated_at) }}</span>
-                                <span v-if="note.word_count > 0" class="flex items-center gap-1">
-                                    {{ note.word_count }} words
-                                </span>
-                                <div v-if="note.tags?.length > 0" class="flex items-center gap-1">
-                                    <Hash class="h-2.5 w-2.5" />
-                                    <span>{{ note.tags.slice(0, 2).join(', ') }}</span>
-                                    <span v-if="note.tags.length > 2">+{{ note.tags.length - 2 }}</span>
-                                </div>
-                            </div>
-                        </button>
-                    </div>
+                        <!-- All -->
+                        <div>
+                            <p v-if="pinnedNotes.length" class="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                All notes
+                            </p>
+                            <NoteItem
+                                v-for="note in unpinnedNotes"
+                                :key="note.id"
+                                :note="note"
+                                :active="currentNote?.id === note.id"
+                                @select="selectNote(note)"
+                            />
+                        </div>
+                    </template>
                 </div>
             </aside>
 
@@ -623,18 +620,18 @@ onMounted(() => {
                   :class="{ 'hidden md:flex': !hasSelectedNote }">
 
                 <!-- No Note Selected -->
-                <div v-if="!hasSelectedNote" class="flex flex-1 items-center justify-center">
-                    <div class="flex flex-col items-center text-center">
-                        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-                            <FileText class="h-8 w-8 text-muted-foreground/50" />
+                <div v-if="!hasSelectedNote" class="flex flex-1 items-center justify-center bg-muted/10 p-6">
+                    <div class="flex max-w-sm flex-col items-center text-center">
+                        <div class="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10">
+                            <FileText class="h-9 w-9 text-primary" />
                         </div>
-                        <h3 class="font-display text-lg font-semibold text-foreground">Select a note</h3>
-                        <p class="mt-1 max-w-xs text-sm text-muted-foreground">
-                            Choose a note from the sidebar or create a new one to start writing.
+                        <h3 class="font-display text-2xl font-semibold tracking-tight text-foreground">Your notebook</h3>
+                        <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
+                            Select a note from the list, or start a fresh one. Everything autosaves as you write.
                         </p>
-                        <Button @click="createNewNote" class="mt-4" size="sm">
+                        <Button @click="createNewNote" class="mt-5">
                             <Plus class="mr-2 h-4 w-4" />
-                            New Note
+                            New note
                         </Button>
                     </div>
                 </div>
@@ -642,14 +639,14 @@ onMounted(() => {
                 <!-- Note Editor -->
                 <div v-else class="flex flex-1 flex-col overflow-hidden">
                     <!-- Toolbar -->
-                    <div class="flex items-center justify-between border-b border-border bg-card px-4 py-2.5">
-                        <div class="flex min-w-0 flex-1 items-center gap-3">
+                    <div class="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-2.5 md:px-6">
+                        <div class="flex min-w-0 flex-1 items-center gap-2">
                             <!-- Back button (mobile) -->
                             <Button
                                 @click="currentNote = null; router.get(route('notes.index'), {}, { preserveState: true })"
                                 variant="ghost"
                                 size="sm"
-                                class="h-7 w-7 p-0 md:hidden"
+                                class="h-8 w-8 shrink-0 p-0 md:hidden"
                             >
                                 <ChevronLeft class="h-4 w-4" />
                             </Button>
@@ -660,7 +657,7 @@ onMounted(() => {
                                     v-if="isTitleEditing"
                                     ref="titleInput"
                                     v-model="noteForm.title"
-                                    class="h-auto border-none bg-transparent p-0 font-display text-lg font-semibold tracking-tight shadow-none focus-visible:ring-0"
+                                    class="h-auto border-none bg-transparent p-0 font-display text-xl font-semibold tracking-tight shadow-none focus-visible:ring-0"
                                     placeholder="Untitled"
                                     @blur="isTitleEditing = false"
                                     @keydown.enter="isTitleEditing = false"
@@ -669,7 +666,7 @@ onMounted(() => {
                                 <button
                                     v-else
                                     @click="toggleTitleEdit"
-                                    class="w-full truncate rounded px-1 py-0.5 text-left font-display text-lg font-semibold tracking-tight text-foreground transition-colors hover:bg-accent/50"
+                                    class="w-full truncate rounded px-1 py-0.5 text-left font-display text-xl font-semibold tracking-tight text-foreground transition-colors hover:bg-accent/50"
                                 >
                                     {{ currentNote.title || 'Untitled' }}
                                 </button>
@@ -677,12 +674,12 @@ onMounted(() => {
                         </div>
 
                         <!-- Actions -->
-                        <div class="flex items-center gap-1">
+                        <div class="flex shrink-0 items-center gap-1">
                             <!-- Auto-save status -->
-                            <div class="mr-2 hidden items-center gap-1 text-xs sm:flex" :class="autoSaveStatus.class">
+                            <div class="mr-1.5 hidden items-center gap-1.5 text-xs sm:flex" :class="autoSaveStatus.class">
                                 <component
                                     :is="autoSaveStatus.icon"
-                                    class="h-3 w-3"
+                                    class="h-3.5 w-3.5"
                                     :class="{ 'animate-spin': autoSaveStatus.icon === Loader2 }"
                                 />
                                 <span>{{ autoSaveStatus.text }}</span>
@@ -692,12 +689,12 @@ onMounted(() => {
                                 @click="togglePin(currentNote)"
                                 variant="ghost"
                                 size="sm"
-                                class="h-7 w-7 p-0"
+                                class="h-8 w-8 p-0"
                                 :class="currentNote.is_pinned ? 'text-amber-500' : 'text-muted-foreground'"
                                 :title="currentNote.is_pinned ? 'Unpin note' : 'Pin note'"
                             >
-                                <Pin v-if="currentNote.is_pinned" class="h-3.5 w-3.5" />
-                                <PinOff v-else class="h-3.5 w-3.5" />
+                                <Pin v-if="currentNote.is_pinned" class="h-4 w-4" />
+                                <PinOff v-else class="h-4 w-4" />
                             </Button>
 
                             <Button
@@ -705,18 +702,18 @@ onMounted(() => {
                                 size="sm"
                                 :disabled="isSaving || !contentChanged"
                                 :variant="hasUnsavedChanges ? 'default' : 'outline'"
-                                class="h-7 gap-1.5 px-2.5 text-xs"
+                                class="h-8 gap-1.5 px-3 text-xs"
                                 title="Save (Ctrl+S)"
                             >
                                 <Loader2 v-if="isSaving" class="h-3.5 w-3.5 animate-spin" />
                                 <Save v-else class="h-3.5 w-3.5" />
-                                {{ isSaving ? 'Saving...' : (contentChanged ? 'Save' : 'Saved') }}
+                                {{ isSaving ? 'Saving…' : (contentChanged ? 'Save' : 'Saved') }}
                             </Button>
 
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
-                                        <Trash2 class="h-3.5 w-3.5" />
+                                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                                        <Trash2 class="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -741,24 +738,22 @@ onMounted(() => {
                     </div>
 
                     <!-- Meta bar -->
-                    <div class="flex items-center gap-4 border-b border-border bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground">
-                        <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-3 border-b border-border bg-muted/20 px-4 py-2 text-xs text-muted-foreground md:px-6">
+                        <span class="inline-flex items-center gap-1.5">
                             <Clock class="h-3 w-3" />
-                            <span>{{ formatDate(currentNote.updated_at) }}</span>
-                        </div>
+                            {{ formatDate(currentNote.updated_at) }}
+                        </span>
+                        <span v-if="currentNote.word_count > 0" class="text-muted-foreground/40">·</span>
                         <span v-if="currentNote.word_count > 0">{{ currentNote.word_count }} words</span>
-                        <div v-if="currentNote.tags?.length > 0" class="flex items-center gap-1.5">
-                            <Hash class="h-3 w-3" />
-                            <div class="flex gap-1">
-                                <Badge
-                                    v-for="tag in currentNote.tags"
-                                    :key="tag"
-                                    variant="secondary"
-                                    class="h-4 px-1.5 text-[10px] font-normal"
-                                >
-                                    {{ tag }}
-                                </Badge>
-                            </div>
+                        <div v-if="currentNote.tags?.length > 0" class="ml-auto flex items-center gap-1.5">
+                            <Badge
+                                v-for="tag in currentNote.tags"
+                                :key="tag"
+                                variant="secondary"
+                                class="h-5 gap-1 px-1.5 text-[10px] font-normal"
+                            >
+                                <Hash class="h-2.5 w-2.5" />{{ tag }}
+                            </Badge>
                         </div>
                     </div>
 
@@ -781,11 +776,3 @@ onMounted(() => {
     </AppLayout>
 </template>
 
-<style scoped>
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-</style>
