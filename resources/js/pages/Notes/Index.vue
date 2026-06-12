@@ -28,6 +28,7 @@ import {
     AlignCenter,
     AlignJustify,
     Pencil,
+    X,
 } from 'lucide-vue-next';
 import Image from '@/extensions/TipTapImageExtension';
 
@@ -562,24 +563,34 @@ onMounted(() => {
                 :class="{ 'hidden md:flex': hasSelectedNote, 'flex': !hasSelectedNote }"
             >
                 <!-- Sidebar Header -->
-                <div class="flex flex-col gap-3 border-b border-border p-4">
+                <div class="flex flex-col gap-3.5 border-b border-border bg-card/40 px-4 pb-4 pt-5">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-baseline gap-2">
-                            <h1 class="font-display text-xl font-semibold tracking-tight text-foreground">Notes</h1>
-                            <span class="text-sm text-muted-foreground">{{ filteredNotes.length }}</span>
+                        <div class="flex items-center gap-2.5">
+                            <h1 class="font-display text-2xl font-semibold tracking-tight text-foreground">Notes</h1>
+                            <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-muted px-1.5 text-xs font-semibold text-muted-foreground">
+                                {{ filteredNotes.length }}
+                            </span>
                         </div>
-                        <Button @click="createNewNote" size="sm" class="h-8 gap-1.5 px-3">
+                        <Button @click="createNewNote" size="sm" class="h-9 gap-1.5 px-3.5 shadow-sm">
                             <Plus class="h-4 w-4" />
                             New
                         </Button>
                     </div>
-                    <div class="relative">
-                        <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <div class="group relative">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
                         <Input
                             v-model="searchQuery"
                             placeholder="Search notes…"
-                            class="h-9 rounded-lg pl-8 text-sm"
+                            class="h-10 rounded-xl border-border bg-background pl-9 pr-9 text-sm shadow-sm transition-shadow focus-visible:ring-2 focus-visible:ring-primary/20"
                         />
+                        <button
+                            v-if="searchQuery"
+                            @click="searchQuery = ''"
+                            class="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            title="Clear search"
+                        >
+                            <X class="h-3.5 w-3.5" />
+                        </button>
                     </div>
                 </div>
 
