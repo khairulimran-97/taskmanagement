@@ -4,6 +4,7 @@ import { computed } from 'vue';
 
 interface Props {
     variant?: 'header' | 'sidebar';
+    fullBleed?: boolean;
     class?: string;
 }
 
@@ -15,7 +16,11 @@ const className = computed(() => props.class);
     <SidebarInset v-if="props.variant === 'sidebar'" :class="className">
         <slot />
     </SidebarInset>
-    <main v-else class="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl" :class="className">
+    <main
+        v-else
+        class="mx-auto flex h-full w-full flex-1 flex-col gap-4 rounded-xl"
+        :class="[props.fullBleed ? 'max-w-none' : 'max-w-7xl', className]"
+    >
         <slot />
     </main>
 </template>

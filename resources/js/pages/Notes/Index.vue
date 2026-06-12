@@ -547,7 +547,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppLayout :breadcrumbs="breadcrumbs" full-bleed>
         <Head title="Notes" />
 
         <div class="notes-layout flex h-[calc(100vh-3.5rem)] w-full overflow-hidden border-t border-border">

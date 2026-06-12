@@ -4,6 +4,7 @@ import type { BreadcrumbItemType } from '@/types';
 
 interface Props {
     breadcrumbs?: BreadcrumbItemType[];
+    fullBleed?: boolean;
     notifications?: {
         total: number;
         overdue_tasks: number;
@@ -14,6 +15,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
+    fullBleed: false,
     notifications: () => ({
         total: 0,
         overdue_tasks: 0,
@@ -24,7 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <AppHeaderLayout :breadcrumbs="breadcrumbs" :notifications="notifications">
+    <AppHeaderLayout :breadcrumbs="breadcrumbs" :full-bleed="fullBleed">
         <slot />
     </AppHeaderLayout>
 </template>

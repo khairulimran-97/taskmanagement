@@ -7,17 +7,19 @@ import { Toaster } from '@/components/ui/sonner'
 
 interface Props {
     breadcrumbs?: BreadcrumbItemType[];
+    fullBleed?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
+    fullBleed: false,
 });
 </script>
 
 <template>
     <AppShell class="flex-col">
         <AppHeader :breadcrumbs="breadcrumbs" />
-        <AppContent>
+        <AppContent :full-bleed="fullBleed">
             <slot />
         </AppContent>
         <Toaster position="top-right" />
