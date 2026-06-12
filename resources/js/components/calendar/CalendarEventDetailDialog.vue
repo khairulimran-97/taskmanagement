@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Calendar, Clock, Edit, Trash2 } from 'lucide-vue-next';
+import { categoryForColor } from '@/lib/eventCategories';
 
 interface Props {
     isOpen: boolean;
@@ -214,14 +215,11 @@ const handleClose = () => {
 
                     <Badge
                         variant="outline"
-                        class="flex items-center space-x-1"
+                        class="flex items-center gap-1.5"
                         :style="{ borderColor: event.backgroundColor, color: event.backgroundColor }"
                     >
-                        <div
-                            class="w-2 h-2 rounded-full"
-                            :style="{ backgroundColor: event.backgroundColor }"
-                        />
-                        <span>{{ event.backgroundColor }}</span>
+                        <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: event.backgroundColor }" />
+                        <span>{{ categoryForColor(event.backgroundColor).label }}</span>
                     </Badge>
                 </div>
 

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { BreadcrumbItem, CalendarEvent, FullCalendarEvent } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Plus, Calendar as CalendarIcon, RefreshCw } from 'lucide-vue-next';
+import { CATEGORIES } from '@/lib/eventCategories';
 
 // FullCalendar imports
 import FullCalendar from '@fullcalendar/vue3';
@@ -23,11 +24,8 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Define breadcrumbs
-const breadcrumbs = ref<BreadcrumbItem[]>([
-    { title: 'Dashboard', href: route('dashboard') },
-    { title: 'Calendar', href: route('calendar.index') },
-]);
+// No breadcrumb on the calendar — it's a full-width workspace
+const breadcrumbs = ref<BreadcrumbItem[]>([]);
 
 // Calendar ref and state
 const calendarRef = ref();
@@ -65,6 +63,9 @@ const loadEvents = async (fetchInfo: any, successCallback: Function, failureCall
     }
 };
 
+// Restore last-used view
+const storedView = (typeof localStorage !== 'undefined' && localStorage.getItem('calendar_view')) || 'dayGridMonth';
+
 // Calendar options with dynamic event loading
 const calendarOptions = computed(() => ({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
@@ -73,7 +74,7 @@ const calendarOptions = computed(() => ({
         center: 'title',
         right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
     },
-    initialView: 'dayGridMonth',
+    initialView: storedView,
     height: 'auto',
     selectable: true,
     selectMirror: true,
@@ -97,6 +98,20 @@ const calendarOptions = computed(() => ({
     eventDrop: handleEventDrop,
     eventResize: handleEventResize,
 
+    // Persist the active view
+    datesSet: (info: any) => {
+        if (typeof localStorage !== 'undefined') localStorage.setItem('calendar_view', info.view.type);
+    },
+
+    // Hover preview via native title
+    eventDidMount: (info: any) => {
+        const desc = info.event.extendedProps?.description;
+        const time = info.event.allDay
+            ? 'All day'
+            : info.event.start?.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        info.el.setAttribute('title', `${info.event.title}\n${time}${desc ? '\n' + desc : ''}`);
+    },
+
     // Event styling
     eventDisplay: 'block',
     eventTextColor: '#ffffff',
@@ -119,15 +134,10 @@ const calendarOptions = computed(() => ({
     }
 }));
 
-// Date selection handler
+// Date selection handler → lightweight quick-add
 function handleDateSelect(selectInfo: any) {
-    selectedDate.value = {
-        start: selectInfo.start,
-        end: selectInfo.end,
-        allDay: selectInfo.allDay
-    };
-    editingEvent.value = null;
-    isEventDialogOpen.value = true;
+    openQuickAdd({ start: selectInfo.start, end: selectInfo.end, allDay: selectInfo.allDay });
+    calendarRef.value?.getApi?.()?.unselect();
 }
 
 // Event click handler
@@ -191,7 +201,7 @@ function handleEventDrop(dropInfo: any) {
                 dropInfo.revert();
             },
             onSuccess: () => {
-                refreshCalendar();
+                afterEventChange();
             }
         });
     } catch (error) {
@@ -228,7 +238,7 @@ function handleEventResize(resizeInfo: any) {
                 resizeInfo.revert();
             },
             onSuccess: () => {
-                refreshCalendar();
+                afterEventChange();
             }
         });
     } catch (error) {
@@ -255,7 +265,7 @@ const createEvent = (eventData: any) => {
             isEventDialogOpen.value = false;
             selectedDate.value = null;
             resetForm();
-            await refreshCalendar();
+            await afterEventChange();
         },
         onError: (errors) => {
             // Handle validation errors
@@ -285,7 +295,7 @@ const updateEvent = (eventId: string, eventData: any) => {
             isEventDetailDialogOpen.value = false;
             editingEvent.value = null;
             resetForm();
-            await refreshCalendar();
+            await afterEventChange();
         },
         onError: (errors) => {
             // Handle validation errors
@@ -311,7 +321,7 @@ const deleteEvent = (eventId: string) => {
         onSuccess: async () => {
             isEventDetailDialogOpen.value = false;
             selectedEvent.value = null;
-            await refreshCalendar();
+            await afterEventChange();
         }
     });
 };
@@ -334,6 +344,125 @@ const resetForm = () => {
 const openNewEventDialog = () => {
     resetForm();
     isEventDialogOpen.value = true;
+};
+
+/* ───────────────── Upcoming agenda rail ───────────────── */
+const upcoming = ref<any[]>([]);
+const totalEventCount = ref<number>(props.events?.length || 0);
+
+const todayItems = computed(() => upcoming.value.filter((e) => e.is_today));
+const laterItems = computed(() => upcoming.value.filter((e) => !e.is_today));
+
+const fetchUpcoming = async () => {
+    try {
+        const res = await fetch(route('calendar.api.upcoming'), { headers: { Accept: 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        upcoming.value = data.events || [];
+    } catch {
+        /* non-fatal */
+    }
+};
+
+const relativeDay = (dateStr: string, isToday: boolean): string => {
+    if (isToday) return 'Today';
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
+    if (diff === 1) return 'Tomorrow';
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const eventTimeLabel = (e: any): string => {
+    if (e.all_day) return 'All day';
+    return new Date(e.start_date || e.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+};
+
+// Open the detail slideover from a rail item
+const openFromRail = (e: any) => {
+    selectedEvent.value = {
+        id: e.id,
+        title: e.title,
+        start: e.start_date || e.start,
+        end: e.end_date || e.end || undefined,
+        allDay: e.all_day,
+        backgroundColor: e.color,
+        borderColor: e.color,
+        textColor: '#ffffff',
+        extendedProps: { description: e.description || '' },
+    } as any;
+    isEventDetailDialogOpen.value = true;
+};
+
+/* ───────────────── Quick add ───────────────── */
+const quickAddOpen = ref(false);
+const quickAddTitle = ref('');
+const quickAddDate = ref<{ start: Date; end?: Date; allDay: boolean } | null>(null);
+const quickAddInput = ref<HTMLInputElement | null>(null);
+
+const openQuickAdd = (info: { start: Date; end?: Date; allDay: boolean }) => {
+    quickAddDate.value = info;
+    quickAddTitle.value = '';
+    quickAddOpen.value = true;
+    nextTick(() => quickAddInput.value?.focus());
+};
+
+const submitQuickAdd = () => {
+    const title = quickAddTitle.value.trim();
+    if (!title || !quickAddDate.value) return;
+    const start = quickAddDate.value.start;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+    const allDay = quickAddDate.value.allDay;
+    const startTime = allDay ? '00:00' : `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+    createEvent({
+        title,
+        description: '',
+        color: '#3B82F6',
+        all_day: allDay,
+        start_date: `${dateStr}T${startTime}:00`,
+    });
+    quickAddOpen.value = false;
+};
+
+const escalateQuickAdd = () => {
+    selectedDate.value = quickAddDate.value
+        ? { start: quickAddDate.value.start, end: quickAddDate.value.end, allDay: quickAddDate.value.allDay }
+        : null;
+    quickAddOpen.value = false;
+    editingEvent.value = null;
+    isEventDialogOpen.value = true;
+};
+
+/* ───────────────── Keyboard navigation ───────────────── */
+const onKeydown = (e: KeyboardEvent) => {
+    const t = e.target as HTMLElement;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const api = calendarRef.value?.getApi?.();
+    if (!api) return;
+    switch (e.key.toLowerCase()) {
+        case 't': api.today(); break;
+        case 'arrowleft': api.prev(); break;
+        case 'arrowright': api.next(); break;
+        case 'm': api.changeView('dayGridMonth'); break;
+        case 'w': api.changeView('timeGridWeek'); break;
+        case 'd': api.changeView('timeGridDay'); break;
+        case 'l': api.changeView('listWeek'); break;
+        default: return;
+    }
+};
+
+onMounted(() => {
+    fetchUpcoming();
+    window.addEventListener('keydown', onKeydown);
+});
+onUnmounted(() => window.removeEventListener('keydown', onKeydown));
+
+// Refresh agenda whenever events change
+const afterEventChange = async () => {
+    await afterEventChange();
+    await fetchUpcoming();
 };
 </script>
 
@@ -371,24 +500,142 @@ const openNewEventDialog = () => {
                 </div>
             </div>
 
-            <!-- Calendar -->
-            <div class="relative flex-1 overflow-auto px-4 py-4 md:px-6">
-                <!-- Loading overlay -->
-                <div
-                    v-if="isLoadingEvents"
-                    class="absolute inset-0 z-10 flex items-center justify-center bg-background/60"
-                >
-                    <div class="flex items-center gap-2 text-muted-foreground">
-                        <RefreshCw class="h-5 w-5 animate-spin" />
-                        <span>Loading events…</span>
+            <!-- Body: calendar + agenda rail -->
+            <div class="flex min-h-0 flex-1">
+                <!-- Calendar -->
+                <div class="relative min-w-0 flex-1 overflow-auto px-4 py-4 md:px-6">
+                    <!-- Loading overlay -->
+                    <div
+                        v-if="isLoadingEvents"
+                        class="absolute inset-0 z-10 flex items-center justify-center bg-background/60"
+                    >
+                        <div class="flex items-center gap-2 text-muted-foreground">
+                            <RefreshCw class="h-5 w-5 animate-spin" />
+                            <span>Loading events…</span>
+                        </div>
                     </div>
+
+                    <!-- Empty state -->
+                    <div
+                        v-if="totalEventCount === 0 && upcoming.length === 0"
+                        class="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center p-6"
+                    >
+                        <div class="pointer-events-auto flex max-w-xs flex-col items-center rounded-2xl border border-dashed border-border bg-card/80 px-8 py-10 text-center backdrop-blur-sm">
+                            <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                <CalendarIcon class="h-7 w-7" />
+                            </div>
+                            <h3 class="font-display text-lg font-semibold text-foreground">No events yet</h3>
+                            <p class="mt-1 text-sm text-muted-foreground">Click any day or add your first event to get started.</p>
+                            <Button @click="openNewEventDialog" size="sm" class="mt-4 gap-1.5">
+                                <Plus class="h-4 w-4" /> Add event
+                            </Button>
+                        </div>
+                    </div>
+
+                    <FullCalendar
+                        ref="calendarRef"
+                        :options="calendarOptions"
+                        class="calendar-container"
+                    />
                 </div>
 
-                <FullCalendar
-                    ref="calendarRef"
-                    :options="calendarOptions"
-                    class="calendar-container"
-                />
+                <!-- Agenda rail -->
+                <aside class="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-muted/20 lg:flex">
+                    <div class="border-b border-border px-4 py-3">
+                        <h2 class="font-display text-base font-semibold tracking-tight text-foreground">Up next</h2>
+                        <p class="text-xs text-muted-foreground">Today and the next 7 days</p>
+                    </div>
+
+                    <div class="flex-1 space-y-5 px-4 py-4">
+                        <!-- Today -->
+                        <div v-if="todayItems.length">
+                            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-primary">Today</p>
+                            <div class="space-y-1.5">
+                                <button
+                                    v-for="e in todayItems"
+                                    :key="e.id"
+                                    @click="openFromRail(e)"
+                                    class="group flex w-full items-start gap-2.5 rounded-lg border border-transparent px-2 py-2 text-left transition-colors hover:border-border hover:bg-card"
+                                >
+                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: e.color }"></span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-sm font-medium text-foreground group-hover:text-primary">{{ e.title }}</p>
+                                        <p class="text-xs text-muted-foreground">{{ eventTimeLabel(e) }}</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Upcoming -->
+                        <div v-if="laterItems.length">
+                            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Upcoming</p>
+                            <div class="space-y-1.5">
+                                <button
+                                    v-for="e in laterItems"
+                                    :key="e.id"
+                                    @click="openFromRail(e)"
+                                    class="group flex w-full items-start gap-2.5 rounded-lg border border-transparent px-2 py-2 text-left transition-colors hover:border-border hover:bg-card"
+                                >
+                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: e.color }"></span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-sm font-medium text-foreground group-hover:text-primary">{{ e.title }}</p>
+                                        <p class="text-xs text-muted-foreground">
+                                            {{ relativeDay(e.start_date || e.start, false) }} · {{ eventTimeLabel(e) }}
+                                        </p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Empty -->
+                        <div v-if="!todayItems.length && !laterItems.length" class="flex flex-col items-center py-10 text-center">
+                            <CalendarIcon class="mb-2 h-7 w-7 text-muted-foreground/40" />
+                            <p class="text-sm text-muted-foreground">Nothing coming up</p>
+                        </div>
+                    </div>
+
+                    <!-- Category legend -->
+                    <div class="border-t border-border px-4 py-3">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categories</p>
+                        <div class="flex flex-wrap gap-x-3 gap-y-1.5">
+                            <span v-for="c in CATEGORIES" :key="c.key" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: c.color }"></span>
+                                {{ c.label }}
+                            </span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Quick-add popover -->
+            <div
+                v-if="quickAddOpen"
+                class="fixed inset-0 z-50 flex items-start justify-center bg-foreground/10 pt-32"
+                @click.self="quickAddOpen = false"
+            >
+                <div class="w-full max-w-sm rounded-xl border border-border bg-card p-4 shadow-xl">
+                    <p class="mb-2 text-xs font-medium text-muted-foreground">
+                        New event · {{ quickAddDate ? relativeDay(quickAddDate.start.toISOString(), false) : '' }}
+                    </p>
+                    <input
+                        ref="quickAddInput"
+                        v-model="quickAddTitle"
+                        type="text"
+                        placeholder="Event title…"
+                        class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        @keydown.enter.prevent="submitQuickAdd"
+                        @keydown.esc.prevent="quickAddOpen = false"
+                    />
+                    <div class="mt-3 flex items-center justify-between">
+                        <button class="text-xs text-muted-foreground hover:text-primary" @click="escalateQuickAdd">
+                            More options →
+                        </button>
+                        <div class="flex gap-2">
+                            <Button variant="ghost" size="sm" @click="quickAddOpen = false">Cancel</Button>
+                            <Button size="sm" :disabled="!quickAddTitle.trim()" @click="submitQuickAdd">Add</Button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -529,6 +776,20 @@ const openNewEventDialog = () => {
 
 :deep(.fc-day-today) {
     background-color: var(--fc-today-bg-color) !important;
+}
+
+/* Saffron pill on today's date number */
+:deep(.fc-daygrid-day.fc-day-today .fc-daygrid-day-number) {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-radius: 9999px;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0.2rem;
+    font-weight: 600;
 }
 
 :deep(.fc-scrollgrid) {

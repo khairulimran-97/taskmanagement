@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Calendar, Clock } from 'lucide-vue-next';
+import { Calendar, Clock, Palette } from 'lucide-vue-next';
+import { CATEGORIES, isCustomColor } from '@/lib/eventCategories';
 
 interface Props {
     isOpen: boolean;
@@ -38,6 +39,9 @@ const form = reactive({
 
 // Force re-render key for Switch component
 const switchKey = ref(0);
+
+// Whether the user is using a custom color vs a named category
+const useCustom = ref(false);
 
 // Form validation errors
 const errors = ref<Record<string, string>>({});
@@ -72,6 +76,7 @@ const resetForm = () => {
     form.color = '#3B82F6';
     form.all_day = false;
     errors.value = {};
+    useCustom.value = false;
 
     // Force Switch component re-render
     switchKey.value++;
@@ -83,6 +88,7 @@ const populateForm = (event: any) => {
     form.description = event.extendedProps?.description || '';
     form.color = event.backgroundColor || '#3B82F6';
     form.all_day = event.allDay || false;
+    useCustom.value = isCustomColor(form.color);
 
     if (event.start) {
         const startDate = new Date(event.start);
@@ -371,28 +377,41 @@ const formatDate = (dateString: string): string => {
                     </div>
                 </div>
 
-                <!-- Color Selection -->
+                <!-- Category -->
                 <div class="space-y-2">
-                    <Label>Event Color</Label>
-                    <div class="flex flex-wrap gap-2">
+                    <Label>Category</Label>
+                    <div class="grid grid-cols-2 gap-2">
                         <button
-                            v-for="color in availableColors"
-                            :key="color"
+                            v-for="cat in CATEGORIES"
+                            :key="cat.key"
                             type="button"
-                            @click="form.color = color"
-                            class="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
-                            :class="form.color === color ? 'border-border dark:border-card' : 'border-input'"
-                            :style="{ backgroundColor: color }"
-                            :title="color"
-                        />
+                            @click="form.color = cat.color; useCustom = false"
+                            class="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
+                            :class="form.color === cat.color && !useCustom
+                                ? 'border-primary bg-primary/8 text-foreground'
+                                : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'"
+                        >
+                            <span class="h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: cat.color }"></span>
+                            <component :is="cat.icon" class="h-3.5 w-3.5 shrink-0" />
+                            <span class="truncate">{{ cat.label }}</span>
+                        </button>
                     </div>
-                    <div class="flex items-center space-x-2 mt-2">
-                        <Label for="custom-color" class="text-sm">Custom:</Label>
+
+                    <!-- Custom color escape hatch -->
+                    <button
+                        type="button"
+                        class="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
+                        @click="useCustom = !useCustom"
+                    >
+                        <Palette class="h-3.5 w-3.5" />
+                        {{ useCustom ? 'Use a category instead' : 'Custom color' }}
+                    </button>
+                    <div v-if="useCustom" class="flex items-center gap-2">
                         <Input
                             id="custom-color"
                             type="color"
                             v-model="form.color"
-                            class="w-12 h-8 p-1 border-0"
+                            class="h-9 w-12 p-1"
                         />
                         <span class="text-sm text-muted-foreground">{{ form.color }}</span>
                     </div>
