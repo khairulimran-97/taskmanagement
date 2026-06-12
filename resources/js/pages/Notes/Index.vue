@@ -41,11 +41,8 @@ interface Props {
 const props = defineProps<Props>();
 const page = usePage();
 
-// Define breadcrumbs
-const breadcrumbs = ref<BreadcrumbItem[]>([
-    { title: 'Dashboard', href: route('dashboard') },
-    { title: 'Notes', href: route('notes.index') },
-]);
+// No breadcrumb on Notes — it's a full-width workspace
+const breadcrumbs = ref<BreadcrumbItem[]>([]);
 
 // State
 const searchQuery = ref(props.search || '');
