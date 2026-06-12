@@ -423,8 +423,8 @@ const openNewEventDialog = () => {
     --fc-button-bg-color: var(--card);
     --fc-button-border-color: var(--border);
     --fc-button-hover-bg-color: var(--accent);
-    --fc-button-hover-border-color: var(--primary);
-    --fc-button-active-bg-color: var(--primary);
+    --fc-button-hover-border-color: var(--border);
+    --fc-button-active-bg-color: var(--muted);
     --fc-today-bg-color: color-mix(in srgb, var(--primary) 10%, transparent);
     --fc-event-text-color: #ffffff;
     --fc-neutral-bg-color: var(--muted);
@@ -479,11 +479,34 @@ const openNewEventDialog = () => {
     margin-left: 0.5rem;
 }
 
-:deep(.fc-button-primary:not(:disabled).fc-button-active),
-:deep(.fc-button-primary:not(:disabled):active) {
-    background-color: var(--primary) !important;
-    border-color: var(--primary) !important;
-    color: var(--primary-foreground) !important;
+/* View switcher (Month/Week/Day/List) as a segmented control — keeps
+   saffron reserved for true primary actions like "New Event". */
+:deep(.fc-toolbar-chunk:last-child .fc-button-group) {
+    gap: 0 !important;
+    background-color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    padding: 0.25rem;
+}
+
+:deep(.fc-toolbar-chunk:last-child .fc-button-group > .fc-button) {
+    border: 1px solid transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    color: var(--muted-foreground) !important;
+    padding: 0.3rem 0.75rem !important;
+}
+
+:deep(.fc-toolbar-chunk:last-child .fc-button-group > .fc-button:hover) {
+    color: var(--foreground) !important;
+    border-color: transparent !important;
+}
+
+:deep(.fc-toolbar-chunk:last-child .fc-button-group > .fc-button-active) {
+    background-color: var(--card) !important;
+    color: var(--foreground) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+    font-weight: 600 !important;
 }
 
 :deep(.fc-event) {
