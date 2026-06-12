@@ -75,7 +75,8 @@ const calendarOptions = computed(() => ({
         right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
     },
     initialView: storedView,
-    height: 'auto',
+    height: '100%',
+    expandRows: true,
     selectable: true,
     selectMirror: true,
     dayMaxEvents: true,
@@ -503,7 +504,7 @@ const afterEventChange = async () => {
             <!-- Body: calendar + agenda rail -->
             <div class="flex min-h-0 flex-1">
                 <!-- Calendar -->
-                <div class="relative min-w-0 flex-1 overflow-auto px-4 py-4 md:px-6">
+                <div class="relative flex min-w-0 flex-1 flex-col overflow-auto px-4 py-4 md:px-6">
                     <!-- Loading overlay -->
                     <div
                         v-if="isLoadingEvents"
@@ -678,8 +679,14 @@ const afterEventChange = async () => {
     --fc-page-bg-color: var(--background);
 }
 
+.calendar-container {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 :deep(.fc) {
     font-family: inherit;
+    height: 100%;
 }
 
 :deep(.fc-toolbar) {
