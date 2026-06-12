@@ -544,13 +544,12 @@ onMounted(() => {
                 <div class="flex flex-col gap-3 border-b border-border p-4">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <FileText class="h-4 w-4 text-primary" />
-                            <h1 class="text-sm font-semibold text-foreground">Notes</h1>
+                            <h1 class="font-display text-lg font-semibold tracking-tight text-foreground">Notes</h1>
                             <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">
                                 {{ filteredNotes.length }}
                             </span>
                         </div>
-                        <Button @click="createNewNote" size="sm" class="h-7 gap-1.5 px-2 text-xs">
+                        <Button @click="createNewNote" size="sm" class="h-8 gap-1.5 px-2.5 text-xs">
                             <Plus class="h-3.5 w-3.5" />
                             New
                         </Button>
@@ -629,7 +628,7 @@ onMounted(() => {
                         <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
                             <FileText class="h-8 w-8 text-muted-foreground/50" />
                         </div>
-                        <h3 class="text-base font-medium text-foreground">Select a note</h3>
+                        <h3 class="font-display text-lg font-semibold text-foreground">Select a note</h3>
                         <p class="mt-1 max-w-xs text-sm text-muted-foreground">
                             Choose a note from the sidebar or create a new one to start writing.
                         </p>
@@ -661,7 +660,7 @@ onMounted(() => {
                                     v-if="isTitleEditing"
                                     ref="titleInput"
                                     v-model="noteForm.title"
-                                    class="h-auto border-none bg-transparent p-0 text-base font-semibold shadow-none focus-visible:ring-0"
+                                    class="h-auto border-none bg-transparent p-0 font-display text-lg font-semibold tracking-tight shadow-none focus-visible:ring-0"
                                     placeholder="Untitled"
                                     @blur="isTitleEditing = false"
                                     @keydown.enter="isTitleEditing = false"
@@ -670,7 +669,7 @@ onMounted(() => {
                                 <button
                                     v-else
                                     @click="toggleTitleEdit"
-                                    class="w-full truncate rounded px-1 py-0.5 text-left text-base font-semibold text-foreground transition-colors hover:bg-accent/50"
+                                    class="w-full truncate rounded px-1 py-0.5 text-left font-display text-lg font-semibold tracking-tight text-foreground transition-colors hover:bg-accent/50"
                                 >
                                     {{ currentNote.title || 'Untitled' }}
                                 </button>
