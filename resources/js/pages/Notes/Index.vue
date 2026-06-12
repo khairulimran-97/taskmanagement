@@ -49,6 +49,8 @@ const searchQuery = ref(props.search || '');
 const filteredNotes = ref<Note[]>(props.notes || []);
 const currentNote = ref<Note | null>(props.selectedNote || null);
 const isTitleEditing = ref(false);
+// Mobile is single-pane: start on the list even if the server pre-selected a note
+const mobileShowEditor = ref(false);
 
 // Reading width: 'full' (edge-to-edge) or 'centered' (~750px reading column)
 const readingWidth = ref<'full' | 'centered'>(
@@ -301,6 +303,7 @@ watch(searchQuery, () => {
 
 // Select a note (client-side, no server roundtrip)
 const selectNote = (note: Note) => {
+    mobileShowEditor.value = true;
     if (currentNote.value?.id === note.id) return;
 
     // Save current note if has unsaved changes
@@ -548,8 +551,8 @@ onMounted(() => {
         <div class="notes-layout flex h-[calc(100vh-3.5rem)] w-full overflow-hidden">
             <!-- Sidebar -->
             <aside
-                class="flex w-80 flex-col overflow-hidden border-r border-border bg-muted/20 xl:w-96"
-                :class="{ 'hidden md:flex': hasSelectedNote, 'flex': !hasSelectedNote }"
+                class="w-full flex-col overflow-hidden border-r border-border bg-muted/20 md:flex md:w-80 xl:w-96"
+                :class="mobileShowEditor ? 'hidden md:flex' : 'flex'"
             >
                 <!-- Sidebar Header -->
                 <div class="flex flex-col gap-3.5 border-b border-border bg-card/40 px-4 pb-4 pt-5">
@@ -641,8 +644,8 @@ onMounted(() => {
             </aside>
 
             <!-- Main Content -->
-            <main class="flex flex-1 flex-col overflow-hidden"
-                  :class="{ 'hidden md:flex': !hasSelectedNote }">
+            <main class="flex-1 flex-col overflow-hidden md:flex"
+                  :class="mobileShowEditor ? 'flex' : 'hidden md:flex'">
 
                 <!-- No Note Selected -->
                 <div v-if="!hasSelectedNote" class="flex flex-1 items-center justify-center bg-muted/10 p-6">
@@ -670,7 +673,7 @@ onMounted(() => {
                             <div class="flex min-w-0 flex-1 items-start gap-2">
                                 <!-- Back button (mobile) -->
                                 <Button
-                                    @click="currentNote = null; router.get(route('notes.index'), {}, { preserveState: true })"
+                                    @click="mobileShowEditor = false"
                                     variant="ghost"
                                     size="sm"
                                     class="-ml-1 mt-0.5 h-8 w-8 shrink-0 p-0 md:hidden"
