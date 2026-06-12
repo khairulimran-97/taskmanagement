@@ -150,9 +150,24 @@ const canMoveDown = (task: any) => {
                         <span class="text-muted-foreground/50">/</span>
                         <span class="text-sm text-muted-foreground">Task</span>
                     </div>
-                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('close')">
-                        <X class="h-4 w-4" />
-                    </Button>
+                    <div class="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" class="h-8 gap-1.5 px-2.5 text-xs" @click="emit('edit-task', selectedTask)">
+                            <Edit class="h-3.5 w-3.5" /> Edit
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            class="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            title="Delete task"
+                            @click="emit('delete-task', selectedTask)"
+                        >
+                            <Trash2 class="h-4 w-4" />
+                        </Button>
+                        <span class="mx-1 h-5 w-px bg-border"></span>
+                        <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('close')">
+                            <X class="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
 
                 <!-- Scroll body -->
@@ -177,7 +192,7 @@ const canMoveDown = (task: any) => {
                                 >
                                     {{ selectedTask.title }}
                                 </h2>
-                                <p v-if="selectedTask.description" class="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                                <p v-if="selectedTask.description" class="mt-1.5 text-sm leading-relaxed text-muted-foreground break-words">
                                     {{ selectedTask.description }}
                                 </p>
                             </div>
@@ -192,21 +207,6 @@ const canMoveDown = (task: any) => {
                                 <Flag class="mr-1 h-3 w-3" />
                                 {{ labelize(selectedTask.priority || 'medium') }}
                             </Badge>
-                        </div>
-
-                        <!-- Actions -->
-                        <div class="mt-4 flex items-center gap-2 pl-9">
-                            <Button variant="outline" size="sm" @click="emit('edit-task', selectedTask)">
-                                <Edit class="mr-1.5 h-3.5 w-3.5" /> Edit
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                @click="emit('delete-task', selectedTask)"
-                            >
-                                <Trash2 class="mr-1.5 h-3.5 w-3.5" /> Delete
-                            </Button>
                         </div>
                     </div>
 
