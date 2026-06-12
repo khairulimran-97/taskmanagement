@@ -540,13 +540,13 @@ const afterEventChange = async () => {
                 </div>
 
                 <!-- Agenda rail -->
-                <aside class="hidden w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-muted/20 lg:flex">
+                <aside class="hidden w-80 shrink-0 flex-col border-l border-border bg-muted/20 lg:flex">
                     <div class="border-b border-border px-4 py-3">
                         <h2 class="font-display text-base font-semibold tracking-tight text-foreground">Up next</h2>
                         <p class="text-xs text-muted-foreground">Today and the next 7 days</p>
                     </div>
 
-                    <div class="space-y-5 px-4 py-4">
+                    <div class="flex-1 space-y-5 overflow-y-auto px-4 py-4">
                         <!-- Today -->
                         <div v-if="todayItems.length">
                             <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-primary">Today</p>
@@ -592,16 +592,16 @@ const afterEventChange = async () => {
                             <CalendarIcon class="mb-2 h-7 w-7 text-muted-foreground/40" />
                             <p class="text-sm text-muted-foreground">Nothing coming up</p>
                         </div>
+                    </div>
 
-                        <!-- Category legend -->
-                        <div class="border-t border-border pt-4">
-                            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categories</p>
-                            <div class="flex flex-wrap gap-x-3 gap-y-1.5">
-                                <span v-for="c in CATEGORIES" :key="c.key" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: c.color }"></span>
-                                    {{ c.label }}
-                                </span>
-                            </div>
+                    <!-- Category legend (pinned footer) -->
+                    <div class="mt-auto border-t border-border bg-muted/30 px-4 py-3">
+                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categories</p>
+                        <div class="flex flex-wrap gap-x-3 gap-y-1.5">
+                            <span v-for="c in CATEGORIES" :key="c.key" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: c.color }"></span>
+                                {{ c.label }}
+                            </span>
                         </div>
                     </div>
                 </aside>
