@@ -25,6 +25,8 @@ import {
     CloudOff,
     AlertCircle,
     ChevronLeft,
+    AlignCenter,
+    AlignJustify,
 } from 'lucide-vue-next';
 import Image from '@/extensions/TipTapImageExtension';
 
@@ -48,6 +50,17 @@ const searchQuery = ref(props.search || '');
 const filteredNotes = ref<Note[]>(props.notes || []);
 const currentNote = ref<Note | null>(props.selectedNote || null);
 const isTitleEditing = ref(false);
+
+// Reading width: 'full' (edge-to-edge) or 'centered' (~750px reading column)
+const readingWidth = ref<'full' | 'centered'>(
+    (typeof localStorage !== 'undefined' && (localStorage.getItem('notes_reading_width') as 'full' | 'centered')) || 'full',
+);
+const toggleReadingWidth = () => {
+    readingWidth.value = readingWidth.value === 'full' ? 'centered' : 'full';
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('notes_reading_width', readingWidth.value);
+    }
+};
 const isSaving = ref(false);
 const isAutoSaving = ref(false);
 const autoSaveTimeout = ref<number | null>(null);
@@ -686,6 +699,17 @@ onMounted(() => {
                             </div>
 
                             <Button
+                                @click="toggleReadingWidth"
+                                variant="ghost"
+                                size="sm"
+                                class="hidden h-8 w-8 p-0 text-muted-foreground md:inline-flex"
+                                :title="readingWidth === 'full' ? 'Switch to centered reading column' : 'Switch to full width'"
+                            >
+                                <AlignCenter v-if="readingWidth === 'full'" class="h-4 w-4" />
+                                <AlignJustify v-else class="h-4 w-4" />
+                            </Button>
+
+                            <Button
                                 @click="togglePin(currentNote)"
                                 variant="ghost"
                                 size="sm"
@@ -759,16 +783,21 @@ onMounted(() => {
 
                     <!-- Editor -->
                     <div class="flex-1 overflow-y-auto">
-                        <TipTapEditor
-                            :key="currentNote?.id"
-                            v-model="noteForm.content"
-                            :editable="true"
-                            :noteId="currentNote?.id"
-                            placeholder="Start writing your note... (Type '/' for commands)"
-                            class="h-full w-full !rounded-none !border-0"
-                            @update:modelValue="(value) => noteForm.content = value"
-                            @save="handleEditorSave"
-                        />
+                        <div
+                            class="mx-auto h-full transition-all duration-300"
+                            :class="readingWidth === 'centered' ? 'max-w-3xl' : 'max-w-none'"
+                        >
+                            <TipTapEditor
+                                :key="currentNote?.id"
+                                v-model="noteForm.content"
+                                :editable="true"
+                                :noteId="currentNote?.id"
+                                placeholder="Start writing your note... (Type '/' for commands)"
+                                class="h-full w-full !rounded-none !border-0"
+                                @update:modelValue="(value) => noteForm.content = value"
+                                @save="handleEditorSave"
+                            />
+                        </div>
                     </div>
                 </div>
             </main>
