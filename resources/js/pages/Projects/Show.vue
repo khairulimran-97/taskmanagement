@@ -357,7 +357,7 @@ const handleEditTask = (task) => {
                                 <Input
                                     v-model="searchQuery"
                                     placeholder="Filter tasks…"
-                                    class="h-9 w-full rounded-lg border-border bg-background pl-8 pr-8 text-sm shadow-none focus-visible:ring-1"
+                                    class="h-9 w-full rounded-lg border-border bg-card pl-8 pr-8 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
                                 />
                                 <button
                                     v-if="searchQuery"
@@ -369,7 +369,7 @@ const handleEditTask = (task) => {
                             </div>
 
                             <Select v-model="filterPriority">
-                                <SelectTrigger class="h-9 w-32 shrink-0 rounded-lg border-border bg-background text-sm shadow-none">
+                                <SelectTrigger class="h-9 w-32 shrink-0 rounded-lg border-border bg-card text-sm shadow-sm">
                                     <SelectValue placeholder="Priority" />
                                 </SelectTrigger>
                                 <SelectContent>
