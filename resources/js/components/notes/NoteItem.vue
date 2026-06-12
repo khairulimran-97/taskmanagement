@@ -24,7 +24,7 @@ const formatDate = (dateString: string): string => {
 <template>
     <button
         @click="emit('select')"
-        class="group relative flex w-full flex-col gap-1.5 border-l-2 px-4 py-3 text-left transition-colors"
+        class="group relative flex w-full flex-col gap-1.5 border-b border-l-2 border-b-border/60 px-4 py-3 text-left transition-colors"
         :class="active ? 'border-l-primary bg-accent' : 'border-l-transparent hover:bg-accent/50'"
     >
         <!-- Title -->
