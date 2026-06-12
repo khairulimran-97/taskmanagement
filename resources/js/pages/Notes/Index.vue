@@ -680,11 +680,11 @@ onMounted(() => {
                                         v-if="isTitleEditing"
                                         ref="titleInput"
                                         v-model="noteForm.title"
-                                        class="-mx-2 h-auto rounded-md border border-primary/40 bg-background px-2 py-0.5 font-display text-2xl font-semibold leading-tight tracking-tight ring-2 ring-primary/15 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+                                        class="-mx-2 h-auto rounded-md border border-primary/40 bg-background px-2 py-0.5 font-display text-2xl font-semibold leading-tight tracking-tight ring-2 ring-primary/15 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 md:text-2xl"
                                         placeholder="Untitled"
                                         @blur="isTitleEditing = false"
-                                        @keydown.enter="isTitleEditing = false"
-                                        @keydown.escape="cancelTitleEdit"
+                                        @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+                                        @keydown.esc.prevent="cancelTitleEdit"
                                     />
                                     <button
                                         v-else

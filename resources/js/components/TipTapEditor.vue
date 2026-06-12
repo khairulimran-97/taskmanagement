@@ -1033,7 +1033,7 @@ const canDeleteTable = () => editor.value?.can().deleteTable() || false
                         <span class="h-2.5 w-2.5 rounded-full bg-[#28c840]"></span>
                     </span>
                     <span class="ml-1 font-mono text-xs text-[#8b8fa3]">source.html</span>
-                    <span class="ml-auto font-mono text-[11px] text-[#6b6f80]">read-only edits apply on toggle back</span>
+                    <span class="ml-auto font-mono text-[11px] text-[#6b6f80]">edits apply when you switch back</span>
                 </div>
                 <textarea
                     v-model="htmlDraft"
