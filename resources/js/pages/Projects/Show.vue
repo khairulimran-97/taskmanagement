@@ -330,14 +330,14 @@ const handleEditTask = (task) => {
 
         <PageContainer>
             <!-- Project Header -->
-            <div class="mb-4 space-y-3">
+            <div class="mb-6 space-y-4">
                 <ProjectHeader :project="project" @edit="isEditProjectOpen = true" @add-task="openAddTaskModal()" />
                 <ProjectStats :project="project" :completion-percentage="completionPercentage" />
             </div>
 
             <!-- Toolbar -->
             <Tabs :default-value="viewMode" @update:model-value="(val) => viewMode = val">
-                <div class="mb-3 flex items-center justify-between border-b border-border pb-3">
+                <div class="mb-4 flex items-center justify-between border-b border-border pb-3">
                     <div class="flex items-center gap-3">
                         <TabsList class="h-8 rounded-md bg-muted p-0.5">
                             <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded px-2.5 text-xs data-[state=active]:bg-card data-[state=active]:shadow-sm">
@@ -424,9 +424,8 @@ const handleEditTask = (task) => {
             </Tabs>
         </PageContainer>
 
-        <!-- Task Detail Sidebar with Subtask Form using slot -->
-        <div class="relative">
-            <TaskDetailSidebar
+        <!-- Task Detail Slideover with Subtask Form using slot -->
+        <TaskDetailSidebar
                 :project="project"
                 :is-open="isTaskDetailModalOpen"
                 :selected-task="selectedTask"
@@ -435,6 +434,7 @@ const handleEditTask = (task) => {
                 :updating-tasks="updatingTasks"
                 @close="closeTaskDetailModal"
                 @toggle-task="toggleTaskCompletion"
+                @edit-task="handleEditTask"
                 @edit-subtask="editSubtask"
                 @delete-task="deleteTask"
                 @add-subtask="openSubtaskForm"
@@ -456,10 +456,6 @@ const handleEditTask = (task) => {
                     />
                 </template>
             </TaskDetailSidebar>
-        </div>
-
-        <!-- Overlay -->
-        <div v-if="isTaskDetailModalOpen" class="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm" @click="closeTaskDetailModal"></div>
 
         <!-- Task Form Modal -->
         <TaskForm

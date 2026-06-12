@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import {
     X,
     TagIcon,
@@ -12,6 +12,8 @@ import {
     ChevronUp,
     ChevronDown,
     ChevronsUp,
+    CalendarDays,
+    Flag,
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,346 +25,336 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { taskStatusBadge, priorityBadge, labelize, progressColor } from '@/lib/projectMeta';
 
 const props = defineProps({
-    project: {
-        type: Object,
-        required: true,
-    },
-    isOpen: {
-        type: Boolean,
-        default: false,
-    },
-    selectedTask: {
-        type: Object,
-        default: null,
-    },
-    statusConfig: {
-        type: Object,
-        required: true,
-    },
-    priorityConfig: {
-        type: Object,
-        required: true,
-    },
-    updatingTasks: {
-        type: Object,
-        required: true,
-    },
+    project: { type: Object, required: true },
+    isOpen: { type: Boolean, default: false },
+    selectedTask: { type: Object, default: null },
+    statusConfig: { type: Object, required: true },
+    priorityConfig: { type: Object, required: true },
+    updatingTasks: { type: Object, required: true },
 });
 
 const emit = defineEmits([
     'close',
     'toggle-task',
+    'edit-task',
     'edit-subtask',
     'delete-task',
     'add-subtask',
     'reorder-tasks',
 ]);
 
-// Get subtasks for a given parent task
 const getSubtasks = (parentId: string | number) => {
     return (props.project.tasks || [])
         .filter((task) => task.parent_task_id === parentId)
         .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 };
 
+const subtasks = computed(() => (props.selectedTask ? getSubtasks(props.selectedTask.id) : []));
+const subtaskProgress = computed(() => {
+    const list = subtasks.value;
+    if (!list.length) return 0;
+    return Math.round((list.filter((t) => t.status === 'completed').length / list.length) * 100);
+});
+const completedCount = computed(() => subtasks.value.filter((t) => t.status === 'completed').length);
+
+const isMainCompleted = computed(() => props.selectedTask?.status === 'completed');
+
 const formatDate = (date: string | Date | null) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString();
+    if (!date) return '—';
+    return new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 const getDueDateClass = (task: any) => {
     if (!task.due_date || task.status === 'completed') return 'text-muted-foreground';
-
     const due = new Date(task.due_date);
     const now = new Date();
     const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) return 'text-red-600 font-medium dark:text-red-400'; // Overdue
-    if (diffDays <= 1) return 'text-orange-600 font-medium dark:text-orange-400'; // Due soon
-    if (diffDays <= 3) return 'text-yellow-600 dark:text-yellow-400'; // Due in a few days
+    if (diffDays < 0) return 'text-destructive font-medium';
+    if (diffDays <= 1) return 'text-orange-600 dark:text-orange-400 font-medium';
+    if (diffDays <= 3) return 'text-amber-600 dark:text-amber-400';
     return 'text-muted-foreground';
 };
 
-// Sort control methods
+// Reorder helpers
 const moveTaskUp = (task: any) => {
-    const subtasks = getSubtasks(props.selectedTask.id);
-    const currentIndex = subtasks.findIndex(t => t.id === task.id);
-
-    if (currentIndex <= 0) return; // Already at top
-
-    const updates = [
-        { id: task.id, sort_order: subtasks[currentIndex - 1].sort_order },
-        { id: subtasks[currentIndex - 1].id, sort_order: task.sort_order }
-    ];
-
-    emit('reorder-tasks', updates);
+    const list = getSubtasks(props.selectedTask.id);
+    const i = list.findIndex((t) => t.id === task.id);
+    if (i <= 0) return;
+    emit('reorder-tasks', [
+        { id: task.id, sort_order: list[i - 1].sort_order },
+        { id: list[i - 1].id, sort_order: task.sort_order },
+    ]);
 };
-
 const moveTaskDown = (task: any) => {
-    const subtasks = getSubtasks(props.selectedTask.id);
-    const currentIndex = subtasks.findIndex(t => t.id === task.id);
-
-    if (currentIndex >= subtasks.length - 1) return; // Already at bottom
-
-    const updates = [
-        { id: task.id, sort_order: subtasks[currentIndex + 1].sort_order },
-        { id: subtasks[currentIndex + 1].id, sort_order: task.sort_order }
-    ];
-
-    emit('reorder-tasks', updates);
+    const list = getSubtasks(props.selectedTask.id);
+    const i = list.findIndex((t) => t.id === task.id);
+    if (i >= list.length - 1) return;
+    emit('reorder-tasks', [
+        { id: task.id, sort_order: list[i + 1].sort_order },
+        { id: list[i + 1].id, sort_order: task.sort_order },
+    ]);
 };
-
 const moveTaskToTop = (task: any) => {
-    const subtasks = getSubtasks(props.selectedTask.id);
-    const currentIndex = subtasks.findIndex(t => t.id === task.id);
-
-    if (currentIndex <= 0) return; // Already at top
-
-    // Create updates to shift all tasks and move current to top
-    const updates = subtasks.slice(0, currentIndex).map((t, index) => ({
-        id: t.id,
-        sort_order: index + 1
-    }));
-
+    const list = getSubtasks(props.selectedTask.id);
+    const i = list.findIndex((t) => t.id === task.id);
+    if (i <= 0) return;
+    const updates = list.slice(0, i).map((t, index) => ({ id: t.id, sort_order: index + 1 }));
     updates.push({ id: task.id, sort_order: 0 });
-
     emit('reorder-tasks', updates);
 };
-
-// Check if task can move up/down
 const canMoveUp = (task: any) => {
-    const subtasks = getSubtasks(props.selectedTask.id);
-    const currentIndex = subtasks.findIndex(t => t.id === task.id);
-    return currentIndex > 0;
+    const list = getSubtasks(props.selectedTask.id);
+    return list.findIndex((t) => t.id === task.id) > 0;
 };
-
 const canMoveDown = (task: any) => {
-    const subtasks = getSubtasks(props.selectedTask.id);
-    const currentIndex = subtasks.findIndex(t => t.id === task.id);
-    return currentIndex < subtasks.length - 1;
+    const list = getSubtasks(props.selectedTask.id);
+    return list.findIndex((t) => t.id === task.id) < list.length - 1;
 };
 </script>
 
 <template>
-    <div
-        v-if="isOpen && selectedTask"
-        class="fixed inset-y-0 right-0 z-50 w-full overflow-auto transform bg-card shadow-2xl transition-transform duration-300 ease-in-out md:w-2xl lg:w-2xl dark:bg-background"
-        :class="isOpen ? 'translate-x-0' : 'translate-x-full'"
-    >
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between border-b border-border bg-muted/50 p-4 dark:border-border dark:bg-card">
-            <div class="flex items-center space-x-3">
-                <div class="h-3 w-3 rounded-full" :style="`background-color: ${project.color}`"></div>
-                <h2 class="text-lg font-semibold text-foreground">Task Details</h2>
-            </div>
-            <Button variant="ghost" size="sm" @click="$emit('close')">
-                <X class="h-4 w-4 text-foreground" />
-            </Button>
-        </div>
+    <Teleport to="body">
+        <!-- Backdrop -->
+        <Transition
+            enter-active-class="transition-opacity duration-300 ease-out"
+            enter-from-class="opacity-0"
+            leave-active-class="transition-opacity duration-200 ease-in"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="isOpen && selectedTask"
+                class="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm"
+                @click="emit('close')"
+            ></div>
+        </Transition>
 
-        <!-- Modal Content -->
-        <div class="flex-1 overflow-y-auto p-4 text-foreground">
-            <!-- Task Info -->
-            <div class="mb-6 space-y-3">
-                <div>
-                    <h3 class="mb-2 text-base font-medium">{{ selectedTask.title }}</h3>
-                    <p v-if="selectedTask.description" class="text-sm text-muted-foreground">
-                        {{ selectedTask.description }}
-                    </p>
-                </div>
-
-                <div class="flex items-center space-x-3">
-                    <Badge
-                        :class="statusConfig[selectedTask.status]?.class || 'bg-muted text-foreground dark:bg-muted dark:text-foreground'"
-                        class="px-2 py-1 text-xs"
-                    >
-                        {{ statusConfig[selectedTask.status]?.label || selectedTask.status }}
-                    </Badge>
-                    <Badge
-                        :class="priorityConfig[selectedTask.priority || 'medium']?.class || 'border-input'"
-                        variant="outline"
-                        class="border px-2 py-1 text-xs"
-                    >
-                        {{ priorityConfig[selectedTask.priority || 'medium']?.label }}
-                    </Badge>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                        <span class="text-muted-foreground">Start:</span>
-                        <p class="font-medium">{{ formatDate(selectedTask.start_date) }}</p>
+        <!-- Panel -->
+        <Transition
+            enter-active-class="transition-transform duration-300 ease-out"
+            enter-from-class="translate-x-full"
+            leave-active-class="transition-transform duration-200 ease-in"
+            leave-to-class="translate-x-full"
+        >
+            <aside
+                v-if="isOpen && selectedTask"
+                class="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col bg-card shadow-2xl"
+            >
+                <!-- Header -->
+                <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+                    <div class="flex min-w-0 items-center gap-2.5">
+                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="`background-color: ${project.color}`"></span>
+                        <span class="truncate text-sm font-medium text-muted-foreground">{{ project.name }}</span>
+                        <span class="text-muted-foreground/50">/</span>
+                        <span class="text-sm text-muted-foreground">Task</span>
                     </div>
-                    <div>
-                        <span class="text-muted-foreground">Due:</span>
-                        <p class="font-medium" :class="getDueDateClass(selectedTask)">{{ formatDate(selectedTask.due_date) }}</p>
-                    </div>
-                </div>
-
-                <!-- Tags -->
-                <div v-if="selectedTask.tags && selectedTask.tags.length > 0" class="flex items-center space-x-2">
-                    <TagIcon class="h-3 w-3 text-muted-foreground" />
-                    <div class="flex flex-wrap gap-1">
-                        <Badge
-                            v-for="tag in selectedTask.tags"
-                            :key="tag.id"
-                            variant="outline"
-                            class="px-1.5 py-0.5 text-xs"
-                            :style="`border-color: ${tag.color}; color: ${tag.color}`"
-                        >
-                            {{ tag.name }}
-                        </Badge>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Subtasks Section -->
-            <div class="border-t border-border pt-4 dark:border-border">
-                <div class="mb-3 flex items-center justify-between">
-                    <h4 class="text-base font-medium">Subtasks ({{ getSubtasks(selectedTask.id).length }})</h4>
-                    <Button size="sm" @click="$emit('add-subtask', selectedTask)" class="h-7 px-2 text-xs">
-                        <Plus class="mr-1 h-3 w-3" />
-                        Add
+                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('close')">
+                        <X class="h-4 w-4" />
                     </Button>
                 </div>
 
-                <!-- Subtask Form Slot -->
-                <slot name="subtask-form"></slot>
+                <!-- Scroll body -->
+                <div class="flex-1 overflow-y-auto">
+                    <!-- Task hero -->
+                    <div class="border-b border-border px-5 py-5">
+                        <div class="flex items-start gap-3">
+                            <button
+                                @click="emit('toggle-task', selectedTask)"
+                                :disabled="updatingTasks.has(selectedTask.id)"
+                                class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all hover:scale-105"
+                                :class="isMainCompleted ? 'border-[hsl(150_24%_45%)] bg-[hsl(150_24%_45%)] text-white' : 'border-muted-foreground/40 text-transparent hover:border-primary'"
+                            >
+                                <Loader2 v-if="updatingTasks.has(selectedTask.id)" class="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                <CheckCircle2 v-else class="h-4 w-4" />
+                            </button>
 
-                <!-- Subtasks Table -->
-                <div v-if="getSubtasks(selectedTask.id).length > 0" class="rounded-lg border border-border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow class="h-9 bg-muted">
-                                <TableHead class="w-12 py-2"></TableHead>
-                                <TableHead class="w-64 py-2 text-xs">Title</TableHead>
-                                <TableHead class="w-24 py-2 text-xs">Status</TableHead>
-                                <TableHead class="w-24 py-2 text-xs">Due</TableHead>
-                                <TableHead class="w-16 py-2 text-xs">Order</TableHead>
-                                <TableHead class="w-20 py-2 text-right text-xs">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            <TableRow v-for="subtask in getSubtasks(selectedTask.id)" :key="subtask.id" class="h-10 hover:bg-muted/50 dark:hover:bg-muted">
-                                <TableCell class="w-12 py-1">
-                                    <button
-                                        @click="$emit('toggle-task', subtask)"
-                                        :disabled="updatingTasks.has(subtask.id)"
-                                        class="flex h-4 w-4 items-center justify-center rounded-full transition-all duration-200 hover:scale-110"
-                                        :class="[
-                      subtask.status === 'completed'
-                        ? 'bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800'
-                        : 'bg-muted hover:bg-muted dark:hover:bg-accent',
-                    ]"
-                                    >
-                                        <Loader2 v-if="updatingTasks.has(subtask.id)" class="h-3 w-3 animate-spin text-muted-foreground" />
-                                        <CheckCircle2 v-else-if="subtask.status === 'completed'" class="h-3 w-3 text-green-600 dark:text-green-400" />
-                                        <Circle v-else class="h-3 w-3 text-muted-foreground" />
-                                    </button>
-                                </TableCell>
-                                <TableCell class="w-64 py-1">
-                                    <div>
-                                        <p
-                                            class="text-xs font-medium"
-                                            :class="subtask.status === 'completed' ? 'text-muted-foreground line-through dark:text-muted-foreground' : 'text-foreground'"
-                                        >
-                                            {{ subtask.title }}
-                                        </p>
-                                        <p v-if="subtask.description" class="line-clamp-1 text-xs text-muted-foreground">
-                                            {{ subtask.description }}
-                                        </p>
-                                        <div v-if="subtask.tags && subtask.tags.length > 0" class="mt-1 flex flex-wrap gap-1">
-                                            <Badge
-                                                v-for="tag in subtask.tags"
-                                                :key="tag.id"
-                                                variant="outline"
-                                                class="px-1 py-0 text-xs"
-                                                :style="`border-color: ${tag.color}; color: ${tag.color}`"
+                            <div class="min-w-0 flex-1">
+                                <h2
+                                    class="font-display text-xl font-semibold leading-snug tracking-tight"
+                                    :class="isMainCompleted ? 'text-muted-foreground line-through' : 'text-foreground'"
+                                >
+                                    {{ selectedTask.title }}
+                                </h2>
+                                <p v-if="selectedTask.description" class="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                                    {{ selectedTask.description }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Badges -->
+                        <div class="mt-4 flex flex-wrap items-center gap-2 pl-9">
+                            <Badge variant="outline" :class="taskStatusBadge(selectedTask.status)" class="font-medium">
+                                {{ statusConfig[selectedTask.status]?.label || labelize(selectedTask.status) }}
+                            </Badge>
+                            <Badge variant="outline" :class="priorityBadge(selectedTask.priority || 'medium')" class="font-medium">
+                                <Flag class="mr-1 h-3 w-3" />
+                                {{ labelize(selectedTask.priority || 'medium') }}
+                            </Badge>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="mt-4 flex items-center gap-2 pl-9">
+                            <Button variant="outline" size="sm" @click="emit('edit-task', selectedTask)">
+                                <Edit class="mr-1.5 h-3.5 w-3.5" /> Edit
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                @click="emit('delete-task', selectedTask)"
+                            >
+                                <Trash2 class="mr-1.5 h-3.5 w-3.5" /> Delete
+                            </Button>
+                        </div>
+                    </div>
+
+                    <!-- Meta -->
+                    <div class="grid grid-cols-2 gap-px border-b border-border bg-border">
+                        <div class="bg-card px-5 py-3">
+                            <p class="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <CalendarDays class="h-3 w-3" /> Start date
+                            </p>
+                            <p class="text-sm font-medium text-foreground">{{ formatDate(selectedTask.start_date) }}</p>
+                        </div>
+                        <div class="bg-card px-5 py-3">
+                            <p class="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <CalendarDays class="h-3 w-3" /> Due date
+                            </p>
+                            <p class="text-sm font-medium" :class="getDueDateClass(selectedTask)">{{ formatDate(selectedTask.due_date) }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Tags -->
+                    <div v-if="selectedTask.tags && selectedTask.tags.length > 0" class="border-b border-border px-5 py-4">
+                        <p class="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <TagIcon class="h-3 w-3" /> Tags
+                        </p>
+                        <div class="flex flex-wrap gap-1.5">
+                            <Badge
+                                v-for="tag in selectedTask.tags"
+                                :key="tag.id"
+                                variant="outline"
+                                class="px-2 py-0.5 text-xs"
+                                :style="`border-color: ${tag.color}66; color: ${tag.color}; background-color: ${tag.color}14`"
+                            >
+                                {{ tag.name }}
+                            </Badge>
+                        </div>
+                    </div>
+
+                    <!-- Subtasks -->
+                    <div class="px-5 py-5">
+                        <div class="mb-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-semibold text-foreground">Subtasks</h3>
+                                <span v-if="subtasks.length" class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                    {{ completedCount }}/{{ subtasks.length }}
+                                </span>
+                            </div>
+                            <Button size="sm" variant="outline" class="h-7 px-2 text-xs" @click="emit('add-subtask', selectedTask)">
+                                <Plus class="mr-1 h-3 w-3" /> Add
+                            </Button>
+                        </div>
+
+                        <!-- Progress -->
+                        <div v-if="subtasks.length" class="mb-4 flex items-center gap-3">
+                            <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                <div class="h-full rounded-full transition-all duration-500" :class="progressColor(subtaskProgress)" :style="`width: ${subtaskProgress}%`"></div>
+                            </div>
+                            <span class="text-xs font-medium text-muted-foreground">{{ subtaskProgress }}%</span>
+                        </div>
+
+                        <!-- Subtask form slot -->
+                        <slot name="subtask-form"></slot>
+
+                        <!-- Subtask list -->
+                        <div v-if="subtasks.length > 0" class="overflow-hidden rounded-lg border border-border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow class="h-9 bg-muted/50 hover:bg-muted/50">
+                                        <TableHead class="w-10 py-2"></TableHead>
+                                        <TableHead class="py-2 text-xs">Title</TableHead>
+                                        <TableHead class="w-24 py-2 text-xs">Status</TableHead>
+                                        <TableHead class="w-20 py-2 text-xs">Due</TableHead>
+                                        <TableHead class="w-14 py-2 text-xs">Order</TableHead>
+                                        <TableHead class="w-16 py-2 text-right text-xs"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow v-for="subtask in subtasks" :key="subtask.id" class="group h-10 hover:bg-muted/40">
+                                        <TableCell class="w-10 py-1">
+                                            <button
+                                                @click="emit('toggle-task', subtask)"
+                                                :disabled="updatingTasks.has(subtask.id)"
+                                                class="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all hover:scale-110"
+                                                :class="subtask.status === 'completed' ? 'border-[hsl(150_24%_45%)] bg-[hsl(150_24%_45%)] text-white' : 'border-muted-foreground/40 text-transparent hover:border-primary'"
                                             >
-                                                {{ tag.name }}
+                                                <Loader2 v-if="updatingTasks.has(subtask.id)" class="h-3 w-3 animate-spin text-muted-foreground" />
+                                                <CheckCircle2 v-else class="h-3 w-3" />
+                                            </button>
+                                        </TableCell>
+                                        <TableCell class="py-1">
+                                            <p
+                                                class="text-xs font-medium"
+                                                :class="subtask.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'"
+                                            >
+                                                {{ subtask.title }}
+                                            </p>
+                                            <p v-if="subtask.description" class="line-clamp-1 text-xs text-muted-foreground">
+                                                {{ subtask.description }}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell class="w-24 py-1">
+                                            <Badge variant="outline" :class="taskStatusBadge(subtask.status)" class="px-1.5 py-0.5 text-xs">
+                                                {{ statusConfig[subtask.status]?.label || labelize(subtask.status) }}
                                             </Badge>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell class="w-24 py-1">
-                                    <Badge
-                                        :class="statusConfig[subtask.status]?.class || 'bg-muted text-foreground dark:bg-muted dark:text-foreground'"
-                                        class="px-1.5 py-0.5 text-xs"
-                                    >
-                                        {{ statusConfig[subtask.status]?.label || subtask.status }}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell class="w-24 py-1">
-                                    <div v-if="subtask.due_date" class="text-xs" :class="getDueDateClass(subtask)">
-                                        {{ formatDate(subtask.due_date) }}
-                                    </div>
-                                    <span v-else class="text-xs text-muted-foreground">-</span>
-                                </TableCell>
-                                <TableCell class="w-16 py-1">
-                                    <div class="flex items-center justify-center space-x-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click="moveTaskToTop(subtask)"
-                                            :disabled="!canMoveUp(subtask)"
-                                            class="h-5 w-5 p-0"
-                                            title="Move to top"
-                                        >
-                                            <ChevronsUp class="h-3 w-3" :class="canMoveUp(subtask) ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground/70 dark:text-muted-foreground'" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click="moveTaskUp(subtask)"
-                                            :disabled="!canMoveUp(subtask)"
-                                            class="h-5 w-5 p-0"
-                                            title="Move up"
-                                        >
-                                            <ChevronUp class="h-3 w-3" :class="canMoveUp(subtask) ? 'text-muted-foreground' : 'text-muted-foreground/70 dark:text-muted-foreground'" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click="moveTaskDown(subtask)"
-                                            :disabled="!canMoveDown(subtask)"
-                                            class="h-5 w-5 p-0"
-                                            title="Move down"
-                                        >
-                                            <ChevronDown class="h-3 w-3" :class="canMoveDown(subtask) ? 'text-muted-foreground' : 'text-muted-foreground/70 dark:text-muted-foreground'" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                                <TableCell class="w-20 py-1 text-right">
-                                    <div class="flex items-center justify-end space-x-1">
-                                        <Button variant="ghost" size="sm" @click="$emit('edit-subtask', subtask)" class="h-6 w-6 p-0">
-                                            <Edit class="h-3 w-3 text-foreground" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            @click="$emit('delete-task', subtask)"
-                                            class="h-6 w-6 p-0 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600"
-                                        >
-                                            <Trash2 class="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        </TableBody>
-                    </Table>
-                </div>
+                                        </TableCell>
+                                        <TableCell class="w-20 py-1">
+                                            <span v-if="subtask.due_date" class="text-xs" :class="getDueDateClass(subtask)">{{ formatDate(subtask.due_date) }}</span>
+                                            <span v-else class="text-xs text-muted-foreground">—</span>
+                                        </TableCell>
+                                        <TableCell class="w-14 py-1">
+                                            <div class="flex items-center justify-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                                <button @click="moveTaskToTop(subtask)" :disabled="!canMoveUp(subtask)" class="rounded p-0.5 hover:bg-muted disabled:opacity-30" title="Move to top">
+                                                    <ChevronsUp class="h-3 w-3" :class="canMoveUp(subtask) ? 'text-primary' : 'text-muted-foreground'" />
+                                                </button>
+                                                <button @click="moveTaskUp(subtask)" :disabled="!canMoveUp(subtask)" class="rounded p-0.5 hover:bg-muted disabled:opacity-30" title="Move up">
+                                                    <ChevronUp class="h-3 w-3 text-muted-foreground" />
+                                                </button>
+                                                <button @click="moveTaskDown(subtask)" :disabled="!canMoveDown(subtask)" class="rounded p-0.5 hover:bg-muted disabled:opacity-30" title="Move down">
+                                                    <ChevronDown class="h-3 w-3 text-muted-foreground" />
+                                                </button>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell class="w-16 py-1 text-right">
+                                            <div class="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                                <button @click="emit('edit-subtask', subtask)" class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+                                                    <Edit class="h-3 w-3" />
+                                                </button>
+                                                <button @click="emit('delete-task', subtask)" class="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                                                    <Trash2 class="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </div>
 
-                <div v-else-if="getSubtasks(selectedTask.id).length === 0" class="py-6 text-center text-muted-foreground">
-                    <p class="text-sm">No subtasks yet</p>
-                    <Button variant="outline" size="sm" @click="$emit('add-subtask', selectedTask)" class="mt-2 h-7 px-3 text-xs">
-                        <Plus class="mr-1 h-3 w-3" />
-                        Add First Subtask
-                    </Button>
+                        <!-- Empty -->
+                        <div v-else class="rounded-lg border border-dashed border-border py-8 text-center">
+                            <p class="text-sm text-muted-foreground">No subtasks yet</p>
+                            <Button variant="outline" size="sm" @click="emit('add-subtask', selectedTask)" class="mt-3 h-7 px-3 text-xs">
+                                <Plus class="mr-1 h-3 w-3" /> Add first subtask
+                            </Button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
+            </aside>
+        </Transition>
+    </Teleport>
 </template>
 
 <style>
