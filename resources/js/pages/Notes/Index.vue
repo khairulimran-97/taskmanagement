@@ -27,6 +27,7 @@ import {
     ChevronLeft,
     AlignCenter,
     AlignJustify,
+    Pencil,
 } from 'lucide-vue-next';
 import Image from '@/extensions/TipTapImageExtension';
 
@@ -658,135 +659,155 @@ onMounted(() => {
 
                 <!-- Note Editor -->
                 <div v-else class="flex flex-1 flex-col overflow-hidden">
-                    <!-- Toolbar -->
-                    <div class="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-2.5 md:px-6">
-                        <div class="flex min-w-0 flex-1 items-center gap-2">
-                            <!-- Back button (mobile) -->
-                            <Button
-                                @click="currentNote = null; router.get(route('notes.index'), {}, { preserveState: true })"
-                                variant="ghost"
-                                size="sm"
-                                class="h-8 w-8 shrink-0 p-0 md:hidden"
-                            >
-                                <ChevronLeft class="h-4 w-4" />
-                            </Button>
-
-                            <!-- Title -->
-                            <div class="min-w-0 flex-1">
-                                <Input
-                                    v-if="isTitleEditing"
-                                    ref="titleInput"
-                                    v-model="noteForm.title"
-                                    class="h-auto border-none bg-transparent p-0 font-display text-xl font-semibold tracking-tight shadow-none focus-visible:ring-0"
-                                    placeholder="Untitled"
-                                    @blur="isTitleEditing = false"
-                                    @keydown.enter="isTitleEditing = false"
-                                    @keydown.escape="cancelTitleEdit"
-                                />
-                                <button
-                                    v-else
-                                    @click="toggleTitleEdit"
-                                    class="w-full truncate rounded px-1 py-0.5 text-left font-display text-xl font-semibold tracking-tight text-foreground transition-colors hover:bg-accent/50"
+                    <!-- Unified header -->
+                    <header class="border-b border-border bg-card px-4 pb-3 pt-3.5 md:px-6">
+                        <div class="flex items-start justify-between gap-4">
+                            <!-- Title + meta -->
+                            <div class="flex min-w-0 flex-1 items-start gap-2">
+                                <!-- Back button (mobile) -->
+                                <Button
+                                    @click="currentNote = null; router.get(route('notes.index'), {}, { preserveState: true })"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="-ml-1 mt-0.5 h-8 w-8 shrink-0 p-0 md:hidden"
                                 >
-                                    {{ currentNote.title || 'Untitled' }}
-                                </button>
+                                    <ChevronLeft class="h-4 w-4" />
+                                </Button>
+
+                                <div class="min-w-0 flex-1">
+                                    <!-- Title (editable) -->
+                                    <Input
+                                        v-if="isTitleEditing"
+                                        ref="titleInput"
+                                        v-model="noteForm.title"
+                                        class="h-auto border-none bg-transparent p-0 font-display text-2xl font-semibold leading-tight tracking-tight shadow-none focus-visible:ring-0"
+                                        placeholder="Untitled"
+                                        @blur="isTitleEditing = false"
+                                        @keydown.enter="isTitleEditing = false"
+                                        @keydown.escape="cancelTitleEdit"
+                                    />
+                                    <button
+                                        v-else
+                                        @click="toggleTitleEdit"
+                                        class="group/title -mx-1 flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-accent/40"
+                                        title="Click to rename"
+                                    >
+                                        <span class="truncate font-display text-2xl font-semibold leading-tight tracking-tight text-foreground">
+                                            {{ currentNote.title || 'Untitled' }}
+                                        </span>
+                                        <Pencil class="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/title:opacity-100" />
+                                    </button>
+
+                                    <!-- Inline meta -->
+                                    <div class="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+                                        <span class="inline-flex items-center gap-1">
+                                            <Clock class="h-3 w-3" />
+                                            {{ formatDate(currentNote.updated_at) }}
+                                        </span>
+                                        <template v-if="currentNote.word_count > 0">
+                                            <span class="text-muted-foreground/40">·</span>
+                                            <span>{{ currentNote.word_count }} words</span>
+                                        </template>
+                                        <template v-if="currentNote.tags?.length > 0">
+                                            <span class="text-muted-foreground/40">·</span>
+                                            <span class="inline-flex items-center gap-1">
+                                                <Badge
+                                                    v-for="tag in currentNote.tags.slice(0, 3)"
+                                                    :key="tag"
+                                                    variant="secondary"
+                                                    class="h-5 gap-1 px-1.5 text-[10px] font-normal"
+                                                >
+                                                    <Hash class="h-2.5 w-2.5" />{{ tag }}
+                                                </Badge>
+                                                <span v-if="currentNote.tags.length > 3" class="text-muted-foreground/70">+{{ currentNote.tags.length - 3 }}</span>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Actions -->
-                        <div class="flex shrink-0 items-center gap-1">
-                            <!-- Auto-save status -->
-                            <div class="mr-1.5 hidden items-center gap-1.5 text-xs sm:flex" :class="autoSaveStatus.class">
-                                <component
-                                    :is="autoSaveStatus.icon"
-                                    class="h-3.5 w-3.5"
-                                    :class="{ 'animate-spin': autoSaveStatus.icon === Loader2 }"
-                                />
-                                <span>{{ autoSaveStatus.text }}</span>
-                            </div>
+                            <!-- Actions -->
+                            <div class="flex shrink-0 items-center gap-0.5">
+                                <!-- Save status pill -->
+                                <div
+                                    class="mr-1 hidden h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors sm:inline-flex"
+                                    :class="hasUnsavedChanges
+                                        ? 'bg-amber-500/12 text-amber-600 dark:text-amber-400'
+                                        : 'bg-[hsl(150_24%_42%/0.12)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)]'"
+                                >
+                                    <component
+                                        :is="autoSaveStatus.icon"
+                                        class="h-3.5 w-3.5"
+                                        :class="{ 'animate-spin': autoSaveStatus.icon === Loader2 }"
+                                    />
+                                    <span>{{ autoSaveStatus.text }}</span>
+                                </div>
 
-                            <Button
-                                @click="toggleReadingWidth"
-                                variant="ghost"
-                                size="sm"
-                                class="hidden h-8 w-8 p-0 text-muted-foreground md:inline-flex"
-                                :title="readingWidth === 'full' ? 'Switch to centered reading column' : 'Switch to full width'"
-                            >
-                                <AlignCenter v-if="readingWidth === 'full'" class="h-4 w-4" />
-                                <AlignJustify v-else class="h-4 w-4" />
-                            </Button>
-
-                            <Button
-                                @click="togglePin(currentNote)"
-                                variant="ghost"
-                                size="sm"
-                                class="h-8 w-8 p-0"
-                                :class="currentNote.is_pinned ? 'text-amber-500' : 'text-muted-foreground'"
-                                :title="currentNote.is_pinned ? 'Unpin note' : 'Pin note'"
-                            >
-                                <Pin v-if="currentNote.is_pinned" class="h-4 w-4" />
-                                <PinOff v-else class="h-4 w-4" />
-                            </Button>
-
-                            <Button
-                                @click="saveNote"
-                                size="sm"
-                                :disabled="isSaving || !contentChanged"
-                                :variant="hasUnsavedChanges ? 'default' : 'outline'"
-                                class="h-8 gap-1.5 px-3 text-xs"
-                                title="Save (Ctrl+S)"
-                            >
-                                <Loader2 v-if="isSaving" class="h-3.5 w-3.5 animate-spin" />
-                                <Save v-else class="h-3.5 w-3.5" />
-                                {{ isSaving ? 'Saving…' : (contentChanged ? 'Save' : 'Saved') }}
-                            </Button>
-
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-                                        <Trash2 class="h-4 w-4" />
+                                <!-- Icon action group -->
+                                <div class="flex h-9 items-center gap-0.5 rounded-lg border border-border bg-background/60 px-1">
+                                    <Button
+                                        @click="toggleReadingWidth"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="hidden h-7 w-7 p-0 text-muted-foreground hover:text-foreground md:inline-flex"
+                                        :title="readingWidth === 'full' ? 'Centered reading column' : 'Full width'"
+                                    >
+                                        <AlignCenter v-if="readingWidth === 'full'" class="h-4 w-4" />
+                                        <AlignJustify v-else class="h-4 w-4" />
                                     </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Note</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Are you sure you want to delete "{{ currentNote.title || 'Untitled' }}"? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            @click="deleteNote(currentNote.id)"
-                                            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        >
-                                            Delete
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    </div>
+                                    <Button
+                                        @click="togglePin(currentNote)"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="h-7 w-7 p-0 hover:text-amber-500"
+                                        :class="currentNote.is_pinned ? 'text-amber-500' : 'text-muted-foreground'"
+                                        :title="currentNote.is_pinned ? 'Unpin note' : 'Pin note'"
+                                    >
+                                        <Pin v-if="currentNote.is_pinned" class="h-4 w-4 fill-current" />
+                                        <PinOff v-else class="h-4 w-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="Delete note">
+                                                <Trash2 class="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Are you sure you want to delete "{{ currentNote.title || 'Untitled' }}"? This action cannot be undone.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    @click="deleteNote(currentNote.id)"
+                                                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                >
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
 
-                    <!-- Meta bar -->
-                    <div class="flex items-center gap-3 border-b border-border bg-muted/20 px-4 py-2 text-xs text-muted-foreground md:px-6">
-                        <span class="inline-flex items-center gap-1.5">
-                            <Clock class="h-3 w-3" />
-                            {{ formatDate(currentNote.updated_at) }}
-                        </span>
-                        <span v-if="currentNote.word_count > 0" class="text-muted-foreground/40">·</span>
-                        <span v-if="currentNote.word_count > 0">{{ currentNote.word_count }} words</span>
-                        <div v-if="currentNote.tags?.length > 0" class="ml-auto flex items-center gap-1.5">
-                            <Badge
-                                v-for="tag in currentNote.tags"
-                                :key="tag"
-                                variant="secondary"
-                                class="h-5 gap-1 px-1.5 text-[10px] font-normal"
-                            >
-                                <Hash class="h-2.5 w-2.5" />{{ tag }}
-                            </Badge>
+                                <!-- Save -->
+                                <Button
+                                    @click="saveNote"
+                                    size="sm"
+                                    :disabled="isSaving || !contentChanged"
+                                    :variant="hasUnsavedChanges ? 'default' : 'outline'"
+                                    class="ml-1 h-9 gap-1.5 px-3.5 text-xs"
+                                    title="Save (Ctrl+S)"
+                                >
+                                    <Loader2 v-if="isSaving" class="h-3.5 w-3.5 animate-spin" />
+                                    <Save v-else class="h-3.5 w-3.5" />
+                                    {{ isSaving ? 'Saving…' : (contentChanged ? 'Save' : 'Saved') }}
+                                </Button>
+                            </div>
                         </div>
-                    </div>
+                    </header>
 
                     <!-- Editor -->
                     <div class="flex-1 overflow-y-auto">

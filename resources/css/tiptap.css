@@ -147,29 +147,65 @@
 /* Code Blocks
    ========================================================================== */
 
+/* Inline code — distinct pill with subtle saffron tint */
 .tiptap-prose code {
-    background-color: var(--muted) !important;
+    background-color: color-mix(in srgb, var(--primary) 10%, var(--muted)) !important;
     color: var(--foreground) !important;
-    border-radius: 0.25rem !important;
-    padding: 0.125em 0.25em !important;
-    font-size: 0.875em !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent) !important;
+    border-radius: 0.375rem !important;
+    padding: 0.1em 0.4em !important;
+    font-size: 0.85em !important;
+    font-weight: 500 !important;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 }
 
+/* Code block — terminal-style with a label bar */
 .tiptap-prose pre {
-    background-color: var(--muted) !important;
+    position: relative !important;
+    background-color: var(--card) !important;
     color: var(--foreground) !important;
-    border-radius: 0.5rem !important;
-    padding: 1em !important;
-    margin: 1em 0 !important;
+    border-radius: 0.625rem !important;
+    padding: 2.4em 1.1em 1.1em !important;
+    margin: 1.25em 0 !important;
     overflow-x: auto !important;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+    font-size: 0.875em !important;
+    line-height: 1.6 !important;
     border: 1px solid var(--border) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Mac-style traffic-light dots in the code block header */
+.tiptap-prose pre::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0.85em !important;
+    left: 1.1em !important;
+    width: 0.55em !important;
+    height: 0.55em !important;
+    border-radius: 9999px !important;
+    background: #ef4444 !important;
+    box-shadow: 1em 0 0 #f59e0b, 2em 0 0 #22c55e !important;
+    opacity: 0.85 !important;
+}
+
+/* Divider under the header dots */
+.tiptap-prose pre::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 2em !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 1px !important;
+    background: var(--border) !important;
 }
 
 .tiptap-prose pre code {
     background: none !important;
+    border: none !important;
     padding: 0 !important;
+    font-weight: 400 !important;
+    color: var(--foreground) !important;
 }
 
 /* Text Highlighting
