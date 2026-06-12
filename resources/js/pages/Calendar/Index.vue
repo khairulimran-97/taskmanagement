@@ -813,12 +813,14 @@ const afterEventChange = async () => {
     background-color: var(--primary);
     color: var(--primary-foreground);
     border-radius: 9999px;
-    min-width: 1.5rem;
-    height: 1.5rem;
+    min-width: 1.25rem;
+    height: 1.25rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin: 0.2rem;
+    margin: 0.25rem;
+    padding: 0 0.25rem;
+    font-size: 0.8rem;
     font-weight: 600;
 }
 
