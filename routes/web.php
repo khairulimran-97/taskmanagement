@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteImageController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\SecretController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -80,6 +81,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Note Images - Pure JSON API endpoints (for fetch() requests, not Inertia)
     Route::post('/api/notes/images/upload', [NoteImageController::class, 'pureApiStore'])->name('notes.images.pure-api.store');
     Route::get('/api/images', [NoteImageController::class, 'apiAllImages'])->name('images.api.index');
+
+    // Secret Vault
+    Route::get('/secrets', [SecretController::class, 'index'])->name('secrets.index');
+    Route::get('/api/secrets', [SecretController::class, 'apiList'])->name('secrets.api.list');
+    Route::post('/secrets', [SecretController::class, 'store'])->name('secrets.store');
+    Route::put('/secrets/{secret}', [SecretController::class, 'update'])->name('secrets.update');
+    Route::delete('/secrets/{secret}', [SecretController::class, 'destroy'])->name('secrets.destroy');
 
 });
 

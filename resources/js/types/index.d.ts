@@ -193,3 +193,14 @@ export interface NoteImage {
     size?: number;
     created_at?: string;
 }
+
+// Secret vault types
+export interface Secret {
+    id: number;
+    name: string;
+    type: string;
+    value: string;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+}

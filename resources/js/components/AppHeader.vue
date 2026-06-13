@@ -33,11 +33,13 @@ import {
     AlertTriangle,
     Clock,
     CalendarDays,
-    PenTool
+    PenTool,
+    KeyRound
 } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
 import { computed, ref } from 'vue';
 import QuickNotesSheet from '@/components/notes/QuickNotesSheet.vue';
+import QuickVaultSheet from '@/components/secrets/QuickVaultSheet.vue';
 
 const quickNotes = ref<InstanceType<typeof QuickNotesSheet> | null>(null);
 
@@ -106,6 +108,11 @@ const mainNavItems: NavItem[] = [
         title: 'Calendar',
         href: '/calendar',
         icon: Calendar,
+    },
+    {
+        title: 'Vault',
+        href: '/secrets',
+        icon: KeyRound,
     },
 ];
 
@@ -326,5 +333,8 @@ const createNewNote = () => {
 
         <!-- Global Quick Notes (read-only) -->
         <QuickNotesSheet ref="quickNotes" />
+
+        <!-- Global Quick Vault (read-only) -->
+        <QuickVaultSheet />
     </div>
 </template>
