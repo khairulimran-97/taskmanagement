@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openship.io/openship.schema.json",
+  "framework": "laravel",
+  "packageManager": "composer",
+  "installCommand": "composer install --no-dev --optimize-autoloader",
+  "buildCommand": "npm i --force && npm run build",
+  "startCommand": "SERVER_NAME=\":$PORT\" exec frankenphp run --config /etc/frankenphp/Caddyfile --adapter caddyfile",
+  "buildImage": "php:8.4-cli",
+  "runtime": "docker",
+  "productionMode": "host",
+  "port": 8000,
+  "volumes": ["storage:/app/storage"],
+  "domains": ["nota.khairulimran.me"]
+}
