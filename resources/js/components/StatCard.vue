@@ -14,25 +14,23 @@ withDefaults(
 </script>
 
 <template>
-    <div
-        class="group relative overflow-hidden rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:shadow-sm"
-    >
+    <div class="border-border bg-card rounded-lg border p-4 shadow-xs">
         <div class="flex items-start justify-between gap-3">
-            <div class="space-y-1">
-                <p class="text-sm font-medium text-muted-foreground">{{ label }}</p>
-                <p class="font-display text-3xl font-semibold leading-none tracking-tight text-foreground">
+            <div class="min-w-0">
+                <p class="text-muted-foreground text-xs font-medium">{{ label }}</p>
+                <p class="text-foreground mt-1.5 text-2xl leading-none font-semibold tracking-tight tabular-nums">
                     {{ value }}
                 </p>
-                <p v-if="hint" class="text-xs text-muted-foreground">{{ hint }}</p>
+                <p v-if="hint" class="text-muted-foreground mt-1.5 text-xs">{{ hint }}</p>
             </div>
             <div
                 v-if="icon"
                 :class="[
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors',
-                    accent ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground group-hover:text-primary',
+                    'flex size-8 shrink-0 items-center justify-center rounded-md',
+                    accent ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
                 ]"
             >
-                <component :is="icon" class="h-5 w-5" />
+                <component :is="icon" class="size-4" />
             </div>
         </div>
     </div>

@@ -9,19 +9,19 @@ defineProps<{
 </script>
 
 <template>
-    <div class="mb-7 flex flex-col gap-3 border-b border-border/70 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-center gap-3.5">
+    <div class="border-border mb-6 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
             <div
                 v-if="icon"
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary"
+                class="border-border bg-card text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border shadow-xs"
             >
-                <component :is="icon" class="h-5 w-5" />
+                <component :is="icon" class="size-4" />
             </div>
-            <div class="space-y-0.5">
-                <h1 class="font-display text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[1.7rem]">
+            <div>
+                <h1 class="text-foreground text-xl font-semibold tracking-tight">
                     {{ title }}
                 </h1>
-                <p v-if="description" class="text-sm text-muted-foreground">{{ description }}</p>
+                <p v-if="description" class="text-muted-foreground mt-0.5 text-sm">{{ description }}</p>
             </div>
         </div>
         <div v-if="$slots.actions" class="flex items-center gap-2">

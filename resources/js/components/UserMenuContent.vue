@@ -1,19 +1,45 @@
 <script setup lang="ts">
 import UserInfo from '@/components/UserInfo.vue';
+import {
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import type { User } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from 'lucide-vue-next';
+import { Loader2, LogOut, Settings } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 interface Props {
     user: User;
 }
 
-const handleLogout = () => {
-    router.flushAll();
-};
-
 defineProps<Props>();
+
+const confirmingLogout = ref(false);
+const loggingOut = ref(false);
+
+const logout = () => {
+    if (loggingOut.value) return;
+    loggingOut.value = true;
+    router.post(
+        route('logout'),
+        {},
+        {
+            onFinish: () => {
+                loggingOut.value = false;
+                confirmingLogout.value = false;
+                router.flushAll();
+            },
+        },
+    );
+};
 </script>
 
 <template>
@@ -25,17 +51,33 @@ defineProps<Props>();
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full" :href="route('profile.edit')" prefetch as="button">
-                <Settings class="mr-2 h-4 w-4" />
+            <Link class="block w-full cursor-pointer" :href="route('profile.edit')" prefetch as="button">
+                <Settings class="mr-2 size-4" />
                 Settings
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>
     <DropdownMenuSeparator />
-    <DropdownMenuItem :as-child="true">
-        <Link class="block w-full" method="post" :href="route('logout')" @click="handleLogout" as="button">
-            <LogOut class="mr-2 h-4 w-4" />
-            Log out
-        </Link>
+    <!-- @select.prevent keeps the dropdown mounted so the nested dialog survives -->
+    <DropdownMenuItem variant="destructive" class="cursor-pointer" @select.prevent="confirmingLogout = true">
+        <LogOut class="mr-2 size-4" />
+        Log out
     </DropdownMenuItem>
+
+    <AlertDialog v-model:open="confirmingLogout">
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Log out of Taskflow?</AlertDialogTitle>
+                <AlertDialogDescription>You'll need to sign in again to get back to your workspace.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel :disabled="loggingOut">Stay signed in</AlertDialogCancel>
+                <Button variant="destructive" :disabled="loggingOut" @click="logout">
+                    <Loader2 v-if="loggingOut" class="size-4 animate-spin" />
+                    <LogOut v-else class="size-4" />
+                    {{ loggingOut ? 'Logging out…' : 'Log out' }}
+                </Button>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 </template>

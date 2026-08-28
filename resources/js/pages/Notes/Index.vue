@@ -1,36 +1,46 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import EmptyState from '@/components/EmptyState.vue';
 import TipTapEditor from '@/components/TipTapEditor.vue';
 import NoteItem from '@/components/notes/NoteItem.vue';
-import { BreadcrumbItem, Note } from '@/types';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { toast } from 'vue-sonner'
+import AppLayout from '@/layouts/AppLayout.vue';
+import { BreadcrumbItem, Note } from '@/types';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
-    Search,
-    Plus,
-    FileText,
-    Pin,
-    PinOff,
-    Trash2,
-    Clock,
-    Hash,
-    Save,
-    Loader2,
-    CheckCircle2,
-    CloudOff,
     AlertCircle,
-    ChevronLeft,
     AlignCenter,
     AlignJustify,
+    CheckCircle2,
+    ChevronLeft,
+    Clock,
+    CloudOff,
+    FileText,
+    Hash,
+    Loader2,
     Pencil,
+    Pin,
+    PinOff,
+    Plus,
+    Save,
+    Search,
+    Trash2,
     X,
 } from 'lucide-vue-next';
-import Image from '@/extensions/TipTapImageExtension';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 
 interface Props {
     notes: Note[];
@@ -79,7 +89,7 @@ const noteForm = ref({
     title: '',
     content: '',
     tags: [] as string[],
-    is_pinned: false
+    is_pinned: false,
 });
 
 // Refs for autofocus
@@ -93,21 +103,20 @@ const unpinnedNotes = computed(() => filteredNotes.value.filter((n: any) => !n.i
 
 // Check if content has changed
 const contentChanged = computed(() => {
-    return noteForm.value.content !== lastSavedContent.value ||
-        noteForm.value.title !== lastSavedTitle.value;
+    return noteForm.value.content !== lastSavedContent.value || noteForm.value.title !== lastSavedTitle.value;
 });
 
-// Auto-save status message
+// Auto-save status message — status colors follow the app's semantic token language
 const autoSaveStatus = computed(() => {
-    if (!isOnline.value) return { text: 'Offline', icon: CloudOff, class: 'text-orange-500' };
-    if (autoSaveError.value) return { text: 'Save failed', icon: AlertCircle, class: 'text-red-500' };
-    if (isAutoSaving.value) return { text: 'Saving...', icon: Loader2, class: 'text-primary' };
-    if (hasUnsavedChanges.value) return { text: 'Unsaved changes', icon: AlertCircle, class: 'text-yellow-500' };
+    if (!isOnline.value) return { text: 'Offline', icon: CloudOff, pill: 'bg-warning/10 text-warning' };
+    if (autoSaveError.value) return { text: 'Save failed', icon: AlertCircle, pill: 'bg-destructive/10 text-destructive' };
+    if (isAutoSaving.value) return { text: 'Saving…', icon: Loader2, pill: 'bg-primary/10 text-primary' };
+    if (hasUnsavedChanges.value) return { text: 'Unsaved changes', icon: AlertCircle, pill: 'bg-warning/10 text-warning' };
     if (lastSaveTime.value) {
         const timeSince = getTimeSince(lastSaveTime.value);
-        return { text: `Saved ${timeSince}`, icon: CheckCircle2, class: 'text-green-500' };
+        return { text: `Saved ${timeSince}`, icon: CheckCircle2, pill: 'bg-success/10 text-success' };
     }
-    return { text: 'All changes saved', icon: CheckCircle2, class: 'text-green-500' };
+    return { text: 'All changes saved', icon: CheckCircle2, pill: 'bg-success/10 text-success' };
 });
 
 // Get time since last save
@@ -152,82 +161,86 @@ const handleOnline = () => {
 
 const handleOffline = () => {
     isOnline.value = false;
-    toast.error('You\'re offline', {
-        description: 'Changes will be saved when you\'re back online.',
+    toast.error("You're offline", {
+        description: "Changes will be saved when you're back online.",
         duration: 5000,
     });
 };
 
 // Watch for flash messages and handle updates
-watch(() => page.props.flash, (flash: any) => {
-    if (flash) {
-        // Handle auto-save success
-        if (flash.auto_save_success && flash.updated_note) {
-            const updatedNote = flash.updated_note;
+watch(
+    () => page.props.flash,
+    (flash: any) => {
+        if (flash) {
+            // Handle auto-save success
+            if (flash.auto_save_success && flash.updated_note) {
+                const updatedNote = flash.updated_note;
 
-            // Update current note
-            if (currentNote.value && currentNote.value.id === updatedNote.id) {
-                currentNote.value.updated_at = updatedNote.updated_at;
-                currentNote.value.word_count = updatedNote.word_count;
+                // Update current note
+                if (currentNote.value && currentNote.value.id === updatedNote.id) {
+                    currentNote.value.updated_at = updatedNote.updated_at;
+                    currentNote.value.word_count = updatedNote.word_count;
+                }
+
+                // Update note in the list
+                const noteIndex = filteredNotes.value.findIndex((n) => n.id === updatedNote.id);
+                if (noteIndex !== -1) {
+                    filteredNotes.value[noteIndex].updated_at = updatedNote.updated_at;
+                    filteredNotes.value[noteIndex].word_count = updatedNote.word_count;
+                }
+
+                // Reset save state
+                lastSavedContent.value = noteForm.value.content;
+                lastSavedTitle.value = noteForm.value.title;
+                hasUnsavedChanges.value = false;
+                autoSaveError.value = false;
+                lastSaveTime.value = new Date();
+                saveRetryCount.value = 0;
             }
 
-            // Update note in the list
-            const noteIndex = filteredNotes.value.findIndex(n => n.id === updatedNote.id);
-            if (noteIndex !== -1) {
-                filteredNotes.value[noteIndex].updated_at = updatedNote.updated_at;
-                filteredNotes.value[noteIndex].word_count = updatedNote.word_count;
+            // Handle manual save success
+            if (flash.success && flash.updated_note) {
+                const updatedNote = flash.updated_note;
+
+                // Update current note
+                if (currentNote.value && currentNote.value.id === updatedNote.id) {
+                    Object.assign(currentNote.value, updatedNote);
+                    initializeForm();
+                }
+
+                // Update note in the list
+                const noteIndex = filteredNotes.value.findIndex((n) => n.id === updatedNote.id);
+                if (noteIndex !== -1) {
+                    Object.assign(filteredNotes.value[noteIndex], updatedNote);
+                }
+
+                // Show success toast
+                toast.success('Note saved', {
+                    description: 'Your note has been saved successfully.',
+                    duration: 2000,
+                });
             }
 
-            // Reset save state
-            lastSavedContent.value = noteForm.value.content;
-            lastSavedTitle.value = noteForm.value.title;
-            hasUnsavedChanges.value = false;
-            autoSaveError.value = false;
-            lastSaveTime.value = new Date();
-            saveRetryCount.value = 0;
+            // Handle pin toggle
+            if (flash.pin_updated) {
+                const { id, is_pinned } = flash.pin_updated;
+
+                // Update current note
+                if (currentNote.value && currentNote.value.id === id) {
+                    currentNote.value.is_pinned = is_pinned;
+                    noteForm.value.is_pinned = is_pinned;
+                }
+
+                // Update note in the list
+                const noteIndex = filteredNotes.value.findIndex((n) => n.id === id);
+                if (noteIndex !== -1) {
+                    filteredNotes.value[noteIndex].is_pinned = is_pinned;
+                }
+            }
         }
-
-        // Handle manual save success
-        if (flash.success && flash.updated_note) {
-            const updatedNote = flash.updated_note;
-
-            // Update current note
-            if (currentNote.value && currentNote.value.id === updatedNote.id) {
-                Object.assign(currentNote.value, updatedNote);
-                initializeForm();
-            }
-
-            // Update note in the list
-            const noteIndex = filteredNotes.value.findIndex(n => n.id === updatedNote.id);
-            if (noteIndex !== -1) {
-                Object.assign(filteredNotes.value[noteIndex], updatedNote);
-            }
-
-            // Show success toast
-            toast.success('Note saved', {
-                description: 'Your note has been saved successfully.',
-                duration: 2000,
-            });
-        }
-
-        // Handle pin toggle
-        if (flash.pin_updated) {
-            const { id, is_pinned } = flash.pin_updated;
-
-            // Update current note
-            if (currentNote.value && currentNote.value.id === id) {
-                currentNote.value.is_pinned = is_pinned;
-                noteForm.value.is_pinned = is_pinned;
-            }
-
-            // Update note in the list
-            const noteIndex = filteredNotes.value.findIndex(n => n.id === id);
-            if (noteIndex !== -1) {
-                filteredNotes.value[noteIndex].is_pinned = is_pinned;
-            }
-        }
-    }
-}, { deep: true });
+    },
+    { deep: true },
+);
 
 // Initialize form when selectedNote changes
 const initializeForm = () => {
@@ -236,7 +249,7 @@ const initializeForm = () => {
             title: currentNote.value.title || 'Untitled',
             content: currentNote.value.content || '',
             tags: [...(currentNote.value.tags || [])],
-            is_pinned: currentNote.value.is_pinned || false
+            is_pinned: currentNote.value.is_pinned || false,
         };
         lastSavedContent.value = noteForm.value.content;
         lastSavedTitle.value = noteForm.value.title;
@@ -248,22 +261,30 @@ const initializeForm = () => {
 };
 
 // Watch for selectedNote changes
-watch(() => props.selectedNote, (newNote) => {
-    // Check for unsaved changes before switching
-    if (currentNote.value && hasUnsavedChanges.value) {
-        // Force a save before switching
-        autoSave();
-    }
+watch(
+    () => props.selectedNote,
+    (newNote) => {
+        // Check for unsaved changes before switching
+        if (currentNote.value && hasUnsavedChanges.value) {
+            // Force a save before switching
+            autoSave();
+        }
 
-    currentNote.value = newNote;
-    initializeForm();
-    isTitleEditing.value = false;
-}, { immediate: true });
+        currentNote.value = newNote;
+        initializeForm();
+        isTitleEditing.value = false;
+    },
+    { immediate: true },
+);
 
 // Watch for notes changes
-watch(() => props.notes, (newNotes) => {
-    filteredNotes.value = newNotes;
-}, { immediate: true });
+watch(
+    () => props.notes,
+    (newNotes) => {
+        filteredNotes.value = newNotes;
+    },
+    { immediate: true },
+);
 
 // Search functionality
 const performSearch = async () => {
@@ -279,9 +300,9 @@ const performSearch = async () => {
         const response = await fetch(url.toString(), {
             method: 'GET',
             headers: {
-                'Accept': 'application/json',
+                Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-            }
+            },
         });
 
         if (response.ok) {
@@ -319,18 +340,29 @@ const selectNote = (note: Note) => {
     window.history.replaceState({}, '', route('notes.show', note.id));
 };
 
-// Create new note
+// Create new note — guarded so double-clicks can't create two notes
+const isCreatingNote = ref(false);
 const createNewNote = () => {
+    if (isCreatingNote.value) return;
+
     // Save current note if has unsaved changes
     if (hasUnsavedChanges.value) {
         autoSave();
     }
 
-    router.post(route('notes.create-empty'), {}, {
-        onSuccess: () => {
-            // Note will be created and user redirected to it
-        }
-    });
+    isCreatingNote.value = true;
+    router.post(
+        route('notes.create-empty'),
+        {},
+        {
+            onSuccess: () => {
+                toast.success('Note created', { duration: 2000 });
+            },
+            onFinish: () => {
+                isCreatingNote.value = false;
+            },
+        },
+    );
 };
 
 // Toggle title edit mode
@@ -357,38 +389,42 @@ const autoSave = async () => {
     isAutoSaving.value = true;
     hasUnsavedChanges.value = true;
 
-    router.put(route('notes.update', currentNote.value.id), {
-        title: noteForm.value.title,
-        content: noteForm.value.content,
-        is_auto_save: true
-    }, {
-        preserveState: true,
-        preserveScroll: true,
-        only: [],
-        onSuccess: () => {
-            autoSaveError.value = false;
-            saveRetryCount.value = 0;
+    router.put(
+        route('notes.update', currentNote.value.id),
+        {
+            title: noteForm.value.title,
+            content: noteForm.value.content,
+            is_auto_save: true,
         },
-        onError: (errors) => {
-            console.error('Auto-save failed:', errors);
-            autoSaveError.value = true;
-            saveRetryCount.value += 1;
+        {
+            preserveState: true,
+            preserveScroll: true,
+            only: [],
+            onSuccess: () => {
+                autoSaveError.value = false;
+                saveRetryCount.value = 0;
+            },
+            onError: (errors) => {
+                console.error('Auto-save failed:', errors);
+                autoSaveError.value = true;
+                saveRetryCount.value += 1;
 
-            // Retry auto-save with exponential backoff
-            if (saveRetryCount.value < 3) {
-                const retryDelay = Math.pow(2, saveRetryCount.value) * 1000;
-                setTimeout(autoSave, retryDelay);
-            } else {
-                toast.error('Auto-save failed', {
-                    description: 'Unable to save your changes. Please try saving manually.',
-                    duration: 5000,
-                });
-            }
+                // Retry auto-save with exponential backoff
+                if (saveRetryCount.value < 3) {
+                    const retryDelay = Math.pow(2, saveRetryCount.value) * 1000;
+                    setTimeout(autoSave, retryDelay);
+                } else {
+                    toast.error('Auto-save failed', {
+                        description: 'Unable to save your changes. Please try saving manually.',
+                        duration: 5000,
+                    });
+                }
+            },
+            onFinish: () => {
+                isAutoSaving.value = false;
+            },
         },
-        onFinish: () => {
-            isAutoSaving.value = false;
-        }
-    });
+    );
 };
 
 // Watch for form changes to trigger auto-save
@@ -413,32 +449,36 @@ const saveNote = async () => {
 
     isSaving.value = true;
 
-    router.put(route('notes.update', currentNote.value.id), {
-        ...noteForm.value,
-        is_auto_save: false
-    }, {
-        preserveState: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            isTitleEditing.value = false;
-            lastSavedContent.value = noteForm.value.content;
-            lastSavedTitle.value = noteForm.value.title;
-            hasUnsavedChanges.value = false;
-            autoSaveError.value = false;
-            lastSaveTime.value = new Date();
-            saveRetryCount.value = 0;
+    router.put(
+        route('notes.update', currentNote.value.id),
+        {
+            ...noteForm.value,
+            is_auto_save: false,
         },
-        onError: (errors) => {
-            console.error('Save failed:', errors);
-            toast.error('Save failed', {
-                description: 'Unable to save your note. Please try again.',
-                duration: 3000,
-            });
+        {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                isTitleEditing.value = false;
+                lastSavedContent.value = noteForm.value.content;
+                lastSavedTitle.value = noteForm.value.title;
+                hasUnsavedChanges.value = false;
+                autoSaveError.value = false;
+                lastSaveTime.value = new Date();
+                saveRetryCount.value = 0;
+            },
+            onError: (errors) => {
+                console.error('Save failed:', errors);
+                toast.error('Save failed', {
+                    description: 'Unable to save your note. Please try again.',
+                    duration: 3000,
+                });
+            },
+            onFinish: () => {
+                isSaving.value = false;
+            },
         },
-        onFinish: () => {
-            isSaving.value = false;
-        }
-    });
+    );
 };
 
 // Handle save from TipTap editor (Ctrl+S)
@@ -446,20 +486,36 @@ const handleEditorSave = () => {
     saveNote();
 };
 
-// Toggle pin using Inertia
+// Toggle pin using Inertia — disabled while the request is in flight
+const isTogglingPin = ref(false);
 const togglePin = async (note: Note) => {
-    router.patch(route('notes.toggle-pin', note.id), {}, {
-        preserveState: true,
-        preserveScroll: true,
-        only: [],
-        onError: (errors) => {
-            console.error('Toggle pin failed:', errors);
-            toast.error('Failed to update pin status', {
-                description: 'Please try again.',
-                duration: 3000,
-            });
-        }
-    });
+    if (isTogglingPin.value) return;
+    isTogglingPin.value = true;
+    // Capture pre-toggle state: the flash watcher may flip note.is_pinned before onSuccess runs
+    const wasPinned = note.is_pinned;
+
+    router.patch(
+        route('notes.toggle-pin', note.id),
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            only: [],
+            onSuccess: () => {
+                toast.success(wasPinned ? 'Note unpinned' : 'Note pinned', { duration: 2000 });
+            },
+            onError: (errors) => {
+                console.error('Toggle pin failed:', errors);
+                toast.error('Failed to update pin status', {
+                    description: 'Please try again.',
+                    duration: 3000,
+                });
+            },
+            onFinish: () => {
+                isTogglingPin.value = false;
+            },
+        },
+    );
 };
 
 // Delete note
@@ -477,7 +533,7 @@ const deleteNote = (noteId: number) => {
                 description: 'Please try again.',
                 duration: 3000,
             });
-        }
+        },
     });
 };
 
@@ -492,7 +548,7 @@ const formatDate = (dateString: string): string => {
         return date.toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit',
-            hour12: true
+            hour12: true,
         });
     } else if (diffDays === 1) {
         return 'Yesterday';
@@ -502,7 +558,7 @@ const formatDate = (dateString: string): string => {
         return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
-            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
         });
     }
 };
@@ -551,37 +607,39 @@ onMounted(() => {
         <div class="notes-layout flex h-[calc(100vh-3.5rem)] w-full overflow-hidden">
             <!-- Sidebar -->
             <aside
-                class="w-full flex-col overflow-hidden border-r border-border bg-muted/20 md:flex md:w-80 xl:w-96"
+                class="border-border bg-muted/20 w-full flex-col overflow-hidden border-r md:flex md:w-80 xl:w-96"
                 :class="mobileShowEditor ? 'hidden md:flex' : 'flex'"
             >
                 <!-- Sidebar Header -->
-                <div class="flex flex-col gap-3.5 border-b border-border bg-card/40 px-4 pb-4 pt-5">
+                <div class="border-border bg-card/40 flex flex-col gap-3 border-b px-4 pt-5 pb-4">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2.5">
-                            <h1 class="font-display text-2xl font-semibold tracking-tight text-foreground">Notes</h1>
-                            <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-muted px-1.5 text-xs font-semibold text-muted-foreground">
+                            <h1 class="text-foreground text-xl font-semibold tracking-tight">Notes</h1>
+                            <span
+                                class="bg-muted text-muted-foreground inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums"
+                            >
                                 {{ filteredNotes.length }}
                             </span>
                         </div>
-                        <Button @click="createNewNote" size="sm" class="h-9 gap-1.5 px-3.5 shadow-sm">
-                            <Plus class="h-4 w-4" />
-                            New
+                        <Button @click="createNewNote" size="sm" class="h-9 gap-1.5 px-3.5" :disabled="isCreatingNote">
+                            <Loader2 v-if="isCreatingNote" class="size-4 animate-spin" />
+                            <Plus v-else class="size-4" />
+                            New note
                         </Button>
                     </div>
                     <div class="group relative">
-                        <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
-                        <Input
-                            v-model="searchQuery"
-                            placeholder="Search notes…"
-                            class="h-10 rounded-xl border-border bg-background pl-9 pr-9 text-sm shadow-sm transition-shadow focus-visible:ring-2 focus-visible:ring-primary/20"
+                        <Search
+                            class="text-muted-foreground group-focus-within:text-primary pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 transition-colors duration-150"
                         />
+                        <Input v-model="searchQuery" placeholder="Search notes…" class="border-border bg-background h-10 pr-9 pl-9 text-sm" />
                         <button
                             v-if="searchQuery"
                             @click="searchQuery = ''"
-                            class="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                            title="Clear search"
+                            type="button"
+                            class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-2.5 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                            aria-label="Clear search"
                         >
-                            <X class="h-3.5 w-3.5" />
+                            <X class="size-3.5" />
                         </button>
                     </div>
                 </div>
@@ -589,29 +647,31 @@ onMounted(() => {
                 <!-- Notes List -->
                 <div class="min-h-0 flex-1 overflow-y-auto">
                     <!-- Empty State -->
-                    <div v-if="!hasNotes" class="flex flex-col items-center justify-center px-6 py-16 text-center">
-                        <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-                            <FileText class="h-7 w-7 text-primary" />
-                        </div>
-                        <p class="font-display text-base font-semibold text-foreground">{{ searchQuery ? 'No matches' : 'No notes yet' }}</p>
-                        <p class="mt-1 text-sm text-muted-foreground">
-                            {{ searchQuery ? 'Try a different search.' : 'Create your first note to get started.' }}
-                        </p>
-                        <Button v-if="!searchQuery" @click="createNewNote" variant="outline" size="sm" class="mt-4">
-                            <Plus class="mr-1.5 h-4 w-4" />
-                            Create note
-                        </Button>
+                    <div v-if="!hasNotes" class="p-4">
+                        <EmptyState
+                            :icon="searchQuery ? Search : FileText"
+                            :title="searchQuery ? 'No matches' : 'No notes yet'"
+                            :description="searchQuery ? 'Try a different search.' : 'Create your first note to get started.'"
+                        >
+                            <template v-if="!searchQuery" #action>
+                                <Button @click="createNewNote" variant="outline" size="sm" :disabled="isCreatingNote">
+                                    <Loader2 v-if="isCreatingNote" class="mr-1.5 size-4 animate-spin" />
+                                    <Plus v-else class="mr-1.5 size-4" />
+                                    New note
+                                </Button>
+                            </template>
+                        </EmptyState>
                     </div>
 
                     <!-- Note Items -->
                     <template v-else>
                         <!-- Pinned -->
-                        <section v-if="pinnedNotes.length" class="bg-amber-500/[0.04]">
-                            <div class="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-muted/60 px-4 py-1.5 backdrop-blur-sm">
-                                <span class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                    <Pin class="h-3 w-3 text-amber-500" /> Pinned
+                        <section v-if="pinnedNotes.length">
+                            <div class="border-border/60 bg-muted sticky top-0 z-10 flex items-center justify-between border-b px-4 py-1.5">
+                                <span class="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+                                    <Pin class="size-3" /> Pinned
                                 </span>
-                                <span class="text-[11px] font-medium text-muted-foreground/70">{{ pinnedNotes.length }}</span>
+                                <span class="text-muted-foreground/70 text-[11px] font-medium tabular-nums">{{ pinnedNotes.length }}</span>
                             </div>
                             <NoteItem
                                 v-for="note in pinnedNotes"
@@ -626,10 +686,10 @@ onMounted(() => {
                         <section>
                             <div
                                 v-if="pinnedNotes.length"
-                                class="sticky top-0 z-10 flex items-center justify-between border-y border-border bg-muted/60 px-4 py-1.5 backdrop-blur-sm"
+                                class="border-border bg-muted sticky top-0 z-10 flex items-center justify-between border-y px-4 py-1.5"
                             >
-                                <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">All notes</span>
-                                <span class="text-[11px] font-medium text-muted-foreground/70">{{ unpinnedNotes.length }}</span>
+                                <span class="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">All notes</span>
+                                <span class="text-muted-foreground/70 text-[11px] font-medium tabular-nums">{{ unpinnedNotes.length }}</span>
                             </div>
                             <NoteItem
                                 v-for="note in unpinnedNotes"
@@ -644,30 +704,30 @@ onMounted(() => {
             </aside>
 
             <!-- Main Content -->
-            <main class="flex-1 flex-col overflow-hidden md:flex"
-                  :class="mobileShowEditor ? 'flex' : 'hidden md:flex'">
-
+            <main class="flex-1 flex-col overflow-hidden md:flex" :class="mobileShowEditor ? 'flex' : 'hidden md:flex'">
                 <!-- No Note Selected -->
-                <div v-if="!hasSelectedNote" class="flex flex-1 items-center justify-center bg-muted/10 p-6">
-                    <div class="flex max-w-sm flex-col items-center text-center">
-                        <div class="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10">
-                            <FileText class="h-9 w-9 text-primary" />
-                        </div>
-                        <h3 class="font-display text-2xl font-semibold tracking-tight text-foreground">Your notebook</h3>
-                        <p class="mt-2 text-sm leading-relaxed text-muted-foreground">
-                            Select a note from the list, or start a fresh one. Everything autosaves as you write.
-                        </p>
-                        <Button @click="createNewNote" class="mt-5">
-                            <Plus class="mr-2 h-4 w-4" />
-                            New note
-                        </Button>
+                <div v-if="!hasSelectedNote" class="bg-muted/10 flex flex-1 items-center justify-center p-6">
+                    <div class="w-full max-w-sm">
+                        <EmptyState
+                            :icon="FileText"
+                            title="Your notebook"
+                            description="Select a note from the list, or start a fresh one. Everything autosaves as you write."
+                        >
+                            <template #action>
+                                <Button @click="createNewNote" :disabled="isCreatingNote">
+                                    <Loader2 v-if="isCreatingNote" class="mr-2 size-4 animate-spin" />
+                                    <Plus v-else class="mr-2 size-4" />
+                                    New note
+                                </Button>
+                            </template>
+                        </EmptyState>
                     </div>
                 </div>
 
                 <!-- Note Editor -->
                 <div v-else class="flex flex-1 flex-col overflow-hidden">
                     <!-- Unified header -->
-                    <header class="border-b border-border bg-card px-4 pb-3 pt-3.5 md:px-6">
+                    <header class="border-border bg-card border-b px-4 pt-3.5 pb-3 md:px-6">
                         <div class="flex items-start justify-between gap-4">
                             <!-- Title + meta -->
                             <div class="flex min-w-0 flex-1 items-start gap-2">
@@ -676,45 +736,51 @@ onMounted(() => {
                                     @click="mobileShowEditor = false"
                                     variant="ghost"
                                     size="sm"
-                                    class="-ml-1 mt-0.5 h-8 w-8 shrink-0 p-0 md:hidden"
+                                    class="mt-0.5 -ml-1 size-8 shrink-0 p-0 md:hidden"
+                                    aria-label="Back to notes list"
                                 >
-                                    <ChevronLeft class="h-4 w-4" />
+                                    <ChevronLeft class="size-4" />
                                 </Button>
 
                                 <div class="min-w-0 flex-1">
                                     <!-- Title (editable) -->
+                                    <!-- Blur commits the edit (Esc cancels) so clicking away doesn't silently discard a typed title -->
                                     <input
                                         v-if="isTitleEditing"
                                         ref="titleInput"
                                         v-model="noteForm.title"
                                         type="text"
-                                        class="-mx-2 w-full rounded-md border border-primary/50 bg-background px-2 py-0.5 font-display text-2xl font-semibold leading-tight tracking-tight text-foreground outline-none ring-2 ring-primary/20 focus:border-primary focus:ring-primary/30"
+                                        class="border-input bg-background text-foreground focus-visible:ring-ring/50 -mx-2 w-full rounded-md border px-2 py-0.5 text-xl leading-tight font-semibold tracking-tight outline-none focus-visible:ring-2"
                                         placeholder="Untitled"
-                                        @blur="isTitleEditing && cancelTitleEdit()"
+                                        @blur="isTitleEditing && commitTitleEdit()"
                                         @keydown.enter.prevent="commitTitleEdit"
                                         @keydown.esc.prevent="cancelTitleEdit"
                                     />
                                     <button
                                         v-else
                                         @click="toggleTitleEdit"
-                                        class="group/title -mx-2 flex w-full items-center gap-2 rounded-md px-2 py-0.5 text-left transition-colors hover:bg-accent/40"
-                                        title="Click to rename"
+                                        type="button"
+                                        class="group/title hover:bg-muted/60 focus-visible:ring-ring/50 -mx-2 flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-0.5 text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                        title="Rename note"
+                                        aria-label="Rename note"
                                     >
-                                        <span class="truncate font-display text-2xl font-semibold leading-tight tracking-tight text-foreground">
+                                        <span class="text-foreground truncate text-xl leading-tight font-semibold tracking-tight">
                                             {{ currentNote.title || 'Untitled' }}
                                         </span>
-                                        <Pencil class="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/title:opacity-100" />
+                                        <Pencil
+                                            class="text-muted-foreground size-3.5 shrink-0 opacity-0 transition-opacity duration-150 group-hover/title:opacity-100 group-focus-visible/title:opacity-100"
+                                        />
                                     </button>
 
                                     <!-- Inline meta -->
-                                    <div class="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
-                                        <span class="inline-flex items-center gap-1">
-                                            <Clock class="h-3 w-3" />
+                                    <div class="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+                                        <span class="inline-flex items-center gap-1 tabular-nums">
+                                            <Clock class="size-3" />
                                             {{ formatDate(currentNote.updated_at) }}
                                         </span>
                                         <template v-if="currentNote.word_count > 0">
                                             <span class="text-muted-foreground/40">·</span>
-                                            <span>{{ currentNote.word_count }} words</span>
+                                            <span class="tabular-nums">{{ currentNote.word_count }} words</span>
                                         </template>
                                         <template v-if="currentNote.tags?.length > 0">
                                             <span class="text-muted-foreground/40">·</span>
@@ -727,7 +793,9 @@ onMounted(() => {
                                                 >
                                                     <Hash class="h-2.5 w-2.5" />{{ tag }}
                                                 </Badge>
-                                                <span v-if="currentNote.tags.length > 3" class="text-muted-foreground/70">+{{ currentNote.tags.length - 3 }}</span>
+                                                <span v-if="currentNote.tags.length > 3" class="text-muted-foreground/70"
+                                                    >+{{ currentNote.tags.length - 3 }}</span
+                                                >
                                             </span>
                                         </template>
                                     </div>
@@ -735,56 +803,65 @@ onMounted(() => {
                             </div>
 
                             <!-- Actions -->
-                            <div class="flex shrink-0 items-center gap-0.5">
-                                <!-- Save status pill -->
+                            <div class="flex shrink-0 items-center gap-1">
+                                <!-- Save status pill (icon-only on mobile so phones still get autosave feedback) -->
                                 <div
-                                    class="mr-1 hidden h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors sm:inline-flex"
-                                    :class="hasUnsavedChanges
-                                        ? 'bg-amber-500/12 text-amber-600 dark:text-amber-400'
-                                        : 'bg-[hsl(150_24%_42%/0.12)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)]'"
+                                    class="mr-1 inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors duration-150"
+                                    :class="autoSaveStatus.pill"
                                 >
                                     <component
                                         :is="autoSaveStatus.icon"
-                                        class="h-3.5 w-3.5"
+                                        class="size-3.5"
                                         :class="{ 'animate-spin': autoSaveStatus.icon === Loader2 }"
                                     />
-                                    <span>{{ autoSaveStatus.text }}</span>
+                                    <span class="hidden sm:inline">{{ autoSaveStatus.text }}</span>
                                 </div>
 
                                 <!-- Icon action group -->
-                                <div class="flex h-9 items-center gap-0.5 rounded-lg border border-border bg-background/60 px-1">
+                                <div class="border-border bg-background/60 flex h-9 items-center gap-0.5 rounded-md border px-0.5">
                                     <Button
                                         @click="toggleReadingWidth"
                                         variant="ghost"
                                         size="sm"
-                                        class="hidden h-7 w-7 p-0 text-muted-foreground hover:text-foreground md:inline-flex"
+                                        class="text-muted-foreground hover:text-foreground hidden size-8 p-0 md:inline-flex"
                                         :title="readingWidth === 'full' ? 'Centered reading column' : 'Full width'"
+                                        :aria-label="readingWidth === 'full' ? 'Switch to centered reading column' : 'Switch to full width'"
                                     >
-                                        <AlignCenter v-if="readingWidth === 'full'" class="h-4 w-4" />
-                                        <AlignJustify v-else class="h-4 w-4" />
+                                        <AlignCenter v-if="readingWidth === 'full'" class="size-4" />
+                                        <AlignJustify v-else class="size-4" />
                                     </Button>
                                     <Button
                                         @click="togglePin(currentNote)"
                                         variant="ghost"
                                         size="sm"
-                                        class="h-7 w-7 p-0 hover:text-amber-500"
-                                        :class="currentNote.is_pinned ? 'text-amber-500' : 'text-muted-foreground'"
+                                        class="size-8 p-0"
+                                        :class="
+                                            currentNote.is_pinned ? 'text-primary hover:text-primary' : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                        :disabled="isTogglingPin"
                                         :title="currentNote.is_pinned ? 'Unpin note' : 'Pin note'"
+                                        :aria-label="currentNote.is_pinned ? 'Unpin note' : 'Pin note'"
                                     >
-                                        <Pin v-if="currentNote.is_pinned" class="h-4 w-4 fill-current" />
-                                        <PinOff v-else class="h-4 w-4" />
+                                        <Pin v-if="currentNote.is_pinned" class="size-4 fill-current" />
+                                        <PinOff v-else class="size-4" />
                                     </Button>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="Delete note">
-                                                <Trash2 class="h-4 w-4" />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-8 p-0"
+                                                title="Delete note"
+                                                aria-label="Delete note"
+                                            >
+                                                <Trash2 class="size-4" />
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                                                <AlertDialogTitle>Delete note</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    Are you sure you want to delete "{{ currentNote.title || 'Untitled' }}"? This action cannot be undone.
+                                                    "{{ currentNote.title || 'Untitled' }}" will be permanently deleted. This cannot be undone.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
@@ -793,14 +870,14 @@ onMounted(() => {
                                                     @click="deleteNote(currentNote.id)"
                                                     class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                 >
-                                                    Delete
+                                                    Delete note
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
                                 </div>
 
-                                <!-- Save -->
+                                <!-- Save (status lives in the pill; the button only states its action) -->
                                 <Button
                                     @click="saveNote"
                                     size="sm"
@@ -809,9 +886,9 @@ onMounted(() => {
                                     class="ml-1 h-9 gap-1.5 px-3.5 text-xs"
                                     title="Save (Ctrl+S)"
                                 >
-                                    <Loader2 v-if="isSaving" class="h-3.5 w-3.5 animate-spin" />
-                                    <Save v-else class="h-3.5 w-3.5" />
-                                    {{ isSaving ? 'Saving…' : (contentChanged ? 'Save' : 'Saved') }}
+                                    <Loader2 v-if="isSaving" class="size-3.5 animate-spin" />
+                                    <Save v-else class="size-3.5" />
+                                    {{ isSaving ? 'Saving…' : 'Save' }}
                                 </Button>
                             </div>
                         </div>
@@ -819,10 +896,7 @@ onMounted(() => {
 
                     <!-- Editor -->
                     <div class="flex-1 overflow-y-auto">
-                        <div
-                            class="mx-auto h-full transition-all duration-300"
-                            :class="readingWidth === 'centered' ? 'max-w-3xl' : 'max-w-none'"
-                        >
+                        <div class="mx-auto h-full transition-all duration-200" :class="readingWidth === 'centered' ? 'max-w-3xl' : 'max-w-none'">
                             <TipTapEditor
                                 :key="currentNote?.id"
                                 v-model="noteForm.content"
@@ -830,7 +904,7 @@ onMounted(() => {
                                 :noteId="currentNote?.id"
                                 placeholder="Start writing your note... (Type '/' for commands)"
                                 class="h-full w-full !rounded-none !border-0"
-                                @update:modelValue="(value) => noteForm.content = value"
+                                @update:modelValue="(value) => (noteForm.content = value)"
                                 @save="handleEditorSave"
                             />
                         </div>
@@ -840,4 +914,3 @@ onMounted(() => {
         </div>
     </AppLayout>
 </template>
-

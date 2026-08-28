@@ -18,7 +18,9 @@ const className = computed(() => props.class);
     </SidebarInset>
     <main
         v-else
-        class="mx-auto flex h-full w-full flex-1 flex-col gap-4 rounded-xl"
+        id="main-content"
+        tabindex="-1"
+        class="mx-auto flex h-full w-full flex-1 flex-col gap-4 outline-none"
         :class="[props.fullBleed ? 'max-w-none' : 'max-w-7xl', className]"
     >
         <slot />

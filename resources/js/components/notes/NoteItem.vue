@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pin, Hash } from 'lucide-vue-next';
+import { Hash, Pin } from 'lucide-vue-next';
 
 defineProps<{
     note: any;
@@ -24,34 +24,32 @@ const formatDate = (dateString: string): string => {
 <template>
     <button
         @click="emit('select')"
-        class="group relative flex w-full flex-col gap-1.5 border-b border-l-2 border-b-border/60 px-4 py-3 text-left transition-colors"
-        :class="active ? 'border-l-primary bg-accent' : 'border-l-transparent hover:bg-accent/50'"
+        type="button"
+        class="group border-b-border/60 focus-visible:ring-ring/50 relative flex w-full cursor-pointer flex-col gap-1.5 border-b border-l-2 px-4 py-3 text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+        :class="active ? 'border-l-primary bg-muted' : 'hover:bg-muted/60 border-l-transparent'"
     >
         <!-- Title -->
         <div class="flex items-center gap-2">
-            <Pin v-if="note.is_pinned" class="h-3 w-3 shrink-0 text-amber-500" />
-            <span
-                class="truncate text-sm font-semibold"
-                :class="active ? 'text-foreground' : 'text-foreground/90'"
-            >
+            <Pin v-if="note.is_pinned" class="text-muted-foreground size-3 shrink-0" />
+            <span class="truncate text-sm font-semibold" :class="active ? 'text-foreground' : 'text-foreground/90'">
                 {{ note.title || 'Untitled' }}
             </span>
         </div>
 
         <!-- Preview -->
-        <p v-if="note.content_preview" class="note-preview text-xs leading-relaxed text-muted-foreground">
+        <p v-if="note.content_preview" class="note-preview text-muted-foreground text-xs leading-relaxed">
             {{ note.content_preview }}
         </p>
 
         <!-- Meta -->
-        <div class="flex items-center gap-2 text-[11px] text-muted-foreground/80">
+        <div class="text-muted-foreground/80 flex items-center gap-2 text-[11px] tabular-nums">
             <span>{{ formatDate(note.updated_at) }}</span>
             <template v-if="note.word_count > 0">
                 <span class="text-muted-foreground/40">·</span>
                 <span>{{ note.word_count }} words</span>
             </template>
-            <span v-if="note.tags?.length > 0" class="ml-auto inline-flex items-center gap-1 text-muted-foreground/80">
-                <Hash class="h-2.5 w-2.5" />
+            <span v-if="note.tags?.length > 0" class="text-muted-foreground/80 ml-auto inline-flex items-center gap-1">
+                <Hash class="size-2.5" />
                 {{ note.tags.length }}
             </span>
         </div>

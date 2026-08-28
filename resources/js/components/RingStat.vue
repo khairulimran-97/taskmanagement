@@ -20,32 +20,24 @@ const dash = computed(() => (Math.min(100, Math.max(0, props.value)) / 100) * ci
     <div class="flex flex-col items-center justify-center">
         <div class="relative" :style="{ width: size + 'px', height: size + 'px' }">
             <svg :width="size" :height="size" class="-rotate-90">
+                <circle :cx="size / 2" :cy="size / 2" :r="radius" fill="none" stroke="currentColor" class="text-muted" stroke-width="9" />
                 <circle
                     :cx="size / 2"
                     :cy="size / 2"
                     :r="radius"
                     fill="none"
                     stroke="currentColor"
-                    class="text-muted"
-                    stroke-width="9"
-                />
-                <circle
-                    :cx="size / 2"
-                    :cy="size / 2"
-                    :r="radius"
-                    fill="none"
-                    stroke="currentColor"
-                    class="text-primary transition-[stroke-dasharray] duration-700 ease-out"
+                    class="text-primary transition-[stroke-dasharray] duration-700 ease-out motion-reduce:transition-none"
                     stroke-width="9"
                     stroke-linecap="round"
                     :stroke-dasharray="`${dash} ${circumference}`"
                 />
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="font-display text-2xl font-semibold leading-none text-foreground">{{ Math.round(value) }}%</span>
+                <span class="text-foreground text-2xl leading-none font-semibold tracking-tight tabular-nums">{{ Math.round(value) }}%</span>
             </div>
         </div>
-        <p class="mt-3 text-sm font-medium text-foreground">{{ label }}</p>
-        <p v-if="sublabel" class="text-xs text-muted-foreground">{{ sublabel }}</p>
+        <p class="text-foreground mt-3 text-sm font-medium">{{ label }}</p>
+        <p v-if="sublabel" class="text-muted-foreground text-xs">{{ sublabel }}</p>
     </div>
 </template>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
+import { CalendarDays, CheckCircle2, Circle, Clock, ListTodo } from 'lucide-vue-next';
 import { computed } from 'vue';
-import { CheckCircle2, ListTodo, Clock, Circle, CalendarDays } from 'lucide-vue-next';
-import { progressColor as progressRamp } from '@/lib/projectMeta';
 
 const props = defineProps({
     project: {
@@ -35,48 +34,42 @@ const dateRange = computed(() => {
     return null;
 });
 
-const barColor = computed(() => progressRamp(pct.value));
-
 const stats = computed(() => [
     { key: 'total', label: 'Tasks', value: totalTasks.value, icon: ListTodo, tint: 'text-muted-foreground' },
     { key: 'todo', label: 'To do', value: todoTasks.value, icon: Circle, tint: 'text-muted-foreground' },
     { key: 'active', label: 'Active', value: inProgressTasks.value, icon: Clock, tint: 'text-primary' },
-    { key: 'done', label: 'Done', value: completedTasks.value, icon: CheckCircle2, tint: 'text-[hsl(150_24%_45%)]' },
+    { key: 'done', label: 'Done', value: completedTasks.value, icon: CheckCircle2, tint: 'text-success' },
 ]);
 </script>
 
 <template>
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <!-- Progress (spans 2) -->
-        <div class="col-span-2 flex flex-col justify-center rounded-xl border border-border bg-card px-4 py-3">
+        <div class="border-border bg-card col-span-2 flex flex-col justify-center rounded-lg border px-4 py-3 shadow-xs">
             <div class="mb-1.5 flex items-baseline justify-between">
-                <span class="text-xs font-medium text-muted-foreground">Progress</span>
-                <span class="font-display text-lg font-semibold leading-none text-foreground">{{ pct }}%</span>
+                <span class="text-muted-foreground text-xs font-medium">Progress</span>
+                <span class="text-foreground text-lg leading-none font-semibold tabular-nums">{{ pct }}%</span>
             </div>
-            <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div class="h-full rounded-full transition-all duration-700" :class="barColor" :style="`width: ${pct}%`"></div>
+            <div class="bg-muted h-2 w-full overflow-hidden rounded-full">
+                <div class="bg-primary h-full rounded-full transition-all duration-300" :style="`width: ${pct}%`"></div>
             </div>
         </div>
 
         <!-- Stat cells -->
-        <div
-            v-for="s in stats"
-            :key="s.key"
-            class="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-3"
-        >
-            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <component :is="s.icon" class="h-4 w-4" :class="s.tint" />
+        <div v-for="s in stats" :key="s.key" class="border-border bg-card flex items-center gap-2.5 rounded-lg border px-3 py-3 shadow-xs">
+            <div class="bg-muted flex size-8 shrink-0 items-center justify-center rounded-md">
+                <component :is="s.icon" class="size-4" :class="s.tint" />
             </div>
             <div class="min-w-0">
-                <p class="font-display text-lg font-semibold leading-none text-foreground">{{ s.value }}</p>
-                <p class="mt-0.5 truncate text-xs text-muted-foreground">{{ s.label }}</p>
+                <p class="text-foreground text-lg leading-none font-semibold tabular-nums">{{ s.value }}</p>
+                <p class="text-muted-foreground mt-0.5 truncate text-xs">{{ s.label }}</p>
             </div>
         </div>
     </div>
 
     <!-- Timeline row -->
-    <div v-if="dateRange" class="mt-3 flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
-        <CalendarDays class="h-3.5 w-3.5" />
+    <div v-if="dateRange" class="text-muted-foreground mt-3 flex items-center gap-1.5 px-1 text-xs tabular-nums">
+        <CalendarDays class="size-3.5" />
         <span>{{ dateRange }}</span>
     </div>
 </template>

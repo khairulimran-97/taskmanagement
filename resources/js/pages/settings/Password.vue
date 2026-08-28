@@ -3,7 +3,9 @@ import InputError from '@/components/InputError.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
+import { LoaderCircle } from 'lucide-vue-next';
 import { ref } from 'vue';
+import { toast } from 'vue-sonner';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
@@ -18,8 +20,8 @@ const breadcrumbItems: BreadcrumbItem[] = [
     },
 ];
 
-const passwordInput = ref<HTMLInputElement | null>(null);
-const currentPasswordInput = ref<HTMLInputElement | null>(null);
+const passwordInput = ref<InstanceType<typeof Input> | null>(null);
+const currentPasswordInput = ref<InstanceType<typeof Input> | null>(null);
 
 const form = useForm({
     current_password: '',
@@ -30,20 +32,24 @@ const form = useForm({
 const updatePassword = () => {
     form.put(route('password.update'), {
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: () => {
+            form.reset();
+            toast.success('Password updated');
+        },
         onError: (errors: any) => {
             if (errors.password) {
                 form.reset('password', 'password_confirmation');
-                if (passwordInput.value instanceof HTMLInputElement) {
-                    passwordInput.value.focus();
-                }
+                (passwordInput.value?.$el as HTMLInputElement | undefined)?.focus();
             }
 
             if (errors.current_password) {
                 form.reset('current_password');
-                if (currentPasswordInput.value instanceof HTMLInputElement) {
-                    currentPasswordInput.value.focus();
-                }
+                (currentPasswordInput.value?.$el as HTMLInputElement | undefined)?.focus();
+            }
+
+            // Surface non-validation failures (expired session, server error)
+            if (!Object.keys(errors).length) {
+                toast.error('Could not update password. Please try again.');
             }
         },
     });
@@ -66,7 +72,7 @@ const updatePassword = () => {
                             ref="currentPasswordInput"
                             v-model="form.current_password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="block w-full"
                             autocomplete="current-password"
                             placeholder="Current password"
                         />
@@ -80,7 +86,7 @@ const updatePassword = () => {
                             ref="passwordInput"
                             v-model="form.password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="block w-full"
                             autocomplete="new-password"
                             placeholder="New password"
                         />
@@ -93,25 +99,17 @@ const updatePassword = () => {
                             id="password_confirmation"
                             v-model="form.password_confirmation"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="block w-full"
                             autocomplete="new-password"
                             placeholder="Confirm password"
                         />
                         <InputError :message="form.errors.password_confirmation" />
                     </div>
 
-                    <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing">Save password</Button>
-
-                        <Transition
-                            enter-active-class="transition ease-in-out"
-                            enter-from-class="opacity-0"
-                            leave-active-class="transition ease-in-out"
-                            leave-to-class="opacity-0"
-                        >
-                            <p v-show="form.recentlySuccessful" class="text-sm text-neutral-600">Saved.</p>
-                        </Transition>
-                    </div>
+                    <Button type="submit" :disabled="form.processing">
+                        <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+                        {{ form.processing ? 'Saving…' : 'Save password' }}
+                    </Button>
                 </form>
             </div>
         </SettingsLayout>

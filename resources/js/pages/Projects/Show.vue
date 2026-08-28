@@ -1,39 +1,39 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { ref, watch, onMounted } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
 import PageContainer from '@/components/PageContainer.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { BreadcrumbItem } from '@/types';
+import { Head, router } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 
+import DeleteTaskDialog from '@/components/project/DeleteTaskDialog.vue';
 import ProjectHeader from '@/components/project/ProjectHeader.vue';
 import ProjectStats from '@/components/project/ProjectStats.vue';
-import TaskList from '@/components/project/TaskList.vue';
-import TaskKanbanBoard from '@/components/project/TaskKanbanBoard.vue';
+import SubtaskForm from '@/components/project/SubtaskForm.vue';
 import TaskDetailSidebar from '@/components/project/TaskDetailSidebar.vue';
 import TaskForm from '@/components/project/TaskForm.vue';
-import SubtaskForm from '@/components/project/SubtaskForm.vue';
-import DeleteTaskDialog from '@/components/project/DeleteTaskDialog.vue';
+import TaskKanbanBoard from '@/components/project/TaskKanbanBoard.vue';
+import TaskList from '@/components/project/TaskList.vue';
 import EditProjectDialog from './Edit.vue';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Search, LayoutList, Columns3, X } from 'lucide-vue-next';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Columns3, LayoutList, Search, X } from 'lucide-vue-next';
 
 const props = defineProps({
     project: {
         type: Object,
-        required: true
+        required: true,
     },
     tags: {
         type: Array,
-        required: true
+        required: true,
     },
     completionPercentage: {
         type: Number,
-        required: true
-    }
+        required: true,
+    },
 });
 
 // Breadcrumbs
@@ -51,6 +51,7 @@ const editingTask = ref(null);
 const isDeleteTaskDialogOpen = ref(false);
 const taskToDelete = ref(null);
 const isSubmitting = ref(false);
+const isDeletingTask = ref(false);
 const updatingTasks = ref(new Set());
 
 // Right side modal for task details
@@ -62,78 +63,85 @@ const editingSubtask = ref(null);
 // Available tags from props (reactive)
 const availableTags = ref([...props.tags]);
 
-// View mode (table / kanban) - persisted to localStorage
+// View mode (table / kanban) - persisted to localStorage (storage can be unavailable)
 const VIEW_PREF_KEY = 'project-view-mode';
-const viewMode = ref(localStorage.getItem(VIEW_PREF_KEY) || 'table');
+const readViewPref = () => {
+    try {
+        return localStorage.getItem(VIEW_PREF_KEY) || 'table';
+    } catch {
+        return 'table';
+    }
+};
+const viewMode = ref(readViewPref());
 
 watch(viewMode, (val) => {
-    localStorage.setItem(VIEW_PREF_KEY, val);
+    try {
+        localStorage.setItem(VIEW_PREF_KEY, val);
+    } catch {
+        // Storage unavailable — the view still switches for this session
+    }
 });
 
 // Search and filter
 const searchQuery = ref('');
 const filterPriority = ref('all');
 
-// Status and priority configuration
+// Status and priority configuration — token-based, matches the shared status language
 const priorityConfig = {
     urgent: {
         key: 'urgent',
-        label: 'Urgent Priority',
-        emoji: '🔥',
-        class: 'bg-destructive/12 text-destructive border-destructive/25',
-        headerClass: 'bg-destructive/8 border-destructive/20 text-destructive',
+        label: 'Urgent priority',
+        class: 'bg-destructive/10 text-destructive',
+        headerClass: 'bg-destructive/10 text-destructive',
         hoverClass: 'hover:bg-destructive/5',
     },
     high: {
         key: 'high',
-        label: 'High Priority',
-        emoji: '⚠️',
-        class: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/25',
-        headerClass: 'bg-orange-500/8 border-orange-500/20 text-orange-700 dark:text-orange-400',
-        hoverClass: 'hover:bg-orange-500/5',
+        label: 'High priority',
+        class: 'bg-warning/10 text-warning',
+        headerClass: 'bg-warning/10 text-warning',
+        hoverClass: 'hover:bg-warning/5',
     },
     medium: {
         key: 'medium',
-        label: 'Medium Priority',
-        emoji: '📋',
-        class: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/25',
-        headerClass: 'bg-amber-500/8 border-amber-500/20 text-amber-700 dark:text-amber-400',
-        hoverClass: 'hover:bg-amber-500/5',
+        label: 'Medium priority',
+        class: 'bg-warning/10 text-warning',
+        headerClass: 'bg-warning/10 text-warning',
+        hoverClass: 'hover:bg-warning/5',
     },
     low: {
         key: 'low',
-        label: 'Low Priority',
-        emoji: '📝',
-        class: 'bg-[hsl(150_24%_42%/0.14)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)] border-[hsl(150_24%_42%/0.25)]',
-        headerClass: 'bg-[hsl(150_24%_42%/0.08)] border-[hsl(150_24%_42%/0.2)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)]',
-        hoverClass: 'hover:bg-[hsl(150_24%_42%/0.05)]',
+        label: 'Low priority',
+        class: 'bg-muted text-muted-foreground',
+        headerClass: 'bg-muted text-muted-foreground',
+        hoverClass: 'hover:bg-muted/50',
     },
 };
 
 const statusConfig = {
     todo: {
-        label: 'To Do',
+        label: 'To do',
         icon: 'Circle',
-        class: 'bg-muted text-muted-foreground hover:bg-muted/70',
-        iconClass: 'text-muted-foreground hover:text-foreground',
+        class: 'bg-muted text-muted-foreground',
+        iconClass: 'text-muted-foreground',
     },
     in_progress: {
-        label: 'In Progress',
+        label: 'In progress',
         icon: 'PlayCircle',
-        class: 'bg-primary/12 text-primary hover:bg-primary/20',
-        iconClass: 'text-primary hover:text-primary',
+        class: 'bg-primary/10 text-primary',
+        iconClass: 'text-primary',
     },
     completed: {
         label: 'Completed',
         icon: 'CheckCircle2',
-        class: 'bg-[hsl(150_24%_42%/0.14)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)] hover:bg-[hsl(150_24%_42%/0.2)]',
-        iconClass: 'text-[hsl(150_24%_45%)] hover:text-[hsl(150_30%_38%)]',
+        class: 'bg-success/10 text-success',
+        iconClass: 'text-success',
     },
     cancelled: {
         label: 'Cancelled',
         icon: 'XCircle',
-        class: 'bg-destructive/12 text-destructive hover:bg-destructive/20',
-        iconClass: 'text-destructive hover:text-destructive',
+        class: 'bg-destructive/10 text-destructive',
+        iconClass: 'text-destructive',
     },
 };
 
@@ -186,13 +194,13 @@ const toggleTaskCompletion = (task) => {
         { status: newStatus },
         {
             preserveScroll: true,
-            onError: (errors) => {
-                console.error('Failed to update task status:', errors);
+            onError: () => {
+                toast.error('Failed to update task status');
             },
             onFinish: () => {
                 updatingTasks.value.delete(task.id);
             },
-        }
+        },
     );
 };
 
@@ -212,7 +220,8 @@ const submitTaskForm = (formData) => {
             editingTask.value = null;
         },
         onError: (errors) => {
-            console.error('Task submission errors:', errors);
+            const firstError = Object.values(errors)[0];
+            toast.error(typeof firstError === 'string' ? firstError : 'Failed to save task');
         },
         onFinish: () => {
             isSubmitting.value = false;
@@ -235,7 +244,8 @@ const submitSubtaskForm = (formData) => {
             editingSubtask.value = null;
         },
         onError: (errors) => {
-            console.error('Subtask submission errors:', errors);
+            const firstError = Object.values(errors)[0];
+            toast.error(typeof firstError === 'string' ? firstError : 'Failed to save subtask');
         },
         onFinish: () => {
             isSubmitting.value = false;
@@ -244,22 +254,18 @@ const submitSubtaskForm = (formData) => {
 };
 
 const createNewTag = (tagData) => {
-    router.post(
-        route('tags.store'),
-        tagData,
-        {
-            preserveScroll: true,
-            onSuccess: (page) => {
-                if (page.props.flash && page.props.flash.newTag) {
-                    const newTag = page.props.flash.newTag;
-                    availableTags.value.push(newTag);
-                }
-            },
-            onError: (errors) => {
-                console.error('Failed to create tag:', errors);
+    router.post(route('tags.store'), tagData, {
+        preserveScroll: true,
+        onSuccess: (page) => {
+            if (page.props.flash && page.props.flash.newTag) {
+                const newTag = page.props.flash.newTag;
+                availableTags.value.push(newTag);
             }
-        }
-    );
+        },
+        onError: () => {
+            toast.error('Failed to create tag');
+        },
+    });
 };
 
 // Task reordering method
@@ -269,11 +275,10 @@ const reorderTasks = (updates) => {
         { updates },
         {
             preserveScroll: true,
-            onError: (errors) => {
-                console.error('Failed to reorder tasks:', errors);
-                // Inertia will automatically handle showing the error message
-            }
-        }
+            onError: () => {
+                toast.error('Failed to reorder tasks');
+            },
+        },
     );
 };
 
@@ -296,7 +301,9 @@ const handleViewTags = (task) => {
 };
 
 const confirmDeleteTask = () => {
-    if (!taskToDelete.value) return;
+    if (!taskToDelete.value || isDeletingTask.value) return;
+
+    isDeletingTask.value = true;
 
     router.delete(route('tasks.destroy', taskToDelete.value.id), {
         preserveScroll: true,
@@ -309,6 +316,12 @@ const confirmDeleteTask = () => {
             }
 
             taskToDelete.value = null;
+        },
+        onError: () => {
+            toast.error('Failed to delete task');
+        },
+        onFinish: () => {
+            isDeletingTask.value = false;
         },
     });
 };
@@ -336,16 +349,22 @@ const handleEditTask = (task) => {
             </div>
 
             <!-- Toolbar -->
-            <Tabs :default-value="viewMode" @update:model-value="(val) => viewMode = val">
-                <div class="mb-4 flex flex-col gap-2 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <Tabs :default-value="viewMode" @update:model-value="(val) => (viewMode = val)">
+                <div class="border-border mb-4 flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex flex-1 flex-wrap items-center gap-2.5">
-                        <TabsList class="h-9 shrink-0 rounded-lg bg-muted p-1">
-                            <TabsTrigger value="table" class="flex h-7 items-center gap-1.5 rounded-md px-3 text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                                <LayoutList class="h-4 w-4" />
+                        <TabsList class="bg-muted h-9 shrink-0 rounded-lg p-1">
+                            <TabsTrigger
+                                value="table"
+                                class="data-[state=active]:bg-card flex h-7 items-center gap-1.5 rounded-md px-3 text-sm data-[state=active]:shadow-xs"
+                            >
+                                <LayoutList class="size-4" />
                                 List
                             </TabsTrigger>
-                            <TabsTrigger value="kanban" class="flex h-7 items-center gap-1.5 rounded-md px-3 text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                                <Columns3 class="h-4 w-4" />
+                            <TabsTrigger
+                                value="kanban"
+                                class="data-[state=active]:bg-card flex h-7 items-center gap-1.5 rounded-md px-3 text-sm data-[state=active]:shadow-xs"
+                            >
+                                <Columns3 class="size-4" />
                                 Board
                             </TabsTrigger>
                         </TabsList>
@@ -353,27 +372,25 @@ const handleEditTask = (task) => {
                         <!-- Filters -->
                         <div class="flex w-full flex-1 items-center gap-2 sm:w-auto">
                             <div class="relative flex-1">
-                                <Search class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    v-model="searchQuery"
-                                    placeholder="Filter tasks…"
-                                    class="h-9 w-full rounded-lg border-border bg-card pl-8 pr-8 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
-                                />
+                                <Search class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Input v-model="searchQuery" placeholder="Filter tasks…" class="bg-card h-9 w-full pr-8 pl-8 text-sm" />
                                 <button
                                     v-if="searchQuery"
+                                    type="button"
+                                    aria-label="Clear search"
                                     @click="searchQuery = ''"
-                                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-1.5 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    <X class="h-3.5 w-3.5" />
+                                    <X class="size-3.5" />
                                 </button>
                             </div>
 
                             <Select v-model="filterPriority">
-                                <SelectTrigger class="h-9 w-32 shrink-0 rounded-lg border-border bg-card text-sm shadow-sm">
+                                <SelectTrigger class="bg-card h-9 w-36 shrink-0 text-sm">
                                     <SelectValue placeholder="Priority" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Priority</SelectItem>
+                                    <SelectItem value="all">All priorities</SelectItem>
                                     <SelectItem value="urgent">Urgent</SelectItem>
                                     <SelectItem value="high">High</SelectItem>
                                     <SelectItem value="medium">Medium</SelectItem>
@@ -421,36 +438,39 @@ const handleEditTask = (task) => {
 
         <!-- Task Detail Slideover with Subtask Form using slot -->
         <TaskDetailSidebar
-                :project="project"
-                :is-open="isTaskDetailModalOpen"
-                :selected-task="selectedTask"
-                :status-config="statusConfig"
-                :priority-config="priorityConfig"
-                :updating-tasks="updatingTasks"
-                @close="closeTaskDetailModal"
-                @toggle-task="toggleTaskCompletion"
-                @edit-task="handleEditTask"
-                @edit-subtask="editSubtask"
-                @delete-task="deleteTask"
-                @add-subtask="openSubtaskForm"
-                @reorder-tasks="reorderTasks"
-            >
-                <!-- Subtask Form slot -->
-                <template #subtask-form>
-                    <SubtaskForm
-                        v-if="selectedTask && isSubtaskFormOpen"
-                        :is-open="isSubtaskFormOpen"
-                        :project-id="project.id"
-                        :parent-task-id="selectedTask.id"
-                        :editing-subtask="editingSubtask"
-                        :available-tags="availableTags"
-                        :is-submitting="isSubmitting"
-                        @submit="submitSubtaskForm"
-                        @cancel="isSubtaskFormOpen = false; editingSubtask = null"
-                        @create-tag="createNewTag"
-                    />
-                </template>
-            </TaskDetailSidebar>
+            :project="project"
+            :is-open="isTaskDetailModalOpen"
+            :selected-task="selectedTask"
+            :status-config="statusConfig"
+            :priority-config="priorityConfig"
+            :updating-tasks="updatingTasks"
+            @close="closeTaskDetailModal"
+            @toggle-task="toggleTaskCompletion"
+            @edit-task="handleEditTask"
+            @edit-subtask="editSubtask"
+            @delete-task="deleteTask"
+            @add-subtask="openSubtaskForm"
+            @reorder-tasks="reorderTasks"
+        >
+            <!-- Subtask Form slot -->
+            <template #subtask-form>
+                <SubtaskForm
+                    v-if="selectedTask && isSubtaskFormOpen"
+                    :is-open="isSubtaskFormOpen"
+                    :project-id="project.id"
+                    :parent-task-id="selectedTask.id"
+                    :editing-subtask="editingSubtask"
+                    :available-tags="availableTags"
+                    :is-submitting="isSubmitting"
+                    @submit="submitSubtaskForm"
+                    @cancel="
+                        isSubtaskFormOpen = false;
+                        editingSubtask = null;
+                    "
+                    @create-tag="createNewTag"
+                />
+            </template>
+        </TaskDetailSidebar>
 
         <!-- Task Form Modal -->
         <TaskForm
@@ -459,7 +479,11 @@ const handleEditTask = (task) => {
             :editing-task="editingTask"
             :is-submitting="isSubmitting"
             :available-tags="availableTags"
-            @update:open="(open) => { if (!open) closeTaskModals(); }"
+            @update:open="
+                (open) => {
+                    if (!open) closeTaskModals();
+                }
+            "
             @submit="submitTaskForm"
             @cancel="closeTaskModals"
             @create-tag="createNewTag"
@@ -469,9 +493,13 @@ const handleEditTask = (task) => {
         <DeleteTaskDialog
             :is-open="isDeleteTaskDialogOpen"
             :task-to-delete="taskToDelete"
+            :processing="isDeletingTask"
             @update:open="isDeleteTaskDialogOpen = $event"
             @confirm="confirmDeleteTask"
-            @cancel="isDeleteTaskDialogOpen = false; taskToDelete = null"
+            @cancel="
+                isDeleteTaskDialogOpen = false;
+                taskToDelete = null;
+            "
         />
 
         <!-- Edit Project Dialog -->

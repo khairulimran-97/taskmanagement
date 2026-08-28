@@ -28,7 +28,7 @@
 }
 
 .ProseMirror p:empty:before {
-    content: "\00a0" !important;
+    content: '\00a0' !important;
 }
 
 /* Typography - Headings
@@ -89,30 +89,30 @@
 /* Task Lists
    ========================================================================== */
 
-.tiptap-prose ul[data-type="taskList"] {
+.tiptap-prose ul[data-type='taskList'] {
     list-style: none !important;
     margin-left: 0 !important;
     padding-left: 0 !important;
 }
 
-.tiptap-prose ul[data-type="taskList"] li {
+.tiptap-prose ul[data-type='taskList'] li {
     display: flex !important;
     align-items: center !important;
     height: 30px;
 }
 
-.tiptap-prose ul[data-type="taskList"] li > label {
+.tiptap-prose ul[data-type='taskList'] li > label {
     flex: 0 0 auto !important;
     margin-right: 0.5em !important;
     margin-top: 0.125em !important;
     user-select: none;
 }
 
-.tiptap-prose ul[data-type="taskList"] li > div {
+.tiptap-prose ul[data-type='taskList'] li > div {
     flex: 1 1 auto !important;
 }
 
-.tiptap-prose ul[data-type="taskList"] input[type="checkbox"] {
+.tiptap-prose ul[data-type='taskList'] input[type='checkbox'] {
     width: 1em !important;
     height: 1em !important;
     accent-color: var(--primary) !important;
@@ -123,13 +123,11 @@
 
 .tiptap-prose blockquote {
     position: relative !important;
-    border-left: 3px solid var(--primary) !important;
+    border-left: 3px solid var(--border) !important;
     margin: 1.25em 0 !important;
-    padding: 0.85em 1.1em 0.85em 1.4em !important;
+    padding: 0.25em 0 0.25em 1.25em !important;
     font-style: italic !important;
-    color: var(--foreground) !important;
-    background-color: color-mix(in srgb, var(--primary) 7%, transparent) !important;
-    border-radius: 0 0.5rem 0.5rem 0 !important;
+    color: var(--muted-foreground) !important;
 }
 
 .tiptap-prose blockquote > :first-child {
@@ -141,63 +139,37 @@
 }
 
 .tiptap-prose blockquote p {
-    color: var(--foreground) !important;
+    color: var(--muted-foreground) !important;
 }
 
 /* Code Blocks
    ========================================================================== */
 
-/* Inline code — distinct pill with subtle saffron tint */
+/* Inline code — quiet neutral pill on tokens */
 .tiptap-prose code {
-    background-color: color-mix(in srgb, var(--primary) 10%, var(--muted)) !important;
+    background-color: var(--muted) !important;
     color: var(--foreground) !important;
-    border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent) !important;
+    border: 1px solid var(--border) !important;
     border-radius: 0.375rem !important;
     padding: 0.1em 0.4em !important;
     font-size: 0.85em !important;
     font-weight: 500 !important;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
 }
 
-/* Code block — terminal-style with a label bar */
+/* Code block — plain bordered panel, no window chrome */
 .tiptap-prose pre {
     position: relative !important;
-    background-color: var(--card) !important;
+    background-color: var(--muted) !important;
     color: var(--foreground) !important;
-    border-radius: 0.625rem !important;
-    padding: 2.4em 1.1em 1.1em !important;
+    border-radius: 0.5rem !important;
+    padding: 1em 1.1em !important;
     margin: 1.25em 0 !important;
     overflow-x: auto !important;
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
     font-size: 0.875em !important;
     line-height: 1.6 !important;
     border: 1px solid var(--border) !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Mac-style traffic-light dots in the code block header */
-.tiptap-prose pre::before {
-    content: '' !important;
-    position: absolute !important;
-    top: 0.85em !important;
-    left: 1.1em !important;
-    width: 0.55em !important;
-    height: 0.55em !important;
-    border-radius: 9999px !important;
-    background: #ef4444 !important;
-    box-shadow: 1em 0 0 #f59e0b, 2em 0 0 #22c55e !important;
-    opacity: 0.85 !important;
-}
-
-/* Divider under the header dots */
-.tiptap-prose pre::after {
-    content: '' !important;
-    position: absolute !important;
-    top: 2em !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 1px !important;
-    background: var(--border) !important;
 }
 
 .tiptap-prose pre code {
@@ -211,16 +183,16 @@
 /* Text Highlighting
    ========================================================================== */
 
+/* Highlight rides the warning token so it adapts to both themes */
 .tiptap-prose mark {
-    background-color: #fef08a !important;
-    color: #854d0e !important;
+    background-color: color-mix(in srgb, var(--warning) 25%, transparent) !important;
+    color: var(--foreground) !important;
     padding: 0.125em 0.25em !important;
     border-radius: 0.25rem !important;
 }
 
 .dark .tiptap-prose mark {
-    background-color: #ca8a04 !important;
-    color: #fef3c7 !important;
+    background-color: color-mix(in srgb, var(--warning) 32%, transparent) !important;
 }
 
 /* Horizontal Rules
@@ -337,7 +309,10 @@
     background: var(--popover);
     padding: 0.25rem;
     color: var(--popover-foreground);
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    /* shadow-md — popovers stay at shadcn's default depth */
+    box-shadow:
+        0 4px 6px -1px rgb(0 0 0 / 0.1),
+        0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 .tiptap-slash-menu .menu-content {
@@ -421,20 +396,20 @@
     border-radius: 0.375rem !important;
 }
 
-.tiptap-prose img[style*="margin: 0 auto"] {
+.tiptap-prose img[style*='margin: 0 auto'] {
     display: block !important;
     margin-left: auto !important;
     margin-right: auto !important;
 }
 
-.tiptap-prose img[style*="float: left"] {
+.tiptap-prose img[style*='float: left'] {
     float: left !important;
     margin-right: 1em !important;
     margin-top: 0.25em !important;
     margin-bottom: 0.25em !important;
 }
 
-.tiptap-prose img[style*="float: right"] {
+.tiptap-prose img[style*='float: right'] {
     float: right !important;
     margin-left: 1em !important;
     margin-top: 0.25em !important;
@@ -453,7 +428,7 @@
 
 /* Dark mode adjustments */
 .dark .tiptap-prose img {
-    border: 1px solid #333 !important;
+    border: 1px solid var(--border) !important;
 }
 
 .dark .tiptap-prose img + em {
@@ -463,14 +438,13 @@
 /* Image Gallery Page
    ========================================================================== */
 
-/* Image hover effects */
+/* Image hover effects — border shift only, no lift or shadow */
 .image-card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    transition: border-color 0.15s ease-in-out;
 }
 
 .image-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    border-color: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
 }
 
 /* Image selection indicator */
@@ -485,7 +459,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--primary-foreground);
     font-size: 12px;
     z-index: 10;
 }

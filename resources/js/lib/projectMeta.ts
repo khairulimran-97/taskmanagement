@@ -1,7 +1,8 @@
 /**
  * Single source of truth for project/task status & priority styling.
- * All token-based and dark-mode safe — replaces the divergent color maps that
- * previously lived in ProjectHeader, ProjectStats, TaskList, and Show.vue.
+ * All token-based and dark-mode safe — the status language is:
+ * completed → success · in progress/active → primary · todo/neutral → muted ·
+ * due soon/medium → warning · overdue/urgent → destructive.
  */
 
 export type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived' | string;
@@ -14,11 +15,11 @@ const capitalize = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1).re
 export function projectStatusBadge(status: ProjectStatus): string {
     switch (status) {
         case 'active':
-            return 'bg-primary/12 text-primary border-primary/25';
+            return 'bg-primary/10 text-primary border-primary/25';
         case 'completed':
-            return 'bg-[hsl(150_24%_42%/0.14)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)] border-[hsl(150_24%_42%/0.25)]';
+            return 'bg-success/10 text-success border-success/25';
         case 'paused':
-            return 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/25';
+            return 'bg-warning/10 text-warning border-warning/25';
         case 'archived':
         default:
             return 'bg-muted text-muted-foreground border-border';
@@ -30,9 +31,9 @@ export function projectStatusDot(status: ProjectStatus): string {
         case 'active':
             return 'bg-primary';
         case 'completed':
-            return 'bg-[hsl(150_24%_45%)]';
+            return 'bg-success';
         case 'paused':
-            return 'bg-amber-500';
+            return 'bg-warning';
         case 'archived':
         default:
             return 'bg-muted-foreground/50';
@@ -43,11 +44,11 @@ export function projectStatusDot(status: ProjectStatus): string {
 export function taskStatusBadge(status: TaskStatus): string {
     switch (status) {
         case 'in_progress':
-            return 'bg-primary/12 text-primary border-primary/25';
+            return 'bg-primary/10 text-primary border-primary/25';
         case 'completed':
-            return 'bg-[hsl(150_24%_42%/0.14)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)] border-[hsl(150_24%_42%/0.25)]';
+            return 'bg-success/10 text-success border-success/25';
         case 'cancelled':
-            return 'bg-destructive/12 text-destructive border-destructive/25';
+            return 'bg-muted text-muted-foreground border-border';
         case 'todo':
         default:
             return 'bg-muted text-muted-foreground border-border';
@@ -59,9 +60,9 @@ export function taskStatusDot(status: TaskStatus): string {
         case 'in_progress':
             return 'bg-primary';
         case 'completed':
-            return 'bg-[hsl(150_24%_45%)]';
+            return 'bg-success';
         case 'cancelled':
-            return 'bg-destructive';
+            return 'bg-muted-foreground/40';
         case 'todo':
         default:
             return 'bg-muted-foreground/50';
@@ -72,13 +73,13 @@ export function taskStatusDot(status: TaskStatus): string {
 export function priorityBadge(priority: Priority): string {
     switch (priority) {
         case 'urgent':
-            return 'bg-destructive/12 text-destructive border-destructive/25';
+            return 'bg-destructive/10 text-destructive border-destructive/30';
         case 'high':
-            return 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/25';
+            return 'bg-transparent text-destructive border-destructive/40';
         case 'medium':
-            return 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/25';
+            return 'bg-warning/10 text-warning border-warning/25';
         case 'low':
-            return 'bg-[hsl(150_24%_42%/0.14)] text-[hsl(150_30%_38%)] dark:text-[hsl(150_30%_55%)] border-[hsl(150_24%_42%/0.25)]';
+            return 'bg-muted text-muted-foreground border-border';
         default:
             return 'bg-muted text-muted-foreground border-border';
     }
@@ -87,13 +88,11 @@ export function priorityBadge(priority: Priority): string {
 export function priorityText(priority: Priority): string {
     switch (priority) {
         case 'urgent':
-            return 'text-destructive';
         case 'high':
-            return 'text-orange-600 dark:text-orange-400';
+            return 'text-destructive';
         case 'medium':
-            return 'text-amber-600 dark:text-amber-400';
+            return 'text-warning';
         case 'low':
-            return 'text-[hsl(150_30%_40%)] dark:text-[hsl(150_30%_55%)]';
         default:
             return 'text-muted-foreground';
     }
@@ -101,9 +100,8 @@ export function priorityText(priority: Priority): string {
 
 /* ---------- Progress bar ramp (completion %) ---------- */
 export function progressColor(pct: number): string {
-    if (pct >= 75) return 'bg-[hsl(150_24%_45%)]';
-    if (pct >= 50) return 'bg-amber-500';
-    if (pct >= 25) return 'bg-orange-500';
+    if (pct >= 66) return 'bg-success';
+    if (pct >= 33) return 'bg-warning';
     return 'bg-destructive';
 }
 

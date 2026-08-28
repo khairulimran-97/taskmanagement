@@ -4,7 +4,7 @@
  * already returns from CalendarEvent::getAvailableColors(). The stored value is
  * still the hex; categories just give it a name + icon for the UI.
  */
-import { Briefcase, User, Users, AlertTriangle, Bell, Circle, type Icon } from 'lucide-vue-next';
+import { AlertTriangle, Bell, Briefcase, Circle, User, Users, type Icon } from 'lucide-vue-next';
 
 export interface EventCategory {
     key: string;

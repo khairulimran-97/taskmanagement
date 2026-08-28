@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
-import { PlusCircle, Calendar } from 'lucide-vue-next';
-import { ref, reactive, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { router } from '@inertiajs/vue3';
 import { DateFormatter, type DateValue, getLocalTimeZone, today } from '@internationalized/date';
+import { Calendar, Loader2, Plus } from 'lucide-vue-next';
+import { reactive, ref, watch } from 'vue';
 
 interface Props {
     open: boolean;
@@ -20,7 +20,7 @@ const props = defineProps<Props>();
 
 const emit = defineEmits<{
     'update:open': [value: boolean];
-    'success': [project: any];
+    success: [project: any];
 }>();
 
 const df = new DateFormatter('en-US', {
@@ -34,6 +34,12 @@ const dateItems = [
     { value: 7, label: 'In a week' },
 ];
 
+// Default project color: matches the app's pine accent
+const DEFAULT_COLOR = '#1D5D4B';
+
+// Curated, muted swatches so arbitrary hues don't fight the UI
+const colorPresets = ['#1D5D4B', '#3A5F8A', '#6D5A9E', '#A34A5E', '#B0762B', '#64748B'];
+
 const isSubmitting = ref(false);
 const startDateValue = ref<DateValue>();
 const dueDateValue = ref<DateValue>();
@@ -41,12 +47,12 @@ const dueDateValue = ref<DateValue>();
 const form = reactive({
     name: '',
     description: '',
-    color: '#3B82F6',
+    color: DEFAULT_COLOR,
     status: 'active',
     priority: 'medium',
     due_date: '',
     start_date: '',
-    sort_order: null
+    sort_order: null,
 });
 
 // Form errors
@@ -68,16 +74,19 @@ watch(dueDateValue, (newValue) => {
     }
 });
 
-watch(() => props.open, (isOpen) => {
-    if (isOpen) {
-        resetForm();
-    }
-});
+watch(
+    () => props.open,
+    (isOpen) => {
+        if (isOpen) {
+            resetForm();
+        }
+    },
+);
 
 const resetForm = () => {
     form.name = '';
     form.description = '';
-    form.color = '#3B82F6';
+    form.color = DEFAULT_COLOR;
     form.status = 'active';
     form.priority = 'medium';
     form.due_date = '';
@@ -109,7 +118,7 @@ const submitForm = () => {
         },
         onFinish: () => {
             isSubmitting.value = false;
-        }
+        },
     });
 };
 </script>
@@ -118,17 +127,15 @@ const submitForm = () => {
     <Dialog :open="open" @update:open="$emit('update:open', $event)">
         <DialogTrigger as-child>
             <Button variant="default" @click="resetForm">
-                <PlusCircle class="w-4 h-4 mr-2" />
-                <span>New Project</span>
+                <Plus class="size-4" />
+                New project
             </Button>
         </DialogTrigger>
 
         <DialogContent class="sm:max-w-[600px]">
             <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
-                <DialogDescription>
-                    Fill in the details below to create a new project.
-                </DialogDescription>
+                <DialogTitle>Create project</DialogTitle>
+                <DialogDescription> Add a project to organize related tasks. </DialogDescription>
             </DialogHeader>
 
             <form @submit.prevent="submitForm" class="grid gap-4 py-4">
@@ -136,27 +143,22 @@ const submitForm = () => {
                 <div class="grid grid-cols-4 items-center gap-4">
                     <Label for="create-name" class="text-right">Name *</Label>
                     <div class="col-span-3">
-                        <Input
-                            id="create-name"
-                            v-model="form.name"
-                            placeholder="Enter project name"
-                            :class="{ 'border-red-500': errors.name }"
-                        />
-                        <p v-if="errors.name" class="text-sm text-red-500 mt-1">{{ errors.name }}</p>
+                        <Input id="create-name" v-model="form.name" placeholder="Enter project name" :class="{ 'border-destructive': errors.name }" />
+                        <p v-if="errors.name" class="text-destructive mt-1 text-sm">{{ errors.name }}</p>
                     </div>
                 </div>
 
                 <!-- Description -->
                 <div class="grid grid-cols-4 items-start gap-4">
-                    <Label for="create-description" class="text-right pt-2">Description</Label>
+                    <Label for="create-description" class="pt-2 text-right">Description</Label>
                     <div class="col-span-3">
                         <Textarea
                             id="create-description"
                             v-model="form.description"
                             placeholder="Enter project description"
-                            :class="{ 'border-red-500': errors.description }"
+                            :class="{ 'border-destructive': errors.description }"
                         />
-                        <p v-if="errors.description" class="text-sm text-red-500 mt-1">{{ errors.description }}</p>
+                        <p v-if="errors.description" class="text-destructive mt-1 text-sm">{{ errors.description }}</p>
                     </div>
                 </div>
 
@@ -198,19 +200,26 @@ const submitForm = () => {
                 <!-- Color -->
                 <div class="grid grid-cols-4 items-center gap-4">
                     <Label for="create-color" class="text-right">Color</Label>
-                    <div class="col-span-3">
-                        <Input
-                            id="create-color"
-                            v-model="form.color"
-                            type="color"
-                            class="w-16 h-10"
-                        />
+                    <div class="col-span-3 flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <button
+                                v-for="preset in colorPresets"
+                                :key="preset"
+                                type="button"
+                                :aria-label="`Use color ${preset}`"
+                                class="ring-border focus-visible:ring-ring/50 size-6 cursor-pointer rounded-full ring-1 transition-transform duration-150 hover:scale-110 focus-visible:ring-2 focus-visible:outline-none"
+                                :class="{ 'ring-ring ring-2': form.color.toLowerCase() === preset.toLowerCase() }"
+                                :style="`background-color: ${preset}`"
+                                @click="form.color = preset"
+                            ></button>
+                        </div>
+                        <Input id="create-color" v-model="form.color" type="color" aria-label="Custom color" class="h-8 w-12 cursor-pointer p-1" />
                     </div>
                 </div>
 
                 <!-- Start Date -->
                 <div class="grid grid-cols-4 items-center gap-4">
-                    <Label for="create-start-date" class="text-right">Start Date</Label>
+                    <Label for="create-start-date" class="text-right">Start date</Label>
                     <div class="col-span-3">
                         <Popover>
                             <PopoverTrigger as-child>
@@ -219,19 +228,21 @@ const submitForm = () => {
                                     :class="[
                                         'w-full justify-start text-left font-normal',
                                         !startDateValue && 'text-muted-foreground',
-                                        errors.start_date && 'border-red-500'
+                                        errors.start_date && 'border-destructive',
                                     ]"
                                 >
-                                    <Calendar class="mr-2 h-4 w-4" />
-                                    {{ startDateValue ? df.format(startDateValue.toDate(getLocalTimeZone())) : "Pick start date" }}
+                                    <Calendar class="size-4" />
+                                    {{ startDateValue ? df.format(startDateValue.toDate(getLocalTimeZone())) : 'Pick a start date' }}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent class="flex w-auto flex-col gap-y-2 p-2">
                                 <Select
-                                    @update:model-value="(v) => {
-                                        if (!v) return;
-                                        startDateValue = today(getLocalTimeZone()).add({ days: Number(v) });
-                                    }"
+                                    @update:model-value="
+                                        (v) => {
+                                            if (!v) return;
+                                            startDateValue = today(getLocalTimeZone()).add({ days: Number(v) });
+                                        }
+                                    "
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select" />
@@ -245,13 +256,13 @@ const submitForm = () => {
                                 <CalendarComponent v-model="startDateValue" />
                             </PopoverContent>
                         </Popover>
-                        <p v-if="errors.start_date" class="text-sm text-red-500 mt-1">{{ errors.start_date }}</p>
+                        <p v-if="errors.start_date" class="text-destructive mt-1 text-sm">{{ errors.start_date }}</p>
                     </div>
                 </div>
 
                 <!-- Due Date -->
                 <div class="grid grid-cols-4 items-center gap-4">
-                    <Label for="create-due-date" class="text-right">Due Date</Label>
+                    <Label for="create-due-date" class="text-right">Due date</Label>
                     <div class="col-span-3">
                         <Popover>
                             <PopoverTrigger as-child>
@@ -260,19 +271,21 @@ const submitForm = () => {
                                     :class="[
                                         'w-full justify-start text-left font-normal',
                                         !dueDateValue && 'text-muted-foreground',
-                                        errors.due_date && 'border-red-500'
+                                        errors.due_date && 'border-destructive',
                                     ]"
                                 >
-                                    <Calendar class="mr-2 h-4 w-4" />
-                                    {{ dueDateValue ? df.format(dueDateValue.toDate(getLocalTimeZone())) : "Pick due date" }}
+                                    <Calendar class="size-4" />
+                                    {{ dueDateValue ? df.format(dueDateValue.toDate(getLocalTimeZone())) : 'Pick a due date' }}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent class="flex w-auto flex-col gap-y-2 p-2">
                                 <Select
-                                    @update:model-value="(v) => {
-                                        if (!v) return;
-                                        dueDateValue = today(getLocalTimeZone()).add({ days: Number(v) });
-                                    }"
+                                    @update:model-value="
+                                        (v) => {
+                                            if (!v) return;
+                                            dueDateValue = today(getLocalTimeZone()).add({ days: Number(v) });
+                                        }
+                                    "
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select" />
@@ -286,27 +299,16 @@ const submitForm = () => {
                                 <CalendarComponent v-model="dueDateValue" />
                             </PopoverContent>
                         </Popover>
-                        <p v-if="errors.due_date" class="text-sm text-red-500 mt-1">{{ errors.due_date }}</p>
+                        <p v-if="errors.due_date" class="text-destructive mt-1 text-sm">{{ errors.due_date }}</p>
                     </div>
                 </div>
             </form>
 
             <DialogFooter>
-                <Button
-                    type="button"
-                    variant="outline"
-                    @click="closeDialog"
-                    :disabled="isSubmitting"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    type="button"
-                    @click="submitForm"
-                    :disabled="isSubmitting"
-                >
-                    <span v-if="isSubmitting">Creating...</span>
-                    <span v-else>Create Project</span>
+                <Button type="button" variant="outline" @click="closeDialog" :disabled="isSubmitting"> Cancel </Button>
+                <Button type="button" @click="submitForm" :disabled="isSubmitting">
+                    <Loader2 v-if="isSubmitting" class="size-4 animate-spin" />
+                    {{ isSubmitting ? 'Creating…' : 'Create project' }}
                 </Button>
             </DialogFooter>
         </DialogContent>

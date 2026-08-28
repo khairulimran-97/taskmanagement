@@ -1,45 +1,40 @@
 <script setup lang="ts">
 import AppLogo from '@/components/AppLogo.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import {
-    NavigationMenu,
-    NavigationMenuItem,
-    NavigationMenuLink,
-    NavigationMenuList,
-    navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import UserMenuContent from '@/components/UserMenuContent.vue';
-import { getInitials } from '@/composables/useInitials';
-import type { BreadcrumbItem, NavItem } from '@/types';
-import { Link, usePage, router } from '@inertiajs/vue3';
-import {
-    LayoutDashboard,
-    CheckSquare,
-    Calendar,
-    Menu,
-    Plus,
-    Bell,
-    Folder,
-    Sun,
-    Moon,
-    FileText,
-    AlertTriangle,
-    Clock,
-    CalendarDays,
-    PenTool,
-    KeyRound
-} from 'lucide-vue-next';
-import { useAppearance } from '@/composables/useAppearance';
-import { computed, ref } from 'vue';
 import QuickNotesSheet from '@/components/notes/QuickNotesSheet.vue';
 import QuickVaultSheet from '@/components/secrets/QuickVaultSheet.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import UserMenuContent from '@/components/UserMenuContent.vue';
+import { useAppearance } from '@/composables/useAppearance';
+import { getInitials } from '@/composables/useInitials';
+import type { BreadcrumbItem, NavItem } from '@/types';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import {
+    AlertTriangle,
+    Bell,
+    Calendar,
+    CalendarDays,
+    ChevronRight,
+    Clock,
+    FileText,
+    Folder,
+    KeyRound,
+    LayoutDashboard,
+    Loader2,
+    Menu,
+    Monitor,
+    Moon,
+    PenTool,
+    Sun,
+} from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import { toast } from 'vue-sonner';
 
 const quickNotes = ref<InstanceType<typeof QuickNotesSheet> | null>(null);
 
@@ -66,17 +61,16 @@ const props = withDefaults(defineProps<Props>(), {
 const page = usePage();
 const auth = computed(() => page.props.auth);
 
-// Dark mode — single source of truth via useAppearance (localStorage 'appearance')
+// Theme — single source of truth via useAppearance (localStorage 'appearance').
+// Cycles light → dark → system so the system preference stays reachable.
 const { appearance, updateAppearance } = useAppearance();
-const isDark = computed(() => {
-    if (appearance.value === 'system') {
-        return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return appearance.value === 'dark';
-});
 
-const toggleTheme = () => {
-    updateAppearance(isDark.value ? 'light' : 'dark');
+const nextTheme = { light: 'dark', dark: 'system', system: 'light' } as const;
+const themeIcon = computed(() => ({ light: Sun, dark: Moon, system: Monitor })[appearance.value]);
+const themeLabel = computed(() => ({ light: 'Light', dark: 'Dark', system: 'System' })[appearance.value]);
+
+const cycleTheme = () => {
+    updateAppearance(nextTheme[appearance.value]);
 };
 
 const isCurrentRoute = computed(() => (url: string) => {
@@ -84,8 +78,8 @@ const isCurrentRoute = computed(() => (url: string) => {
     return path === url || path.startsWith(url + '/');
 });
 
-const activeItemStyles = computed(
-    () => (url: string) => (isCurrentRoute.value(url) ? 'bg-accent text-foreground' : 'text-muted-foreground'),
+const mobileNavItemStyles = computed(
+    () => (url: string) => (isCurrentRoute.value(url) ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'),
 );
 
 const mainNavItems: NavItem[] = [
@@ -116,28 +110,49 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-// Handle creating new note
+// Controlled so the sheet closes on in-sheet navigation instead of relying on a remount
+const mobileMenuOpen = ref(false);
+
+// Guarded so a double-click cannot create two notes
+const creatingNote = ref(false);
 const createNewNote = () => {
-    router.post(route('notes.create-empty'));
+    if (creatingNote.value) return;
+    creatingNote.value = true;
+    router.post(
+        route('notes.create-empty'),
+        {},
+        {
+            onError: () => toast.error('Could not create note'),
+            onFinish: () => {
+                creatingNote.value = false;
+                mobileMenuOpen.value = false;
+            },
+        },
+    );
 };
 </script>
 
 <template>
     <div class="contents">
-        <div class="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
+        <div class="border-border bg-background sticky top-0 z-50 border-b">
             <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
-                <!-- Mobile Menu -->
+                <!-- Mobile menu -->
                 <div class="lg:hidden">
-                    <Sheet>
+                    <Sheet v-model:open="mobileMenuOpen">
                         <SheetTrigger :as-child="true">
-                            <Button variant="ghost" size="icon" class="mr-2 h-9 w-9">
-                                <Menu class="h-5 w-5" />
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="text-muted-foreground hover:text-foreground mr-2 size-10"
+                                aria-label="Open menu"
+                            >
+                                <Menu class="size-5" />
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left" class="w-[300px] p-6">
-                            <SheetTitle class="sr-only">Navigation Menu</SheetTitle>
+                            <SheetTitle class="sr-only">Navigation menu</SheetTitle>
                             <SheetHeader class="flex justify-start text-left">
-                                <AppLogoIcon class="size-6 fill-current text-primary" />
+                                <AppLogo />
                             </SheetHeader>
                             <div class="flex h-full flex-1 flex-col justify-between space-y-4 py-6">
                                 <nav class="-mx-3 space-y-1">
@@ -146,25 +161,28 @@ const createNewNote = () => {
                                         :key="item.title"
                                         :href="item.href"
                                         prefetch
-                                        class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
-                                        :class="activeItemStyles(item.href)"
+                                        class="focus-visible:ring-ring/50 flex min-h-11 items-center gap-x-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                        :class="mobileNavItemStyles(item.href)"
+                                        :aria-current="isCurrentRoute(item.href) ? 'page' : undefined"
+                                        @click="mobileMenuOpen = false"
                                     >
-                                        <component v-if="item.icon" :is="item.icon" class="h-5 w-5" />
+                                        <component v-if="item.icon" :is="item.icon" class="size-4" />
                                         {{ item.title }}
                                     </Link>
                                 </nav>
                                 <div class="flex flex-col space-y-4">
-                                    <div class="border-t pt-4">
-                                        <Button class="w-full" size="sm" @click="createNewNote">
-                                            <PenTool class="mr-2 h-4 w-4" />
-                                            Add New Note
+                                    <div class="border-border border-t pt-4">
+                                        <Button class="w-full" size="sm" :disabled="creatingNote" @click="createNewNote">
+                                            <Loader2 v-if="creatingNote" class="size-4 animate-spin" />
+                                            <PenTool v-else class="size-4" />
+                                            New note
                                         </Button>
                                     </div>
-                                    <div class="flex items-center justify-between border-t pt-4">
+                                    <div class="border-border flex items-center justify-between border-t pt-4">
                                         <span class="text-sm font-medium">Theme</span>
-                                        <Button variant="ghost" size="icon" class="h-8 w-8" @click="toggleTheme">
-                                            <Sun v-if="isDark" class="h-4 w-4" />
-                                            <Moon v-else class="h-4 w-4" />
+                                        <Button variant="outline" size="sm" class="min-w-24" @click="cycleTheme">
+                                            <component :is="themeIcon" class="size-4" />
+                                            {{ themeLabel }}
                                         </Button>
                                     </div>
                                 </div>
@@ -173,145 +191,167 @@ const createNewNote = () => {
                     </Sheet>
                 </div>
 
-                <Link :href="route('dashboard')" class="flex items-center gap-x-2">
+                <Link
+                    :href="route('dashboard')"
+                    class="focus-visible:ring-ring/50 flex items-center gap-x-2 rounded-md focus-visible:ring-2 focus-visible:outline-none"
+                >
                     <AppLogo />
                 </Link>
 
-                <!-- Desktop Menu -->
-                <div class="hidden h-full lg:flex lg:flex-1">
-                    <NavigationMenu class="ml-10 flex h-full items-stretch">
-                        <NavigationMenuList class="flex h-full items-stretch space-x-1">
-                            <NavigationMenuItem v-for="(item, index) in mainNavItems" :key="index" class="relative flex h-full items-center">
-                                <Link :href="item.href" prefetch>
-                                    <NavigationMenuLink
-                                        :class="[navigationMenuTriggerStyle(), activeItemStyles(item.href), 'h-9 cursor-pointer px-3']"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <component v-if="item.icon" :is="item.icon" class="h-4 w-4" />
-                                            <span>{{ item.title }}</span>
-                                        </div>
-                                    </NavigationMenuLink>
-                                </Link>
-                                <div
-                                    v-if="isCurrentRoute(item.href)"
-                                    class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-primary"
-                                ></div>
-                            </NavigationMenuItem>
-                        </NavigationMenuList>
-                    </NavigationMenu>
-                </div>
+                <!-- Desktop nav -->
+                <nav class="ml-8 hidden h-full items-stretch gap-1 lg:flex" aria-label="Main">
+                    <Link
+                        v-for="item in mainNavItems"
+                        :key="item.title"
+                        :href="item.href"
+                        prefetch
+                        class="focus-visible:ring-ring/50 relative flex items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                        :class="isCurrentRoute(item.href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                        :aria-current="isCurrentRoute(item.href) ? 'page' : undefined"
+                    >
+                        <component v-if="item.icon" :is="item.icon" class="size-4" />
+                        <span>{{ item.title }}</span>
+                        <span
+                            class="bg-primary absolute inset-x-3 bottom-0 h-0.5 rounded-full transition-opacity duration-150"
+                            :class="isCurrentRoute(item.href) ? 'opacity-100' : 'opacity-0'"
+                            aria-hidden="true"
+                        ></span>
+                    </Link>
+                </nav>
 
                 <div class="ml-auto flex items-center space-x-2">
-                    <!-- Quick Actions -->
-                    <div class="hidden items-center space-x-2 md:flex">
-                        <Button variant="secondary" size="sm" class="h-9 border border-border" @click="createNewNote">
-                            <PenTool class="mr-2 h-4 w-4" />
-                            Add New Note
+                    <!-- Quick actions -->
+                    <div class="hidden items-center md:flex">
+                        <Button variant="outline" size="sm" class="h-9" :disabled="creatingNote" @click="createNewNote">
+                            <Loader2 v-if="creatingNote" class="size-4 animate-spin" />
+                            <PenTool v-else class="size-4" />
+                            New note
                         </Button>
                     </div>
 
-                    <!-- Action Buttons -->
                     <div class="flex items-center space-x-1">
-                        <!-- Theme Toggle -->
-                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer" @click="toggleTheme">
-                            <Sun v-if="isDark" class="size-5 opacity-80 transition-opacity group-hover:opacity-100" />
-                            <Moon v-else class="size-5 opacity-80 transition-opacity group-hover:opacity-100" />
-                        </Button>
+                        <!-- Theme toggle: light → dark → system -->
+                        <TooltipProvider :delay-duration="300">
+                            <Tooltip>
+                                <TooltipTrigger as-child>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="text-muted-foreground hover:text-foreground size-10"
+                                        :aria-label="`Switch theme, currently ${themeLabel.toLowerCase()}`"
+                                        @click="cycleTheme"
+                                    >
+                                        <component :is="themeIcon" class="size-5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Theme: {{ themeLabel }}</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
 
                         <!-- Notifications -->
                         <Popover>
                             <PopoverTrigger as-child>
-                                <Button variant="ghost" size="icon" class="group relative h-9 w-9 cursor-pointer">
-                                    <Bell class="size-5 opacity-80 transition-opacity group-hover:opacity-100" />
-                                    <Badge
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="text-muted-foreground hover:text-foreground relative size-10"
+                                    :aria-label="`Notifications, ${props.notifications.total} new`"
+                                >
+                                    <Bell class="size-5" />
+                                    <span
                                         v-if="props.notifications.total > 0"
-                                        class="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
-                                        :class="props.notifications.overdue_tasks > 0 ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : 'bg-primary'"
+                                        class="absolute top-0 right-0 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs leading-none font-medium tabular-nums"
+                                        :class="
+                                            props.notifications.overdue_tasks > 0 ? 'bg-destructive text-white' : 'bg-primary text-primary-foreground'
+                                        "
                                     >
                                         {{ props.notifications.total > 9 ? '9+' : props.notifications.total }}
-                                    </Badge>
+                                    </span>
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent class="w-80" align="end">
-                                <div class="space-y-4">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="font-medium">Notifications</h4>
-                                        <Badge variant="secondary" class="text-xs">
-                                            {{ props.notifications.total }}
-                                        </Badge>
-                                    </div>
+                            <PopoverContent class="w-80 p-2" align="end">
+                                <div class="flex items-center justify-between px-2 py-1.5">
+                                    <h4 class="text-sm font-semibold">Notifications</h4>
+                                    <Badge variant="secondary" class="text-xs tabular-nums">
+                                        {{ props.notifications.total }}
+                                    </Badge>
+                                </div>
 
-                                    <div class="space-y-3">
-                                        <!-- Overdue Tasks -->
-                                        <div v-if="props.notifications.overdue_tasks > 0" class="flex items-center space-x-3 p-2 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800">
-                                            <AlertTriangle class="h-4 w-4 text-red-600 dark:text-red-400" />
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-red-900 dark:text-red-100">
-                                                    {{ props.notifications.overdue_tasks }} Overdue Task{{ props.notifications.overdue_tasks > 1 ? 's' : '' }}
-                                                </p>
-                                                <p class="text-xs text-red-600 dark:text-red-400">Requires immediate attention</p>
-                                            </div>
-                                            <Button variant="ghost" size="sm" as-child>
-                                                <Link :href="route('dashboard')" class="text-red-600 dark:text-red-400">
-                                                    View
-                                                </Link>
-                                            </Button>
-                                        </div>
+                                <div v-if="props.notifications.total > 0" class="mt-1 space-y-1">
+                                    <!-- Overdue tasks -->
+                                    <Link
+                                        v-if="props.notifications.overdue_tasks > 0"
+                                        :href="route('dashboard')"
+                                        class="hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-11 items-center gap-3 rounded-md px-2 py-2 transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <span class="bg-destructive/10 text-destructive flex size-8 shrink-0 items-center justify-center rounded-md">
+                                            <AlertTriangle class="size-4" />
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-sm font-medium tabular-nums">
+                                                {{ props.notifications.overdue_tasks }} overdue
+                                                {{ props.notifications.overdue_tasks > 1 ? 'tasks' : 'task' }}
+                                            </span>
+                                            <span class="text-muted-foreground block text-xs">Needs attention</span>
+                                        </span>
+                                        <ChevronRight class="text-muted-foreground size-4 shrink-0" />
+                                    </Link>
 
-                                        <!-- Due Soon Tasks -->
-                                        <div v-if="props.notifications.due_soon_tasks > 0" class="flex items-center space-x-3 p-2 rounded-lg bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800">
-                                            <Clock class="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-orange-900 dark:text-orange-100">
-                                                    {{ props.notifications.due_soon_tasks }} Task{{ props.notifications.due_soon_tasks > 1 ? 's' : '' }} Due Soon
-                                                </p>
-                                                <p class="text-xs text-orange-600 dark:text-orange-400">Due within 7 days</p>
-                                            </div>
-                                            <Button variant="ghost" size="sm" as-child>
-                                                <Link :href="route('dashboard')" class="text-orange-600 dark:text-orange-400">
-                                                    View
-                                                </Link>
-                                            </Button>
-                                        </div>
+                                    <!-- Due soon tasks -->
+                                    <Link
+                                        v-if="props.notifications.due_soon_tasks > 0"
+                                        :href="route('dashboard')"
+                                        class="hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-11 items-center gap-3 rounded-md px-2 py-2 transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <span class="bg-warning/10 text-warning flex size-8 shrink-0 items-center justify-center rounded-md">
+                                            <Clock class="size-4" />
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-sm font-medium tabular-nums">
+                                                {{ props.notifications.due_soon_tasks }}
+                                                {{ props.notifications.due_soon_tasks > 1 ? 'tasks' : 'task' }} due soon
+                                            </span>
+                                            <span class="text-muted-foreground block text-xs">Due within 7 days</span>
+                                        </span>
+                                        <ChevronRight class="text-muted-foreground size-4 shrink-0" />
+                                    </Link>
 
-                                        <!-- Today's Events -->
-                                        <div v-if="props.notifications.today_events > 0" class="flex items-center space-x-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
-                                            <CalendarDays class="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-blue-900 dark:text-blue-100">
-                                                    {{ props.notifications.today_events }} Event{{ props.notifications.today_events > 1 ? 's' : '' }} Today
-                                                </p>
-                                                <p class="text-xs text-blue-600 dark:text-blue-400">Check your calendar</p>
-                                            </div>
-                                            <Button variant="ghost" size="sm" as-child>
-                                                <Link :href="route('calendar.index')" class="text-blue-600 dark:text-blue-400">
-                                                    View
-                                                </Link>
-                                            </Button>
-                                        </div>
+                                    <!-- Today's events -->
+                                    <Link
+                                        v-if="props.notifications.today_events > 0"
+                                        :href="route('calendar.index')"
+                                        class="hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-11 items-center gap-3 rounded-md px-2 py-2 transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <span class="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
+                                            <CalendarDays class="size-4" />
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-sm font-medium tabular-nums">
+                                                {{ props.notifications.today_events }}
+                                                {{ props.notifications.today_events > 1 ? 'events' : 'event' }} today
+                                            </span>
+                                            <span class="text-muted-foreground block text-xs">On your calendar</span>
+                                        </span>
+                                        <ChevronRight class="text-muted-foreground size-4 shrink-0" />
+                                    </Link>
+                                </div>
 
-                                        <!-- No Notifications -->
-                                        <div v-if="props.notifications.total === 0" class="text-center py-6 text-muted-foreground">
-                                            <Bell class="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                            <p class="text-sm">No new notifications</p>
-                                        </div>
-                                    </div>
+                                <!-- No notifications -->
+                                <div v-else class="px-2 py-6 text-center">
+                                    <Bell class="text-muted-foreground/50 mx-auto mb-2 size-8" />
+                                    <p class="text-muted-foreground text-sm">No new notifications</p>
                                 </div>
                             </PopoverContent>
                         </Popover>
                     </div>
 
-                    <!-- User Menu -->
+                    <!-- User menu -->
                     <DropdownMenu>
                         <DropdownMenuTrigger :as-child="true">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="relative size-10 w-auto rounded-full p-1 transition-all focus-within:ring-2 focus-within:ring-primary hover:bg-accent"
-                            >
+                            <Button variant="ghost" size="icon" class="size-10 rounded-full" aria-label="Open user menu">
                                 <Avatar class="size-8 overflow-hidden rounded-full">
                                     <AvatarImage v-if="auth.user.avatar" :src="auth.user.avatar" :alt="auth.user.name" />
-                                    <AvatarFallback class="rounded-lg bg-primary/15 font-semibold text-primary">
+                                    <AvatarFallback class="bg-primary/10 text-primary rounded-full font-medium">
                                         {{ getInitials(auth.user?.name) }}
                                     </AvatarFallback>
                                 </Avatar>
@@ -325,16 +365,17 @@ const createNewNote = () => {
             </div>
         </div>
 
-        <div v-if="props.breadcrumbs.length > 1" class="flex w-full border-b border-border bg-muted/40">
-            <div class="mx-auto flex h-12 w-full items-center justify-start px-4 text-muted-foreground md:max-w-7xl">
+        <!-- Breadcrumb strip: rendered for any breadcrumbs so its height stays stable between routes -->
+        <div v-if="props.breadcrumbs.length > 0" class="border-border bg-muted/30 flex w-full border-b">
+            <div class="text-muted-foreground mx-auto flex h-10 w-full items-center justify-start px-4 md:max-w-7xl">
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </div>
         </div>
 
-        <!-- Global Quick Notes (read-only) -->
+        <!-- Global quick notes (read-only) -->
         <QuickNotesSheet ref="quickNotes" />
 
-        <!-- Global Quick Vault (read-only) -->
+        <!-- Global quick vault (read-only) -->
         <QuickVaultSheet />
     </div>
 </template>

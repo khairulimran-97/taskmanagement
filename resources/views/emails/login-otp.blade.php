@@ -18,12 +18,12 @@
         }
     </style>
 </head>
-<body style="margin:0; padding:0; width:100%; background-color:#f1ebe1; -webkit-font-smoothing:antialiased; font-family:'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<body style="margin:0; padding:0; width:100%; background-color:#f4f5f7; -webkit-font-smoothing:antialiased; font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
         Your {{ $appName }} sign-in code is {{ $code }}. It expires in {{ $expiresInMinutes }} minutes.
     </div>
 
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f1ebe1;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f5f7;">
         <tr>
             <td align="center" style="padding:40px 16px;">
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:480px; width:100%;">
@@ -34,10 +34,10 @@
                             <table role="presentation" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td style="vertical-align:middle;">
-                                        <span style="display:inline-block; width:12px; height:12px; background-color:#f59e3f; border-radius:50%; vertical-align:middle;"></span>
+                                        <span style="display:inline-block; width:12px; height:12px; background-color:#1d5d4b; border-radius:50%; vertical-align:middle;"></span>
                                     </td>
                                     <td style="vertical-align:middle; padding-left:10px;">
-                                        <span style="font-size:18px; font-weight:700; color:#14110f; letter-spacing:-0.01em;">{{ $appName }}</span>
+                                        <span style="font-size:18px; font-weight:700; color:#171d26; letter-spacing:-0.01em;">{{ $appName }}</span>
                                     </td>
                                 </tr>
                             </table>
@@ -46,36 +46,36 @@
 
                     <!-- Card -->
                     <tr>
-                        <td class="sm-px sm-py" style="background-color:#ffffff; border-radius:18px; padding:44px 44px; box-shadow:0 12px 32px -16px rgba(20,17,15,0.25);">
+                        <td class="sm-px sm-py" style="background-color:#ffffff; border:1px solid #e2e5e9; border-radius:12px; padding:44px 44px; box-shadow:0 1px 2px rgba(23,29,38,0.06);">
 
-                            <p style="margin:0 0 6px; font-size:13px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:#e0852f;">
+                            <p style="margin:0 0 6px; font-size:13px; font-weight:600; letter-spacing:0.16em; text-transform:uppercase; color:#1d5d4b;">
                                 Sign-in code
                             </p>
-                            <h1 style="margin:0 0 8px; font-size:24px; line-height:1.2; font-weight:600; color:#14110f; font-family:Georgia, 'Times New Roman', serif;">
+                            <h1 style="margin:0 0 8px; font-size:24px; line-height:1.2; font-weight:600; color:#171d26;">
                                 Hi {{ $name }},
                             </h1>
-                            <p style="margin:0 0 28px; font-size:15px; line-height:1.6; color:#6b6155;">
+                            <p style="margin:0 0 28px; font-size:15px; line-height:1.6; color:#606976;">
                                 Enter the code below to finish signing in to your workspace.
                             </p>
 
                             <!-- Code block -->
                             <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
-                                    <td align="center" style="background-color:#14110f; border-radius:12px; padding:24px 16px;">
-                                        <div class="sm-code" style="font-size:40px; font-weight:700; letter-spacing:12px; color:#f6f1e9; font-family:'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; padding-left:12px;">
+                                    <td align="center" style="background-color:#171d26; border-radius:8px; padding:24px 16px;">
+                                        <div class="sm-code" style="font-size:40px; font-weight:700; letter-spacing:12px; color:#f4f5f7; font-family:'SF Mono', SFMono-Regular, Menlo, Consolas, monospace; padding-left:12px;">
                                             {{ $code }}
                                         </div>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="margin:22px 0 0; font-size:14px; line-height:1.6; color:#6b6155;">
-                                This code expires in <strong style="color:#14110f;">{{ $expiresInMinutes }} minutes</strong>. For your security, don&rsquo;t share it with anyone.
+                            <p style="margin:22px 0 0; font-size:14px; line-height:1.6; color:#606976;">
+                                This code expires in <strong style="color:#171d26;">{{ $expiresInMinutes }} minutes</strong>. For your security, don&rsquo;t share it with anyone.
                             </p>
 
-                            <hr style="border:none; border-top:1px solid #eee6db; margin:28px 0;">
+                            <hr style="border:none; border-top:1px solid #e2e5e9; margin:28px 0;">
 
-                            <p style="margin:0; font-size:13px; line-height:1.6; color:#a99e8f;">
+                            <p style="margin:0; font-size:13px; line-height:1.6; color:#8a919b;">
                                 Didn&rsquo;t try to sign in? You can safely ignore this email &mdash; your account is still secure.
                             </p>
                         </td>
@@ -84,7 +84,7 @@
                     <!-- Footer -->
                     <tr>
                         <td style="padding:28px 8px 0; text-align:center;">
-                            <p style="margin:0; font-size:12px; line-height:1.6; color:#a99e8f;">
+                            <p style="margin:0; font-size:12px; line-height:1.6; color:#8a919b;">
                                 &copy; {{ $year }} {{ $appName }} &middot; This is an automated message, please don&rsquo;t reply.
                             </p>
                         </td>

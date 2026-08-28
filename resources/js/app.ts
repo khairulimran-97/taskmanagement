@@ -1,12 +1,12 @@
 import '../css/app.css';
-import '../css/tiptap.css'
+import '../css/tiptap.css';
 
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
-import { ZiggyVue } from 'ziggy-js';
 import { toast } from 'vue-sonner';
+import { ZiggyVue } from 'ziggy-js';
 import { initializeTheme } from './composables/useAppearance';
 
 // Extend ImportMeta interface for Vite...
@@ -55,9 +55,9 @@ router.on('success', (event) => {
                 style: {
                     background: '#10b981',
                     color: 'white',
-                    border: '1px solid #059669'
+                    border: '1px solid #059669',
                 },
-                duration: 4000
+                duration: 4000,
             });
         }
         if (flash?.error) {
@@ -65,9 +65,9 @@ router.on('success', (event) => {
                 style: {
                     background: '#ef4444',
                     color: 'white',
-                    border: '1px solid #dc2626'
+                    border: '1px solid #dc2626',
                 },
-                duration: 4000
+                duration: 4000,
             });
         }
         if (flash?.warning) {
@@ -75,9 +75,9 @@ router.on('success', (event) => {
                 style: {
                     background: '#f59e0b',
                     color: 'white',
-                    border: '1px solid #d97706'
+                    border: '1px solid #d97706',
                 },
-                duration: 4000
+                duration: 4000,
             });
         }
         if (flash?.info) {
@@ -85,9 +85,9 @@ router.on('success', (event) => {
                 style: {
                     background: '#3b82f6',
                     color: 'white',
-                    border: '1px solid #2563eb'
+                    border: '1px solid #2563eb',
                 },
-                duration: 4000
+                duration: 4000,
             });
         }
     } catch (error) {
@@ -103,9 +103,9 @@ router.on('invalid', (event) => {
             style: {
                 background: '#ef4444',
                 color: 'white',
-                border: '1px solid #dc2626'
+                border: '1px solid #dc2626',
             },
-            duration: 3000
+            duration: 3000,
         });
         setTimeout(() => {
             window.location.reload();

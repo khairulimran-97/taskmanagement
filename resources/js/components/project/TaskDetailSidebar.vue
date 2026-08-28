@@ -1,31 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import {
-    X,
-    TagIcon,
-    CheckCircle2,
-    Circle,
-    Edit,
-    Trash2,
-    Plus,
-    Loader2,
-    ChevronUp,
-    ChevronDown,
-    ChevronsUp,
-    CalendarDays,
-    Flag,
-} from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { taskStatusBadge, priorityBadge, labelize, progressColor } from '@/lib/projectMeta';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { labelize } from '@/lib/projectMeta';
+import { CalendarDays, CheckCircle2, ChevronDown, ChevronsUp, ChevronUp, Edit, Loader2, Plus, TagIcon, Trash2, X } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 const props = defineProps({
     project: { type: Object, required: true },
@@ -36,20 +14,31 @@ const props = defineProps({
     updatingTasks: { type: Object, required: true },
 });
 
-const emit = defineEmits([
-    'close',
-    'toggle-task',
-    'edit-task',
-    'edit-subtask',
-    'delete-task',
-    'add-subtask',
-    'reorder-tasks',
-]);
+const emit = defineEmits(['close', 'toggle-task', 'edit-task', 'edit-subtask', 'delete-task', 'add-subtask', 'reorder-tasks']);
+
+// Shared status language (tokens only) — identical to list, kanban, and index
+const statusBadgeClass = (status: string) => {
+    const map: Record<string, string> = {
+        todo: 'bg-muted text-muted-foreground',
+        in_progress: 'bg-primary/10 text-primary',
+        completed: 'bg-success/10 text-success',
+        cancelled: 'bg-destructive/10 text-destructive',
+    };
+    return map[status] || 'bg-muted text-muted-foreground';
+};
+
+const priorityMeta = (priority: string) => {
+    const map: Record<string, { text: string; dot: string }> = {
+        urgent: { text: 'text-destructive', dot: 'bg-destructive' },
+        high: { text: 'text-warning', dot: 'bg-warning' },
+        medium: { text: 'text-warning', dot: 'bg-warning' },
+        low: { text: 'text-muted-foreground', dot: 'bg-muted-foreground/50' },
+    };
+    return map[priority] || { text: 'text-muted-foreground', dot: 'bg-muted-foreground/50' };
+};
 
 const getSubtasks = (parentId: string | number) => {
-    return (props.project.tasks || [])
-        .filter((task) => task.parent_task_id === parentId)
-        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    return (props.project.tasks || []).filter((task) => task.parent_task_id === parentId).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 };
 
 const subtasks = computed(() => (props.selectedTask ? getSubtasks(props.selectedTask.id) : []));
@@ -73,8 +62,7 @@ const getDueDateClass = (task: any) => {
     const now = new Date();
     const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) return 'text-destructive font-medium';
-    if (diffDays <= 1) return 'text-orange-600 dark:text-orange-400 font-medium';
-    if (diffDays <= 3) return 'text-amber-600 dark:text-amber-400';
+    if (diffDays <= 3) return 'text-warning';
     return 'text-muted-foreground';
 };
 
@@ -124,11 +112,7 @@ const canMoveDown = (task: any) => {
             leave-active-class="transition-opacity duration-200 ease-in"
             leave-to-class="opacity-0"
         >
-            <div
-                v-if="isOpen && selectedTask"
-                class="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm"
-                @click="emit('close')"
-            ></div>
+            <div v-if="isOpen && selectedTask" class="bg-foreground/25 fixed inset-0 z-40" @click="emit('close')"></div>
         </Transition>
 
         <!-- Panel -->
@@ -140,32 +124,32 @@ const canMoveDown = (task: any) => {
         >
             <aside
                 v-if="isOpen && selectedTask"
-                class="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col bg-card shadow-2xl"
+                class="border-border bg-card fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col border-l shadow-md"
             >
                 <!-- Header -->
-                <div class="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+                <div class="border-border flex items-center justify-between gap-3 border-b px-5 py-3.5">
                     <div class="flex min-w-0 items-center gap-2.5">
-                        <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="`background-color: ${project.color}`"></span>
-                        <span class="truncate text-sm font-medium text-muted-foreground">{{ project.name }}</span>
+                        <span class="size-2.5 shrink-0 rounded-full" :style="`background-color: ${project.color}`"></span>
+                        <span class="text-muted-foreground truncate text-sm font-medium">{{ project.name }}</span>
                         <span class="text-muted-foreground/50">/</span>
-                        <span class="text-sm text-muted-foreground">Task</span>
+                        <span class="text-muted-foreground text-sm">Task</span>
                     </div>
                     <div class="flex items-center gap-1">
                         <Button variant="ghost" size="sm" class="h-8 gap-1.5 px-2.5 text-xs" @click="emit('edit-task', selectedTask)">
-                            <Edit class="h-3.5 w-3.5" /> Edit
+                            <Edit class="size-3.5" /> Edit
                         </Button>
                         <Button
                             variant="ghost"
                             size="icon"
-                            class="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            title="Delete task"
+                            class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-8"
+                            aria-label="Delete task"
                             @click="emit('delete-task', selectedTask)"
                         >
-                            <Trash2 class="h-4 w-4" />
+                            <Trash2 class="size-4" />
                         </Button>
-                        <span class="mx-1 h-5 w-px bg-border"></span>
-                        <Button variant="ghost" size="icon" class="h-8 w-8" @click="emit('close')">
-                            <X class="h-4 w-4" />
+                        <span class="bg-border mx-1 h-5 w-px"></span>
+                        <Button variant="ghost" size="icon" class="size-8" aria-label="Close panel" @click="emit('close')">
+                            <X class="size-4" />
                         </Button>
                     </div>
                 </div>
@@ -173,74 +157,81 @@ const canMoveDown = (task: any) => {
                 <!-- Scroll body -->
                 <div class="flex-1 overflow-y-auto">
                     <!-- Task hero -->
-                    <div class="border-b border-border px-5 py-5">
+                    <div class="border-border border-b px-5 py-5">
                         <div class="flex items-start gap-3">
                             <button
+                                type="button"
+                                :aria-label="isMainCompleted ? 'Mark task as not completed' : 'Mark task as completed'"
                                 @click="emit('toggle-task', selectedTask)"
                                 :disabled="updatingTasks.has(selectedTask.id)"
-                                class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all hover:scale-105"
-                                :class="isMainCompleted ? 'border-[hsl(150_24%_45%)] bg-[hsl(150_24%_45%)] text-white' : 'border-muted-foreground/40 text-transparent hover:border-primary'"
+                                class="focus-visible:ring-ring/50 mt-0.5 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                :class="
+                                    isMainCompleted
+                                        ? 'border-success bg-success text-success-foreground'
+                                        : 'border-muted-foreground/40 hover:border-primary text-transparent'
+                                "
                             >
-                                <Loader2 v-if="updatingTasks.has(selectedTask.id)" class="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                                <CheckCircle2 v-else class="h-4 w-4" />
+                                <Loader2 v-if="updatingTasks.has(selectedTask.id)" class="text-muted-foreground size-3.5 animate-spin" />
+                                <CheckCircle2 v-else class="size-4" />
                             </button>
 
                             <div class="min-w-0 flex-1">
                                 <h2
-                                    class="font-display text-xl font-semibold leading-snug tracking-tight"
+                                    class="text-xl leading-snug font-semibold tracking-tight"
                                     :class="isMainCompleted ? 'text-muted-foreground line-through' : 'text-foreground'"
                                 >
                                     {{ selectedTask.title }}
                                 </h2>
-                                <p v-if="selectedTask.description" class="mt-1.5 text-sm leading-relaxed text-muted-foreground break-words">
+                                <p v-if="selectedTask.description" class="text-muted-foreground mt-1.5 text-sm leading-relaxed break-words">
                                     {{ selectedTask.description }}
                                 </p>
                             </div>
                         </div>
 
-                        <!-- Badges -->
-                        <div class="mt-4 flex flex-wrap items-center gap-2 pl-9">
-                            <Badge variant="outline" :class="taskStatusBadge(selectedTask.status)" class="font-medium">
+                        <!-- Status + priority -->
+                        <div class="mt-4 flex flex-wrap items-center gap-3 pl-9">
+                            <span
+                                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                :class="statusBadgeClass(selectedTask.status)"
+                            >
                                 {{ statusConfig[selectedTask.status]?.label || labelize(selectedTask.status) }}
-                            </Badge>
-                            <Badge variant="outline" :class="priorityBadge(selectedTask.priority || 'medium')" class="font-medium">
-                                <Flag class="mr-1 h-3 w-3" />
-                                {{ labelize(selectedTask.priority || 'medium') }}
-                            </Badge>
+                            </span>
+                            <span
+                                class="inline-flex items-center gap-1.5 text-xs font-medium"
+                                :class="priorityMeta(selectedTask.priority || 'medium').text"
+                            >
+                                <span class="size-1.5 rounded-full" :class="priorityMeta(selectedTask.priority || 'medium').dot"></span>
+                                {{ labelize(selectedTask.priority || 'medium') }} priority
+                            </span>
                         </div>
                     </div>
 
                     <!-- Meta -->
-                    <div class="grid grid-cols-2 gap-px border-b border-border bg-border">
+                    <div class="border-border bg-border grid grid-cols-2 gap-px border-b">
                         <div class="bg-card px-5 py-3">
-                            <p class="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <CalendarDays class="h-3 w-3" /> Start date
-                            </p>
-                            <p class="text-sm font-medium text-foreground">{{ formatDate(selectedTask.start_date) }}</p>
+                            <p class="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs"><CalendarDays class="size-3" /> Start date</p>
+                            <p class="text-foreground text-sm font-medium tabular-nums">{{ formatDate(selectedTask.start_date) }}</p>
                         </div>
                         <div class="bg-card px-5 py-3">
-                            <p class="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <CalendarDays class="h-3 w-3" /> Due date
+                            <p class="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs"><CalendarDays class="size-3" /> Due date</p>
+                            <p class="text-sm font-medium tabular-nums" :class="getDueDateClass(selectedTask)">
+                                {{ formatDate(selectedTask.due_date) }}
                             </p>
-                            <p class="text-sm font-medium" :class="getDueDateClass(selectedTask)">{{ formatDate(selectedTask.due_date) }}</p>
                         </div>
                     </div>
 
                     <!-- Tags -->
-                    <div v-if="selectedTask.tags && selectedTask.tags.length > 0" class="border-b border-border px-5 py-4">
-                        <p class="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <TagIcon class="h-3 w-3" /> Tags
-                        </p>
+                    <div v-if="selectedTask.tags && selectedTask.tags.length > 0" class="border-border border-b px-5 py-4">
+                        <p class="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs"><TagIcon class="size-3" /> Tags</p>
                         <div class="flex flex-wrap gap-1.5">
-                            <Badge
+                            <span
                                 v-for="tag in selectedTask.tags"
                                 :key="tag.id"
-                                variant="outline"
-                                class="px-2 py-0.5 text-xs"
+                                class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium"
                                 :style="`border-color: ${tag.color}66; color: ${tag.color}; background-color: ${tag.color}14`"
                             >
                                 {{ tag.name }}
-                            </Badge>
+                            </span>
                         </div>
                     </div>
 
@@ -248,51 +239,66 @@ const canMoveDown = (task: any) => {
                     <div class="px-5 py-5">
                         <div class="mb-3 flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold text-foreground">Subtasks</h3>
-                                <span v-if="subtasks.length" class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                <h3 class="text-foreground text-sm font-semibold">Subtasks</h3>
+                                <span
+                                    v-if="subtasks.length"
+                                    class="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium tabular-nums"
+                                >
                                     {{ completedCount }}/{{ subtasks.length }}
                                 </span>
                             </div>
                             <Button size="sm" variant="outline" class="h-7 px-2 text-xs" @click="emit('add-subtask', selectedTask)">
-                                <Plus class="mr-1 h-3 w-3" /> Add
+                                <Plus class="size-3" /> Add
                             </Button>
                         </div>
 
                         <!-- Progress -->
                         <div v-if="subtasks.length" class="mb-4 flex items-center gap-3">
-                            <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                <div class="h-full rounded-full transition-all duration-500" :class="progressColor(subtaskProgress)" :style="`width: ${subtaskProgress}%`"></div>
+                            <div class="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                                <div class="bg-primary h-full rounded-full transition-all duration-300" :style="`width: ${subtaskProgress}%`"></div>
                             </div>
-                            <span class="text-xs font-medium text-muted-foreground">{{ subtaskProgress }}%</span>
+                            <span class="text-muted-foreground text-xs font-medium tabular-nums">{{ subtaskProgress }}%</span>
                         </div>
 
                         <!-- Subtask form slot -->
                         <slot name="subtask-form"></slot>
 
                         <!-- Subtask list -->
-                        <div v-if="subtasks.length > 0" class="overflow-hidden rounded-lg border border-border">
+                        <div v-if="subtasks.length > 0" class="border-border overflow-hidden rounded-lg border">
                             <Table>
                                 <TableHeader>
-                                    <TableRow class="h-9 bg-muted/50 hover:bg-muted/50">
+                                    <TableRow class="bg-muted/50 hover:bg-muted/50 h-9">
                                         <TableHead class="w-10 py-2"></TableHead>
-                                        <TableHead class="py-2 text-xs">Title</TableHead>
-                                        <TableHead class="w-24 py-2 text-xs">Status</TableHead>
-                                        <TableHead class="w-20 py-2 text-xs">Due</TableHead>
-                                        <TableHead class="w-14 py-2 text-xs">Order</TableHead>
+                                        <TableHead class="text-muted-foreground py-2 text-xs font-medium">Title</TableHead>
+                                        <TableHead class="text-muted-foreground w-24 py-2 text-xs font-medium">Status</TableHead>
+                                        <TableHead class="text-muted-foreground w-20 py-2 text-xs font-medium">Due</TableHead>
+                                        <TableHead class="text-muted-foreground w-16 py-2 text-xs font-medium">Order</TableHead>
                                         <TableHead class="w-16 py-2 text-right text-xs"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    <TableRow v-for="subtask in subtasks" :key="subtask.id" class="group h-10 hover:bg-muted/40">
+                                    <TableRow
+                                        v-for="subtask in subtasks"
+                                        :key="subtask.id"
+                                        class="group hover:bg-muted/40 h-10 transition-colors duration-150"
+                                    >
                                         <TableCell class="w-10 py-1">
                                             <button
+                                                type="button"
+                                                :aria-label="
+                                                    subtask.status === 'completed' ? 'Mark subtask as not completed' : 'Mark subtask as completed'
+                                                "
                                                 @click="emit('toggle-task', subtask)"
                                                 :disabled="updatingTasks.has(subtask.id)"
-                                                class="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all hover:scale-110"
-                                                :class="subtask.status === 'completed' ? 'border-[hsl(150_24%_45%)] bg-[hsl(150_24%_45%)] text-white' : 'border-muted-foreground/40 text-transparent hover:border-primary'"
+                                                class="focus-visible:ring-ring/50 flex size-6 cursor-pointer items-center justify-center rounded-full border-2 transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                                :class="
+                                                    subtask.status === 'completed'
+                                                        ? 'border-success bg-success text-success-foreground'
+                                                        : 'border-muted-foreground/40 hover:border-primary text-transparent'
+                                                "
                                             >
-                                                <Loader2 v-if="updatingTasks.has(subtask.id)" class="h-3 w-3 animate-spin text-muted-foreground" />
-                                                <CheckCircle2 v-else class="h-3 w-3" />
+                                                <Loader2 v-if="updatingTasks.has(subtask.id)" class="text-muted-foreground size-3 animate-spin" />
+                                                <CheckCircle2 v-else class="size-3.5" />
                                             </button>
                                         </TableCell>
                                         <TableCell class="py-1">
@@ -302,39 +308,76 @@ const canMoveDown = (task: any) => {
                                             >
                                                 {{ subtask.title }}
                                             </p>
-                                            <p v-if="subtask.description" class="line-clamp-1 text-xs text-muted-foreground">
+                                            <p v-if="subtask.description" class="text-muted-foreground line-clamp-1 text-xs">
                                                 {{ subtask.description }}
                                             </p>
                                         </TableCell>
                                         <TableCell class="w-24 py-1">
-                                            <Badge variant="outline" :class="taskStatusBadge(subtask.status)" class="px-1.5 py-0.5 text-xs">
+                                            <span
+                                                class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                                :class="statusBadgeClass(subtask.status)"
+                                            >
                                                 {{ statusConfig[subtask.status]?.label || labelize(subtask.status) }}
-                                            </Badge>
+                                            </span>
                                         </TableCell>
                                         <TableCell class="w-20 py-1">
-                                            <span v-if="subtask.due_date" class="text-xs" :class="getDueDateClass(subtask)">{{ formatDate(subtask.due_date) }}</span>
-                                            <span v-else class="text-xs text-muted-foreground">—</span>
+                                            <span v-if="subtask.due_date" class="text-xs tabular-nums" :class="getDueDateClass(subtask)">{{
+                                                formatDate(subtask.due_date)
+                                            }}</span>
+                                            <span v-else class="text-muted-foreground text-xs">—</span>
                                         </TableCell>
-                                        <TableCell class="w-14 py-1">
-                                            <div class="flex items-center justify-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                                                <button @click="moveTaskToTop(subtask)" :disabled="!canMoveUp(subtask)" class="rounded p-0.5 hover:bg-muted disabled:opacity-30" title="Move to top">
-                                                    <ChevronsUp class="h-3 w-3" :class="canMoveUp(subtask) ? 'text-primary' : 'text-muted-foreground'" />
+                                        <TableCell class="w-16 py-1">
+                                            <div
+                                                class="flex items-center justify-center gap-0.5 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    aria-label="Move subtask to top"
+                                                    @click="moveTaskToTop(subtask)"
+                                                    :disabled="!canMoveUp(subtask)"
+                                                    class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 flex size-6 cursor-pointer items-center justify-center rounded transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-30"
+                                                >
+                                                    <ChevronsUp class="size-3" />
                                                 </button>
-                                                <button @click="moveTaskUp(subtask)" :disabled="!canMoveUp(subtask)" class="rounded p-0.5 hover:bg-muted disabled:opacity-30" title="Move up">
-                                                    <ChevronUp class="h-3 w-3 text-muted-foreground" />
+                                                <button
+                                                    type="button"
+                                                    aria-label="Move subtask up"
+                                                    @click="moveTaskUp(subtask)"
+                                                    :disabled="!canMoveUp(subtask)"
+                                                    class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 flex size-6 cursor-pointer items-center justify-center rounded transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-30"
+                                                >
+                                                    <ChevronUp class="size-3" />
                                                 </button>
-                                                <button @click="moveTaskDown(subtask)" :disabled="!canMoveDown(subtask)" class="rounded p-0.5 hover:bg-muted disabled:opacity-30" title="Move down">
-                                                    <ChevronDown class="h-3 w-3 text-muted-foreground" />
+                                                <button
+                                                    type="button"
+                                                    aria-label="Move subtask down"
+                                                    @click="moveTaskDown(subtask)"
+                                                    :disabled="!canMoveDown(subtask)"
+                                                    class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 flex size-6 cursor-pointer items-center justify-center rounded transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-30"
+                                                >
+                                                    <ChevronDown class="size-3" />
                                                 </button>
                                             </div>
                                         </TableCell>
                                         <TableCell class="w-16 py-1 text-right">
-                                            <div class="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                                                <button @click="emit('edit-subtask', subtask)" class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                                                    <Edit class="h-3 w-3" />
+                                            <div
+                                                class="flex items-center justify-end gap-0.5 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    aria-label="Edit subtask"
+                                                    @click="emit('edit-subtask', subtask)"
+                                                    class="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 flex size-6 cursor-pointer items-center justify-center rounded transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                                >
+                                                    <Edit class="size-3" />
                                                 </button>
-                                                <button @click="emit('delete-task', subtask)" class="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-                                                    <Trash2 class="h-3 w-3" />
+                                                <button
+                                                    type="button"
+                                                    aria-label="Delete subtask"
+                                                    @click="emit('delete-task', subtask)"
+                                                    class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-ring/50 flex size-6 cursor-pointer items-center justify-center rounded transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                                >
+                                                    <Trash2 class="size-3" />
                                                 </button>
                                             </div>
                                         </TableCell>
@@ -344,10 +387,10 @@ const canMoveDown = (task: any) => {
                         </div>
 
                         <!-- Empty -->
-                        <div v-else class="rounded-lg border border-dashed border-border py-8 text-center">
-                            <p class="text-sm text-muted-foreground">No subtasks yet</p>
+                        <div v-else class="border-border bg-muted/30 rounded-lg border border-dashed py-8 text-center">
+                            <p class="text-muted-foreground text-sm">No subtasks yet</p>
                             <Button variant="outline" size="sm" @click="emit('add-subtask', selectedTask)" class="mt-3 h-7 px-3 text-xs">
-                                <Plus class="mr-1 h-3 w-3" /> Add first subtask
+                                <Plus class="size-3" /> Add first subtask
                             </Button>
                         </div>
                     </div>
@@ -356,12 +399,3 @@ const canMoveDown = (task: any) => {
         </Transition>
     </Teleport>
 </template>
-
-<style>
-.line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-</style>

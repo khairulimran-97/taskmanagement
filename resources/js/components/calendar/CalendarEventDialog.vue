@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, reactive, watch, computed, nextTick } from 'vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Calendar, Clock, Palette } from 'lucide-vue-next';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { CATEGORIES, isCustomColor } from '@/lib/eventCategories';
+import { Calendar, Check, Clock, Palette } from 'lucide-vue-next';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 
 interface Props {
     isOpen: boolean;
@@ -25,6 +26,19 @@ const emit = defineEmits<{
     update: [eventId: string, eventData: any];
 }>();
 
+/* The DB stores a raw hex per category; the UI renders it through theme tokens
+   so swatches adapt to light/dark. The submitted value stays the hex. */
+const CATEGORY_DISPLAY: Record<string, string> = {
+    '#3B82F6': 'var(--chart-2)', // work
+    '#10B981': 'var(--success)', // personal
+    '#8B5CF6': 'color-mix(in oklch, var(--chart-2) 55%, var(--chart-4) 45%)', // meeting — violet derived from tokens
+    '#EF4444': 'var(--destructive)', // deadline
+    '#F59E0B': 'var(--warning)', // reminder
+    '#6B7280': 'var(--chart-5)', // other
+};
+
+const displayColor = (hex?: string | null): string => CATEGORY_DISPLAY[(hex || '').trim().toUpperCase()] || hex || 'var(--primary)';
+
 // Form data
 const form = reactive({
     title: '',
@@ -33,7 +47,7 @@ const form = reactive({
     start_time: '',
     end_date: '',
     end_time: '',
-    color: '#3B82F6',
+    color: CATEGORIES[0].color,
     all_day: false,
 });
 
@@ -48,7 +62,7 @@ const errors = ref<Record<string, string>>({});
 
 // Dialog title based on editing state
 const dialogTitle = computed(() => {
-    return props.editingEvent ? 'Edit Event' : 'Create New Event';
+    return props.editingEvent ? 'Edit event' : 'New event';
 });
 
 // Helper functions to avoid timezone issues
@@ -73,7 +87,7 @@ const resetForm = () => {
     form.start_time = '';
     form.end_date = '';
     form.end_time = '';
-    form.color = '#3B82F6';
+    form.color = CATEGORIES[0].color;
     form.all_day = false;
     errors.value = {};
     useCustom.value = false;
@@ -86,7 +100,7 @@ const resetForm = () => {
 const populateForm = (event: any) => {
     form.title = event.title || '';
     form.description = event.extendedProps?.description || '';
-    form.color = event.backgroundColor || '#3B82F6';
+    form.color = event.backgroundColor || CATEGORIES[0].color;
     form.all_day = event.allDay || false;
     useCustom.value = isCustomColor(form.color);
 
@@ -132,64 +146,73 @@ const populateFromSelectedDate = (selectedDate: any) => {
 };
 
 // Watch for prop changes
-watch(() => props.isOpen, async (isOpen) => {
-    if (isOpen) {
-        resetForm();
+watch(
+    () => props.isOpen,
+    async (isOpen) => {
+        if (isOpen) {
+            resetForm();
 
-        // Use nextTick to ensure DOM updates before populating
-        await nextTick();
+            // Use nextTick to ensure DOM updates before populating
+            await nextTick();
 
-        if (props.editingEvent) {
-            populateForm(props.editingEvent);
-        } else if (props.selectedDate) {
-            populateFromSelectedDate(props.selectedDate);
+            if (props.editingEvent) {
+                populateForm(props.editingEvent);
+            } else if (props.selectedDate) {
+                populateFromSelectedDate(props.selectedDate);
+            }
+
+            // Another nextTick to ensure form population completes
+            await nextTick();
         }
-
-        // Another nextTick to ensure form population completes
-        await nextTick();
-    }
-});
+    },
+);
 
 // Watch the editingEvent prop specifically
-watch(() => props.editingEvent, (newEvent) => {
-    if (newEvent && props.isOpen) {
-        populateForm(newEvent);
-    }
-});
+watch(
+    () => props.editingEvent,
+    (newEvent) => {
+        if (newEvent && props.isOpen) {
+            populateForm(newEvent);
+        }
+    },
+);
 
 // Handle all-day toggle
-watch(() => form.all_day, (isAllDay) => {
-    if (isAllDay) {
-        form.start_time = '';
-        form.end_time = '';
-    } else if (form.start_date && !form.start_time) {
-        form.start_time = '09:00';
-        form.end_time = '10:00';
-    }
-});
+watch(
+    () => form.all_day,
+    (isAllDay) => {
+        if (isAllDay) {
+            form.start_time = '';
+            form.end_time = '';
+        } else if (form.start_date && !form.start_time) {
+            form.start_time = '09:00';
+            form.end_time = '10:00';
+        }
+    },
+);
 
 // Validate form
 const validateForm = (): boolean => {
     errors.value = {};
 
     if (!form.title.trim()) {
-        errors.value.title = 'Event title is required';
+        errors.value.title = 'Enter a title for the event.';
     }
 
     if (!form.start_date) {
-        errors.value.start_date = 'Start date is required';
+        errors.value.start_date = 'Pick a start date.';
     }
 
     if (!form.all_day && !form.start_time) {
-        errors.value.start_time = 'Start time is required for timed events';
+        errors.value.start_time = 'Pick a start time, or switch to all day.';
     }
 
     if (form.end_date && form.start_date && form.end_date < form.start_date) {
-        errors.value.end_date = 'End date must be after start date';
+        errors.value.end_date = 'The end date must be after the start date.';
     }
 
     if (!form.all_day && form.end_date && form.end_time && form.start_date === form.end_date && form.end_time <= form.start_time) {
-        errors.value.end_time = 'End time must be after start time';
+        errors.value.end_time = 'The end time must be after the start time.';
     }
 
     return Object.keys(errors.value).length === 0;
@@ -260,120 +283,115 @@ const formatDate = (dateString: string): string => {
 <template>
     <Sheet :open="isOpen" @update:open="(open) => !open && handleCancel()">
         <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-            <SheetHeader class="border-b border-border px-5 py-4 text-left">
-                <SheetTitle class="font-display text-xl tracking-tight">{{ dialogTitle }}</SheetTitle>
+            <SheetHeader class="border-border border-b px-5 py-4 text-left">
+                <SheetTitle class="text-base font-semibold tracking-tight">{{ dialogTitle }}</SheetTitle>
                 <SheetDescription>
-                    {{ editingEvent ? 'Update the event details below.' : 'Fill in the details to create a new event.' }}
+                    {{ editingEvent ? 'Update the event details below.' : 'Fill in the details to add an event.' }}
                 </SheetDescription>
             </SheetHeader>
 
             <form @submit.prevent="handleSubmit" class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-                <!-- Event Title -->
+                <!-- Title -->
                 <div class="space-y-2">
-                    <Label for="event-title">Event Title *</Label>
+                    <Label for="event-title">Title</Label>
                     <Input
                         id="event-title"
                         v-model="form.title"
-                        placeholder="Enter event title"
+                        placeholder="Event title"
+                        :aria-invalid="!!errors.title"
                         :class="{ 'border-destructive': errors.title }"
                     />
-                    <p v-if="errors.title" class="text-sm text-destructive">{{ errors.title }}</p>
+                    <InputError :message="errors.title" />
                 </div>
 
                 <!-- Description -->
                 <div class="space-y-2">
-                    <Label for="event-description">Description</Label>
-                    <Textarea
-                        id="event-description"
-                        v-model="form.description"
-                        placeholder="Enter event description (optional)"
-                        rows="3"
-                    />
+                    <Label for="event-description"> Description <span class="text-muted-foreground font-normal">(optional)</span> </Label>
+                    <Textarea id="event-description" v-model="form.description" placeholder="Add any details" rows="3" />
                 </div>
 
-                <!-- All Day Toggle -->
+                <!-- All-day toggle -->
                 <div class="flex items-center space-x-3">
-                    <Switch
-                        :key="switchKey"
-                        id="all-day"
-                        :model-value="form.all_day"
-                        @update:model-value="(value) => form.all_day = value"
-                    />
-                    <Label for="all-day" class="cursor-pointer">All Day Event</Label>
+                    <Switch :key="switchKey" id="all-day" :model-value="form.all_day" @update:model-value="(value) => (form.all_day = value)" />
+                    <Label for="all-day" class="cursor-pointer">All day</Label>
                 </div>
 
-                <!-- Date and Time -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Start Date -->
+                <!-- Date and time -->
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <!-- Start date -->
                     <div class="space-y-2">
-                        <Label for="start-date">Start Date *</Label>
+                        <Label for="start-date">Start date</Label>
                         <div class="relative">
-                            <Calendar class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Calendar class="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                             <Input
                                 id="start-date"
                                 type="date"
                                 v-model="form.start_date"
                                 class="pl-10"
+                                :aria-invalid="!!errors.start_date"
                                 :class="{ 'border-destructive': errors.start_date }"
                             />
                         </div>
-                        <p v-if="errors.start_date" class="text-sm text-destructive">{{ errors.start_date }}</p>
-                        <p v-if="form.start_date" class="text-xs text-muted-foreground">
+                        <InputError :message="errors.start_date" />
+                        <p v-if="form.start_date" class="text-muted-foreground text-xs">
                             {{ formatDate(form.start_date) }}
                         </p>
                     </div>
 
-                    <!-- Start Time -->
+                    <!-- Start time -->
                     <div v-if="!form.all_day" class="space-y-2">
-                        <Label for="start-time">Start Time *</Label>
+                        <Label for="start-time">Start time</Label>
                         <div class="relative">
-                            <Clock class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Clock class="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                             <Input
                                 id="start-time"
                                 type="time"
                                 v-model="form.start_time"
                                 class="pl-10"
+                                :aria-invalid="!!errors.start_time"
                                 :class="{ 'border-destructive': errors.start_time }"
                             />
                         </div>
-                        <p v-if="errors.start_time" class="text-sm text-destructive">{{ errors.start_time }}</p>
+                        <InputError :message="errors.start_time" />
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- End Date -->
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <!-- End date -->
                     <div class="space-y-2">
-                        <Label for="end-date">End Date</Label>
+                        <Label for="end-date"> End date <span class="text-muted-foreground font-normal">(optional)</span> </Label>
                         <div class="relative">
-                            <Calendar class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Calendar class="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                             <Input
                                 id="end-date"
                                 type="date"
                                 v-model="form.end_date"
                                 class="pl-10"
+                                :aria-invalid="!!errors.end_date"
                                 :class="{ 'border-destructive': errors.end_date }"
                             />
                         </div>
-                        <p v-if="errors.end_date" class="text-sm text-destructive">{{ errors.end_date }}</p>
-                        <p v-if="form.end_date" class="text-xs text-muted-foreground">
+                        <InputError :message="errors.end_date" />
+                        <p v-if="form.end_date" class="text-muted-foreground text-xs">
                             {{ formatDate(form.end_date) }}
                         </p>
                     </div>
 
-                    <!-- End Time -->
+                    <!-- End time -->
                     <div v-if="!form.all_day" class="space-y-2">
-                        <Label for="end-time">End Time</Label>
+                        <Label for="end-time"> End time <span class="text-muted-foreground font-normal">(optional)</span> </Label>
                         <div class="relative">
-                            <Clock class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Clock class="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                             <Input
                                 id="end-time"
                                 type="time"
                                 v-model="form.end_time"
                                 class="pl-10"
+                                :aria-invalid="!!errors.end_time"
                                 :class="{ 'border-destructive': errors.end_time }"
                             />
                         </div>
-                        <p v-if="errors.end_time" class="text-sm text-destructive">{{ errors.end_time }}</p>
+                        <InputError :message="errors.end_time" />
                     </div>
                 </div>
 
@@ -385,25 +403,32 @@ const formatDate = (dateString: string): string => {
                             v-for="cat in CATEGORIES"
                             :key="cat.key"
                             type="button"
-                            @click="form.color = cat.color; useCustom = false"
-                            class="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
-                            :class="form.color === cat.color && !useCustom
-                                ? 'border-primary bg-primary/8 text-foreground'
-                                : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'"
+                            :aria-pressed="form.color === cat.color && !useCustom"
+                            @click="
+                                form.color = cat.color;
+                                useCustom = false;
+                            "
+                            class="focus-visible:ring-ring/50 flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                            :class="
+                                form.color === cat.color && !useCustom
+                                    ? 'border-primary bg-primary/10 text-foreground'
+                                    : 'border-border text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground'
+                            "
                         >
-                            <span class="h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: cat.color }"></span>
-                            <component :is="cat.icon" class="h-3.5 w-3.5 shrink-0" />
+                            <span class="size-2.5 shrink-0 rounded-full" :style="{ backgroundColor: displayColor(cat.color) }"></span>
+                            <component :is="cat.icon" class="size-3.5 shrink-0" />
                             <span class="truncate">{{ cat.label }}</span>
+                            <Check v-if="form.color === cat.color && !useCustom" class="text-primary ml-auto size-3.5 shrink-0" />
                         </button>
                     </div>
 
                     <!-- Custom color escape hatch -->
                     <button
                         type="button"
-                        class="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
+                        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 mt-1 -ml-1.5 inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
                         @click="useCustom = !useCustom"
                     >
-                        <Palette class="h-3.5 w-3.5" />
+                        <Palette class="size-3.5" />
                         {{ useCustom ? 'Use a category instead' : 'Custom color' }}
                     </button>
                     <div v-if="useCustom" class="flex items-center gap-2">
@@ -411,29 +436,19 @@ const formatDate = (dateString: string): string => {
                             id="custom-color"
                             type="color"
                             v-model="form.color"
-                            class="h-9 w-12 p-1"
+                            class="h-9 w-12 cursor-pointer p-1"
+                            aria-label="Custom event color"
                         />
-                        <span class="text-sm text-muted-foreground">{{ form.color }}</span>
+                        <span class="text-muted-foreground text-xs uppercase">{{ form.color }}</span>
                     </div>
                 </div>
             </form>
 
-            <SheetFooter class="flex-row justify-end gap-2 border-t border-border px-5 py-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    @click="handleCancel"
-                    :disabled="isSubmitting"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    type="button"
-                    @click="handleSubmit"
-                    :disabled="isSubmitting"
-                >
-                    <span v-if="isSubmitting">{{ editingEvent ? 'Updating…' : 'Creating…' }}</span>
-                    <span v-else>{{ editingEvent ? 'Update Event' : 'Create Event' }}</span>
+            <SheetFooter class="border-border flex-row justify-end gap-2 border-t px-5 py-4">
+                <Button type="button" variant="outline" @click="handleCancel" :disabled="isSubmitting"> Cancel </Button>
+                <Button type="button" @click="handleSubmit" :disabled="isSubmitting">
+                    <span v-if="isSubmitting">{{ editingEvent ? 'Saving…' : 'Creating…' }}</span>
+                    <span v-else>{{ editingEvent ? 'Save changes' : 'Create event' }}</span>
                 </Button>
             </SheetFooter>
         </SheetContent>

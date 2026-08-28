@@ -1,28 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import {
-    CheckCircle2,
-    Circle,
-    Clock,
-    XCircle,
-    MoreVertical,
-    Trash2,
-    Edit,
-    Eye,
-    Tag as TagIcon,
-    CalendarDays,
-    Loader2,
-    ChevronsDown,
-} from 'lucide-vue-next';
+import EmptyState from '@/components/EmptyState.vue';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CalendarDays, CheckCircle2, ChevronsDown, Circle, Columns3, Edit, Eye, Loader2, MoreVertical, Plus, Trash2 } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     project: {
@@ -43,20 +24,14 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits([
-    'add-task',
-    'view-task',
-    'toggle-task',
-    'delete-task',
-    'view-tags',
-    'edit-task',
-]);
+defineEmits(['add-task', 'view-task', 'toggle-task', 'delete-task', 'view-tags', 'edit-task']);
 
+// Shared status language — dot color per status (tokens only)
 const columns = [
-    { key: 'todo', label: 'To Do', icon: Circle, iconClass: 'text-slate-400', bgClass: 'bg-slate-50 dark:bg-slate-800/50', borderClass: 'border-slate-200 dark:border-slate-700' },
-    { key: 'in_progress', label: 'In Progress', icon: Clock, iconClass: 'text-blue-500', bgClass: 'bg-blue-50 dark:bg-blue-900/20', borderClass: 'border-blue-200 dark:border-blue-800' },
-    { key: 'completed', label: 'Completed', icon: CheckCircle2, iconClass: 'text-green-500', bgClass: 'bg-green-50 dark:bg-green-900/20', borderClass: 'border-green-200 dark:border-green-800' },
-    { key: 'cancelled', label: 'Cancelled', icon: XCircle, iconClass: 'text-red-500', bgClass: 'bg-red-50 dark:bg-red-900/20', borderClass: 'border-red-200 dark:border-red-800' },
+    { key: 'todo', label: 'To do', dotClass: 'bg-muted-foreground/50' },
+    { key: 'in_progress', label: 'In progress', dotClass: 'bg-primary' },
+    { key: 'completed', label: 'Completed', dotClass: 'bg-success' },
+    { key: 'cancelled', label: 'Cancelled', dotClass: 'bg-destructive' },
 ];
 
 const filteredRootTasks = computed(() => {
@@ -64,10 +39,7 @@ const filteredRootTasks = computed(() => {
 
     if (props.searchQuery) {
         const q = props.searchQuery.toLowerCase();
-        tasks = tasks.filter((t: any) =>
-            t.title.toLowerCase().includes(q) ||
-            (t.description && t.description.toLowerCase().includes(q))
-        );
+        tasks = tasks.filter((t: any) => t.title.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q)));
     }
 
     if (props.filterPriority && props.filterPriority !== 'all') {
@@ -76,6 +48,9 @@ const filteredRootTasks = computed(() => {
 
     return tasks;
 });
+
+// True when the project has tasks but the current filters hide them all
+const hasRootTasks = computed(() => (props.project.tasks || []).some((t: any) => !t.parent_task_id));
 
 const tasksByStatus = computed(() => {
     const grouped: Record<string, any[]> = { todo: [], in_progress: [], completed: [], cancelled: [] };
@@ -101,24 +76,15 @@ const subtaskCountMap = computed<Record<string | number, number>>(() => {
     return map;
 });
 
-const getPriorityClass = (priority: string) => {
-    const classes: Record<string, string> = {
-        urgent: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-        high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-        medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-        low: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+// Priority — dot + label, identical across list, kanban, sidebar, and index
+const getPriorityMeta = (priority: string) => {
+    const map: Record<string, { text: string; dot: string }> = {
+        urgent: { text: 'text-destructive', dot: 'bg-destructive' },
+        high: { text: 'text-warning', dot: 'bg-warning' },
+        medium: { text: 'text-warning', dot: 'bg-warning' },
+        low: { text: 'text-muted-foreground', dot: 'bg-muted-foreground/50' },
     };
-    return classes[priority] || 'bg-muted text-foreground';
-};
-
-const getPriorityDot = (priority: string) => {
-    const classes: Record<string, string> = {
-        urgent: 'bg-red-500',
-        high: 'bg-orange-500',
-        medium: 'bg-yellow-500',
-        low: 'bg-green-500',
-    };
-    return classes[priority] || 'bg-gray-500';
+    return map[priority] || { text: 'text-muted-foreground', dot: 'bg-muted-foreground/50' };
 };
 
 const formatDueDate = (date: string | null) => {
@@ -132,9 +98,8 @@ const getDueDateClass = (task: any) => {
     const due = new Date(task.due_date);
     const now = new Date();
     const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return 'text-red-600 dark:text-red-400';
-    if (diffDays <= 1) return 'text-orange-600 dark:text-orange-400';
-    if (diffDays <= 3) return 'text-yellow-600 dark:text-yellow-400';
+    if (diffDays < 0) return 'text-destructive';
+    if (diffDays <= 3) return 'text-warning';
     return 'text-muted-foreground';
 };
 
@@ -178,150 +143,164 @@ const loadMore = (statusKey: string) => {
 </script>
 
 <template>
-    <div class="flex gap-4 overflow-x-auto pb-4">
-        <div
-            v-for="col in columns"
-            :key="col.key"
-            class="min-w-[280px] flex-1 rounded-lg border p-3"
-            :class="[col.bgClass, col.borderClass]"
-        >
+    <!-- Board-level empty states -->
+    <EmptyState
+        v-if="filteredRootTasks.length === 0 && hasRootTasks"
+        :icon="Columns3"
+        title="No matching tasks"
+        description="No tasks match your current search or filters."
+    />
+    <EmptyState
+        v-else-if="filteredRootTasks.length === 0"
+        :icon="Columns3"
+        title="No tasks yet"
+        description="Create your first task to see it on the board."
+    >
+        <template #action>
+            <Button size="sm" @click="$emit('add-task')">
+                <Plus class="size-4" />
+                Add task
+            </Button>
+        </template>
+    </EmptyState>
+
+    <div v-else class="flex gap-4 overflow-x-auto pb-4">
+        <div v-for="col in columns" :key="col.key" class="border-border bg-muted/30 min-w-[280px] flex-1 rounded-lg border p-2.5">
             <!-- Column Header -->
-            <div class="mb-3 flex items-center justify-between">
+            <div class="mb-3 flex items-center justify-between px-1 pt-1">
                 <div class="flex items-center gap-2">
-                    <component :is="col.icon" class="h-4 w-4" :class="col.iconClass" />
-                    <span class="text-sm font-semibold text-foreground">{{ col.label }}</span>
-                    <Badge variant="secondary" class="h-5 px-1.5 text-xs">
+                    <span class="size-1.5 rounded-full" :class="col.dotClass"></span>
+                    <span class="text-muted-foreground text-xs font-medium">{{ col.label }}</span>
+                    <span class="text-muted-foreground text-xs tabular-nums">
                         {{ tasksByStatus[col.key]?.length || 0 }}
-                    </Badge>
+                    </span>
                 </div>
             </div>
 
             <!-- Task Cards -->
-            <div class="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-                <Card
+            <div class="max-h-[calc(100vh-280px)] space-y-2 overflow-y-auto pr-1">
+                <div
                     v-for="task in visibleTasks(col.key)"
                     :key="task.id"
-                    class="cursor-pointer border border-border shadow-sm transition-shadow hover:shadow-md dark:border-border"
+                    role="button"
+                    tabindex="0"
+                    class="border-border bg-card hover:border-muted-foreground/30 focus-visible:ring-ring/50 cursor-pointer rounded-lg border p-3 shadow-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
                     @click="$emit('view-task', task)"
+                    @keydown.enter="$emit('view-task', task)"
                 >
-                    <CardContent class="p-3">
-                        <!-- Top row: priority dot + title + menu -->
-                        <div class="mb-2 flex items-start justify-between gap-2">
-                            <div class="flex items-start gap-2 min-w-0 flex-1">
-                                <button
-                                    @click.stop="$emit('toggle-task', task)"
-                                    :disabled="updatingTasks.has(task.id)"
-                                    class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full transition-all hover:scale-110"
-                                    :class="task.status === 'completed'
-                                        ? 'bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800'
-                                        : 'bg-muted hover:bg-muted dark:hover:bg-accent'"
-                                >
-                                    <Loader2 v-if="updatingTasks.has(task.id)" class="h-3 w-3 animate-spin text-muted-foreground" />
-                                    <CheckCircle2 v-else-if="task.status === 'completed'" class="h-3 w-3 text-green-600 dark:text-green-400" />
-                                    <Circle v-else class="h-3 w-3 text-muted-foreground" />
-                                </button>
-                                <span
-                                    class="line-clamp-2 text-sm font-medium leading-tight"
-                                    :class="task.status === 'completed' ? 'text-muted-foreground line-through dark:text-muted-foreground' : 'text-foreground'"
-                                    :title="task.title"
-                                >
-                                    {{ task.title }}
-                                </span>
-                            </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" class="h-6 w-6 flex-shrink-0 p-0" @click.stop>
-                                        <MoreVertical class="h-3.5 w-3.5 text-muted-foreground" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" class="w-36 dark:bg-card">
-                                    <DropdownMenuItem @click.stop="$emit('view-task', task)">
-                                        <Eye class="mr-2 h-3 w-3" />
-                                        <span class="text-xs">View</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem @click.stop="$emit('edit-task', task)">
-                                        <Edit class="mr-2 h-3 w-3" />
-                                        <span class="text-xs">Edit</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem @click.stop="$emit('delete-task', task)" class="text-red-600 dark:text-red-400">
-                                        <Trash2 class="mr-2 h-3 w-3" />
-                                        <span class="text-xs">Delete</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-
-                        <!-- Description -->
-                        <p v-if="task.description" class="mb-2 line-clamp-2 text-xs text-muted-foreground">
-                            {{ task.description }}
-                        </p>
-
-                        <!-- Bottom row: meta info -->
-                        <div class="flex flex-wrap items-center gap-2">
-                            <!-- Priority -->
-                            <Badge :class="getPriorityClass(task.priority)" class="h-5 px-1.5 text-xs">
-                                {{ task.priority.charAt(0).toUpperCase() + task.priority.slice(1) }}
-                            </Badge>
-
-                            <!-- Due date -->
-                            <div v-if="task.due_date" class="flex items-center gap-1 text-xs" :class="getDueDateClass(task)">
-                                <CalendarDays class="h-3 w-3" />
-                                {{ formatDueDate(task.due_date) }}
-                            </div>
-
-                            <!-- Subtask count -->
-                            <span v-if="subtaskCountMap[task.id]" class="text-xs text-muted-foreground">
-                                {{ subtaskCountMap[task.id] }} sub
+                    <!-- Top row: completion toggle + title + menu -->
+                    <div class="mb-2 flex items-start justify-between gap-2">
+                        <div class="flex min-w-0 flex-1 items-start gap-2">
+                            <button
+                                type="button"
+                                :aria-label="task.status === 'completed' ? 'Mark task as not completed' : 'Mark task as completed'"
+                                @click.stop="$emit('toggle-task', task)"
+                                :disabled="updatingTasks.has(task.id)"
+                                class="focus-visible:ring-ring/50 mt-0.5 flex size-5 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border-2 transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                :class="
+                                    task.status === 'completed'
+                                        ? 'border-success bg-success text-success-foreground'
+                                        : 'border-muted-foreground/40 hover:border-primary text-transparent'
+                                "
+                            >
+                                <Loader2 v-if="updatingTasks.has(task.id)" class="text-muted-foreground size-3 animate-spin" />
+                                <CheckCircle2 v-else-if="task.status === 'completed'" class="size-3.5" />
+                                <Circle v-else class="size-3" />
+                            </button>
+                            <span
+                                class="line-clamp-2 text-sm leading-tight font-medium"
+                                :class="task.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'"
+                                :title="task.title"
+                            >
+                                {{ task.title }}
                             </span>
                         </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" aria-label="Task actions" class="size-7 flex-shrink-0" @click.stop>
+                                    <MoreVertical class="text-muted-foreground size-3.5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" class="w-40">
+                                <DropdownMenuItem @click.stop="$emit('view-task', task)">
+                                    <Eye class="size-4" />
+                                    View details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click.stop="$emit('edit-task', task)">
+                                    <Edit class="size-4" />
+                                    Edit task
+                                </DropdownMenuItem>
+                                <DropdownMenuItem @click.stop="$emit('delete-task', task)" class="text-destructive focus:text-destructive">
+                                    <Trash2 class="size-4" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
 
-                        <!-- Tags -->
-                        <div v-if="task.tags && task.tags.length > 0" class="mt-2 flex flex-wrap gap-1">
-                            <Badge
-                                v-for="tag in task.tags.slice(0, 3)"
-                                :key="tag.id"
-                                variant="outline"
-                                class="h-5 px-1.5 text-xs"
-                                :style="`border-color: ${tag.color}; color: ${tag.color}`"
-                            >
-                                {{ tag.name }}
-                            </Badge>
-                            <Badge
-                                v-if="task.tags.length > 3"
-                                variant="outline"
-                                class="h-5 cursor-pointer px-1.5 text-xs hover:bg-muted"
-                                @click.stop="$emit('view-tags', task)"
-                            >
-                                +{{ task.tags.length - 3 }}
-                            </Badge>
-                        </div>
-                    </CardContent>
-                </Card>
+                    <!-- Description -->
+                    <p v-if="task.description" class="text-muted-foreground mb-2 line-clamp-2 text-xs">
+                        {{ task.description }}
+                    </p>
+
+                    <!-- Bottom row: meta info -->
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <!-- Priority -->
+                        <span class="inline-flex items-center gap-1.5 text-xs font-medium" :class="getPriorityMeta(task.priority).text">
+                            <span class="size-1.5 rounded-full" :class="getPriorityMeta(task.priority).dot"></span>
+                            {{ task.priority.charAt(0).toUpperCase() + task.priority.slice(1) }}
+                        </span>
+
+                        <!-- Due date -->
+                        <span v-if="task.due_date" class="inline-flex items-center gap-1 text-xs tabular-nums" :class="getDueDateClass(task)">
+                            <CalendarDays class="size-3" />
+                            {{ formatDueDate(task.due_date) }}
+                        </span>
+
+                        <!-- Subtask count -->
+                        <span v-if="subtaskCountMap[task.id]" class="text-muted-foreground text-xs tabular-nums">
+                            {{ subtaskCountMap[task.id] }} sub
+                        </span>
+                    </div>
+
+                    <!-- Tags -->
+                    <div v-if="task.tags && task.tags.length > 0" class="mt-2 flex flex-wrap gap-1">
+                        <span
+                            v-for="tag in task.tags.slice(0, 3)"
+                            :key="tag.id"
+                            class="inline-flex h-5 items-center rounded-md border px-1.5 text-xs font-medium"
+                            :style="`border-color: ${tag.color}66; color: ${tag.color}; background-color: ${tag.color}14`"
+                        >
+                            {{ tag.name }}
+                        </span>
+                        <button
+                            v-if="task.tags.length > 3"
+                            type="button"
+                            :aria-label="`Show all ${task.tags.length} tags`"
+                            class="border-border bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground focus-visible:ring-ring/50 inline-flex h-5 cursor-pointer items-center rounded-md border px-1.5 text-xs tabular-nums transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                            @click.stop="$emit('view-tags', task)"
+                        >
+                            +{{ task.tags.length - 3 }}
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Load More -->
                 <button
                     v-if="hasMore(col.key)"
+                    type="button"
                     @click="loadMore(col.key)"
-                    class="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-input py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-card hover:text-foreground dark:border-input dark:hover:border-primary/40 dark:hover:bg-muted/50 dark:hover:text-muted-foreground/70"
+                    class="border-input text-muted-foreground hover:border-primary/40 hover:bg-card hover:text-foreground focus-visible:ring-ring/50 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-dashed py-2 text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
                 >
-                    <ChevronsDown class="h-3.5 w-3.5" />
+                    <ChevronsDown class="size-3.5" />
                     Show more ({{ remainingCount(col.key) }} remaining)
                 </button>
 
                 <!-- Empty column -->
-                <div v-if="!tasksByStatus[col.key]?.length" class="py-8 text-center">
-                    <p class="text-xs text-muted-foreground">No tasks</p>
+                <div v-if="!tasksByStatus[col.key]?.length" class="border-border rounded-md border border-dashed py-8 text-center">
+                    <p class="text-muted-foreground text-xs">No tasks</p>
                 </div>
             </div>
         </div>
     </div>
 </template>
-
-<style scoped>
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-</style>

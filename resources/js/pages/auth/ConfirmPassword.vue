@@ -24,30 +24,25 @@ const submit = () => {
     <AuthLayout title="Confirm your password" description="This is a secure area of the application. Please confirm your password before continuing.">
         <Head title="Confirm password" />
 
-        <form @submit.prevent="submit">
-            <div class="space-y-6">
-                <div class="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                        id="password"
-                        type="password"
-                        class="mt-1 block w-full"
-                        v-model="form.password"
-                        required
-                        autocomplete="current-password"
-                        autofocus
-                    />
-
-                    <InputError :message="form.errors.password" />
-                </div>
-
-                <div class="flex items-center">
-                    <Button class="w-full" :disabled="form.processing">
-                        <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                        Confirm Password
-                    </Button>
-                </div>
+        <form @submit.prevent="submit" class="grid gap-6">
+            <div class="grid gap-2">
+                <Label for="password">Password</Label>
+                <Input
+                    id="password"
+                    type="password"
+                    v-model="form.password"
+                    required
+                    autocomplete="current-password"
+                    autofocus
+                    placeholder="Password"
+                />
+                <InputError :message="form.errors.password" />
             </div>
+
+            <Button type="submit" class="w-full" :disabled="form.processing">
+                <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+                {{ form.processing ? 'Confirming…' : 'Confirm password' }}
+            </Button>
         </form>
     </AuthLayout>
 </template>

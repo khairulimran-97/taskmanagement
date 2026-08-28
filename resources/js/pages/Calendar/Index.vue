@@ -1,21 +1,25 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { BreadcrumbItem, CalendarEvent, FullCalendarEvent } from '@/types';
+import EmptyState from '@/components/EmptyState.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
-import { Plus, Calendar as CalendarIcon, RefreshCw } from 'lucide-vue-next';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { CATEGORIES } from '@/lib/eventCategories';
+import { BreadcrumbItem, CalendarEvent, FullCalendarEvent } from '@/types';
+import { Head, router } from '@inertiajs/vue3';
+import { Calendar as CalendarIcon, Plus, RefreshCw } from 'lucide-vue-next';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { toast } from 'vue-sonner';
 
 // FullCalendar imports
-import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import FullCalendar from '@fullcalendar/vue3';
 
-import CalendarEventDialog from '@/components/calendar/CalendarEventDialog.vue';
 import CalendarEventDetailDialog from '@/components/calendar/CalendarEventDetailDialog.vue';
+import CalendarEventDialog from '@/components/calendar/CalendarEventDialog.vue';
 
 interface Props {
     availableColors: string[];
@@ -26,6 +30,19 @@ const props = defineProps<Props>();
 
 // No breadcrumb on the calendar — it's a full-width workspace
 const breadcrumbs = ref<BreadcrumbItem[]>([]);
+
+/* The DB stores a raw hex per category; the UI renders it through theme tokens
+   so event colors adapt to light/dark. Data flow keeps the hex untouched. */
+const CATEGORY_DISPLAY: Record<string, string> = {
+    '#3B82F6': 'var(--chart-2)', // work
+    '#10B981': 'var(--success)', // personal
+    '#8B5CF6': 'color-mix(in oklch, var(--chart-2) 55%, var(--chart-4) 45%)', // meeting — violet derived from tokens
+    '#EF4444': 'var(--destructive)', // deadline
+    '#F59E0B': 'var(--warning)', // reminder
+    '#6B7280': 'var(--chart-5)', // other
+};
+
+const displayColor = (hex?: string | null): string => CATEGORY_DISPLAY[(hex || '').trim().toUpperCase()] || hex || 'var(--primary)';
 
 // Calendar ref and state
 const calendarRef = ref();
@@ -39,8 +56,12 @@ const selectedDate = ref<any>(null);
 const isSubmitting = ref(false);
 const isLoadingEvents = ref(false);
 
+// Events actually delivered to FullCalendar for the visible range —
+// keeps the empty-state overlay honest after refetches
+const loadedEventCount = ref(0);
+
 // Dynamic event loading function
-const loadEvents = async (fetchInfo: any, successCallback: Function, failureCallback: Function) => {
+const loadEvents = async (fetchInfo: any, successCallback: (...args: unknown[]) => void, failureCallback: (...args: unknown[]) => void) => {
     isLoadingEvents.value = true;
 
     try {
@@ -55,8 +76,10 @@ const loadEvents = async (fetchInfo: any, successCallback: Function, failureCall
         }
 
         const events = await response.json();
+        loadedEventCount.value = Array.isArray(events) ? events.length : 0;
         successCallback(events);
     } catch (error) {
+        toast.error("Couldn't load events", { description: 'Check your connection and try again.' });
         failureCallback(error);
     } finally {
         isLoadingEvents.value = false;
@@ -68,7 +91,19 @@ const storedView = (typeof localStorage !== 'undefined' && localStorage.getItem(
 
 // Track narrow screens so the calendar toolbar can simplify
 const isMobile = ref(typeof window !== 'undefined' && window.innerWidth < 640);
-const onResize = () => { isMobile.value = window.innerWidth < 640; };
+const onResize = () => {
+    isMobile.value = window.innerWidth < 640;
+};
+
+// FullCalendar only styles the active view button; mirror it for assistive tech
+const VIEW_TYPES = ['dayGridMonth', 'timeGridWeek', 'timeGridDay', 'listWeek'];
+const syncViewButtonAria = () => {
+    VIEW_TYPES.forEach((view) => {
+        document.querySelectorAll(`.fc .fc-${view}-button`).forEach((btn) => {
+            btn.setAttribute('aria-pressed', String(btn.classList.contains('fc-button-active')));
+        });
+    });
+};
 
 // Calendar options with dynamic event loading
 const calendarOptions = computed(() => ({
@@ -76,13 +111,11 @@ const calendarOptions = computed(() => ({
     headerToolbar: isMobile.value
         ? { left: 'prev,next', center: 'title', right: 'today' }
         : {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-        },
-    footerToolbar: isMobile.value
-        ? { center: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }
-        : false,
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
+          },
+    footerToolbar: isMobile.value ? { center: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' } : false,
     initialView: storedView,
     height: '100%',
     expandRows: true,
@@ -111,20 +144,30 @@ const calendarOptions = computed(() => ({
     // Persist the active view
     datesSet: (info: any) => {
         if (typeof localStorage !== 'undefined') localStorage.setItem('calendar_view', info.view.type);
+        nextTick(syncViewButtonAria);
     },
 
-    // Hover preview via native title
     eventDidMount: (info: any) => {
+        // Hover preview via native title
         const desc = info.event.extendedProps?.description;
-        const time = info.event.allDay
-            ? 'All day'
-            : info.event.start?.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const time = info.event.allDay ? 'All day' : info.event.start?.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         info.el.setAttribute('title', `${info.event.title}\n${time}${desc ? '\n' + desc : ''}`);
+
+        // Re-skin the chip: FC inlines the stored hex, override with the token color
+        const el = info.el as HTMLElement;
+        const display = displayColor(info.event.backgroundColor);
+        if (el.classList.contains('fc-list-event')) {
+            const dot = el.querySelector('.fc-list-event-dot') as HTMLElement | null;
+            if (dot) dot.style.borderColor = display;
+        } else {
+            el.style.backgroundColor = display;
+            el.style.borderColor = display;
+        }
     },
 
     // Event styling
     eventDisplay: 'block',
-    eventTextColor: '#ffffff',
+    eventTextColor: 'var(--primary-foreground)',
 
     // View-specific options
     views: {
@@ -140,8 +183,8 @@ const calendarOptions = computed(() => ({
             allDaySlot: true,
             slotMinTime: '06:00:00',
             slotMaxTime: '22:00:00',
-        }
-    }
+        },
+    },
 }));
 
 // Date selection handler → lightweight quick-add
@@ -209,13 +252,16 @@ function handleEventDrop(dropInfo: any) {
             preserveScroll: true,
             onError: () => {
                 dropInfo.revert();
+                toast.error('Event not rescheduled', { description: 'The change was reverted.' });
             },
             onSuccess: () => {
+                toast.success('Event rescheduled');
                 afterEventChange();
-            }
+            },
         });
-    } catch (error) {
+    } catch {
         dropInfo.revert();
+        toast.error('Event not rescheduled', { description: 'The change was reverted.' });
     }
 }
 
@@ -246,13 +292,16 @@ function handleEventResize(resizeInfo: any) {
             preserveScroll: true,
             onError: () => {
                 resizeInfo.revert();
+                toast.error('Event not rescheduled', { description: 'The change was reverted.' });
             },
             onSuccess: () => {
+                toast.success('Event rescheduled');
                 afterEventChange();
-            }
+            },
         });
-    } catch (error) {
+    } catch {
         resizeInfo.revert();
+        toast.error('Event not rescheduled', { description: 'The change was reverted.' });
     }
 }
 
@@ -265,6 +314,15 @@ const refreshCalendar = async () => {
     }
 };
 
+// Flatten server validation errors into one toast description
+const errorSummary = (errors: Record<string, string>): string => {
+    const messages = [];
+    if (errors.title) messages.push(errors.title);
+    if (errors.start_date) messages.push(errors.start_date);
+    if (errors.end_date) messages.push(errors.end_date);
+    return messages.join('\n');
+};
+
 // Create new event
 const createEvent = (eventData: any) => {
     isSubmitting.value = true;
@@ -273,24 +331,20 @@ const createEvent = (eventData: any) => {
         preserveScroll: true,
         onSuccess: async () => {
             isEventDialogOpen.value = false;
+            quickAddOpen.value = false;
             selectedDate.value = null;
             resetForm();
+            totalEventCount.value++;
+            toast.success('Event created');
             await afterEventChange();
         },
         onError: (errors) => {
-            // Handle validation errors
-            const errorMessages = [];
-            if (errors.start_date) errorMessages.push(`Start date: ${errors.start_date}`);
-            if (errors.end_date) errorMessages.push(`End date: ${errors.end_date}`);
-            if (errors.title) errorMessages.push(`Title: ${errors.title}`);
-
-            if (errorMessages.length > 0) {
-                alert('Please fix the following errors:\n' + errorMessages.join('\n'));
-            }
+            const description = errorSummary(errors);
+            toast.error('Event not created', description ? { description } : undefined);
         },
         onFinish: () => {
             isSubmitting.value = false;
-        }
+        },
     });
 };
 
@@ -305,22 +359,16 @@ const updateEvent = (eventId: string, eventData: any) => {
             isEventDetailDialogOpen.value = false;
             editingEvent.value = null;
             resetForm();
+            toast.success('Event updated');
             await afterEventChange();
         },
         onError: (errors) => {
-            // Handle validation errors
-            const errorMessages = [];
-            if (errors.start_date) errorMessages.push(`Start date: ${errors.start_date}`);
-            if (errors.end_date) errorMessages.push(`End date: ${errors.end_date}`);
-            if (errors.title) errorMessages.push(`Title: ${errors.title}`);
-
-            if (errorMessages.length > 0) {
-                alert('Please fix the following errors:\n' + errorMessages.join('\n'));
-            }
+            const description = errorSummary(errors);
+            toast.error('Event not updated', description ? { description } : undefined);
         },
         onFinish: () => {
             isSubmitting.value = false;
-        }
+        },
     });
 };
 
@@ -331,8 +379,12 @@ const deleteEvent = (eventId: string) => {
         onSuccess: async () => {
             isEventDetailDialogOpen.value = false;
             selectedEvent.value = null;
+            toast.success('Event deleted');
             await afterEventChange();
-        }
+        },
+        onError: () => {
+            toast.error('Event not deleted', { description: 'Please try again.' });
+        },
     });
 };
 
@@ -359,26 +411,40 @@ const openNewEventDialog = () => {
 /* ───────────────── Upcoming agenda rail ───────────────── */
 const upcoming = ref<any[]>([]);
 const totalEventCount = ref<number>(props.events?.length || 0);
+const isLoadingUpcoming = ref(false);
+const upcomingFailed = ref(false);
 
 const todayItems = computed(() => upcoming.value.filter((e) => e.is_today));
 const laterItems = computed(() => upcoming.value.filter((e) => !e.is_today));
 
 const fetchUpcoming = async () => {
+    isLoadingUpcoming.value = true;
+    upcomingFailed.value = false;
     try {
         const res = await fetch(route('calendar.api.upcoming'), { headers: { Accept: 'application/json' } });
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         upcoming.value = data.events || [];
     } catch {
-        /* non-fatal */
+        upcomingFailed.value = true;
+    } finally {
+        isLoadingUpcoming.value = false;
     }
 };
+
+// Only claim "no events" when every source agrees the account is empty
+const showEmptyState = computed(
+    () => !isLoadingEvents.value && totalEventCount.value === 0 && loadedEventCount.value === 0 && upcoming.value.length === 0,
+);
 
 const relativeDay = (dateStr: string, isToday: boolean): string => {
     if (isToday) return 'Today';
     const d = new Date(dateStr);
     const now = new Date();
-    const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000);
+    const diff = Math.round(
+        (new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) /
+            86400000,
+    );
     if (diff === 1) return 'Tomorrow';
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
@@ -398,7 +464,7 @@ const openFromRail = (e: any) => {
         allDay: e.all_day,
         backgroundColor: e.color,
         borderColor: e.color,
-        textColor: '#ffffff',
+        textColor: 'var(--primary-foreground)',
         extendedProps: { description: e.description || '' },
     } as any;
     isEventDetailDialogOpen.value = true;
@@ -417,22 +483,27 @@ const openQuickAdd = (info: { start: Date; end?: Date; allDay: boolean }) => {
     nextTick(() => quickAddInput.value?.focus());
 };
 
+const closeQuickAdd = () => {
+    if (isSubmitting.value) return;
+    quickAddOpen.value = false;
+};
+
 const submitQuickAdd = () => {
     const title = quickAddTitle.value.trim();
-    if (!title || !quickAddDate.value) return;
+    if (!title || !quickAddDate.value || isSubmitting.value) return;
     const start = quickAddDate.value.start;
     const pad = (n: number) => n.toString().padStart(2, '0');
     const dateStr = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
     const allDay = quickAddDate.value.allDay;
     const startTime = allDay ? '00:00' : `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+    // Popover stays open while the request runs; createEvent closes it on success
     createEvent({
         title,
         description: '',
-        color: '#3B82F6',
+        color: CATEGORIES[0].color,
         all_day: allDay,
         start_date: `${dateStr}T${startTime}:00`,
     });
-    quickAddOpen.value = false;
 };
 
 const escalateQuickAdd = () => {
@@ -452,14 +523,29 @@ const onKeydown = (e: KeyboardEvent) => {
     const api = calendarRef.value?.getApi?.();
     if (!api) return;
     switch (e.key.toLowerCase()) {
-        case 't': api.today(); break;
-        case 'arrowleft': api.prev(); break;
-        case 'arrowright': api.next(); break;
-        case 'm': api.changeView('dayGridMonth'); break;
-        case 'w': api.changeView('timeGridWeek'); break;
-        case 'd': api.changeView('timeGridDay'); break;
-        case 'l': api.changeView('listWeek'); break;
-        default: return;
+        case 't':
+            api.today();
+            break;
+        case 'arrowleft':
+            api.prev();
+            break;
+        case 'arrowright':
+            api.next();
+            break;
+        case 'm':
+            api.changeView('dayGridMonth');
+            break;
+        case 'w':
+            api.changeView('timeGridWeek');
+            break;
+        case 'd':
+            api.changeView('timeGridDay');
+            break;
+        case 'l':
+            api.changeView('listWeek');
+            break;
+        default:
+            return;
     }
 };
 
@@ -485,172 +571,227 @@ const afterEventChange = async () => {
         <Head title="Calendar" />
 
         <div class="flex h-[calc(100vh-3.5rem)] flex-col">
-            <!-- Header bar -->
-            <div class="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 md:px-6">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/12 text-primary">
-                        <CalendarIcon class="h-5 w-5" />
-                    </div>
-                    <div>
-                        <h1 class="font-display text-xl font-semibold tracking-tight text-foreground">Calendar</h1>
-                        <p class="text-xs text-muted-foreground">Manage your personal events and appointments</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <Button
-                        @click="refreshCalendar"
-                        variant="outline"
-                        size="sm"
-                        :disabled="isLoadingEvents"
-                        class="h-9 gap-1.5"
-                    >
-                        <RefreshCw :class="['h-4 w-4', { 'animate-spin': isLoadingEvents }]" />
-                        <span class="hidden sm:inline">{{ isLoadingEvents ? 'Loading…' : 'Refresh' }}</span>
-                    </Button>
-                    <Button @click="openNewEventDialog" size="sm" class="h-9 gap-1.5">
-                        <Plus class="h-4 w-4" />
-                        <span>New Event</span>
-                    </Button>
-                </div>
+            <!-- Page header -->
+            <div class="shrink-0 px-4 pt-4 md:px-6">
+                <PageHeader title="Calendar" description="Your events and appointments" :icon="CalendarIcon">
+                    <template #actions>
+                        <TooltipProvider :delay-duration="300">
+                            <Tooltip>
+                                <TooltipTrigger as-child>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        :disabled="isLoadingEvents"
+                                        aria-label="Refresh events"
+                                        class="text-muted-foreground hover:text-foreground"
+                                        @click="refreshCalendar"
+                                    >
+                                        <RefreshCw class="size-4" :class="{ 'animate-spin': isLoadingEvents }" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Refresh events</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        <Button size="sm" class="gap-1.5" @click="openNewEventDialog">
+                            <Plus class="size-4" />
+                            New event
+                        </Button>
+                    </template>
+                </PageHeader>
             </div>
 
             <!-- Body: calendar + agenda rail -->
             <div class="flex min-h-0 flex-1">
                 <!-- Calendar -->
-                <div class="relative flex min-w-0 flex-1 flex-col overflow-auto px-4 py-4 md:px-6">
+                <div class="relative flex min-w-0 flex-1 flex-col overflow-auto px-4 pb-4 md:px-6">
                     <!-- Loading overlay -->
-                    <div
-                        v-if="isLoadingEvents"
-                        class="absolute inset-0 z-10 flex items-center justify-center bg-background/60"
-                    >
-                        <div class="flex items-center gap-2 text-muted-foreground">
-                            <RefreshCw class="h-5 w-5 animate-spin" />
+                    <div v-if="isLoadingEvents" class="bg-background/60 absolute inset-0 z-10 flex items-center justify-center">
+                        <div class="text-muted-foreground flex items-center gap-2 text-sm">
+                            <RefreshCw class="size-4 animate-spin" />
                             <span>Loading events…</span>
                         </div>
                     </div>
 
                     <!-- Empty state -->
-                    <div
-                        v-if="totalEventCount === 0 && upcoming.length === 0"
-                        class="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center p-6"
-                    >
-                        <div class="pointer-events-auto flex max-w-xs flex-col items-center rounded-2xl border border-dashed border-border bg-card/80 px-8 py-10 text-center backdrop-blur-sm">
-                            <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                                <CalendarIcon class="h-7 w-7" />
-                            </div>
-                            <h3 class="font-display text-lg font-semibold text-foreground">No events yet</h3>
-                            <p class="mt-1 text-sm text-muted-foreground">Click any day or add your first event to get started.</p>
-                            <Button @click="openNewEventDialog" size="sm" class="mt-4 gap-1.5">
-                                <Plus class="h-4 w-4" /> Add event
-                            </Button>
+                    <div v-if="showEmptyState" class="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center p-6">
+                        <div class="bg-card pointer-events-auto w-full max-w-xs rounded-lg shadow-xs">
+                            <EmptyState :icon="CalendarIcon" title="No events yet" description="Click any day to add your first event.">
+                                <template #action>
+                                    <Button size="sm" class="gap-1.5" @click="openNewEventDialog">
+                                        <Plus class="size-4" />
+                                        New event
+                                    </Button>
+                                </template>
+                            </EmptyState>
                         </div>
                     </div>
 
-                    <FullCalendar
-                        ref="calendarRef"
-                        :options="calendarOptions"
-                        class="calendar-container"
-                    />
+                    <FullCalendar ref="calendarRef" :options="calendarOptions" class="calendar-container" />
                 </div>
 
                 <!-- Agenda rail -->
-                <aside class="hidden w-80 shrink-0 flex-col border-l border-border bg-muted/20 lg:flex">
-                    <div class="border-b border-border px-4 py-3">
-                        <h2 class="font-display text-base font-semibold tracking-tight text-foreground">Up next</h2>
-                        <p class="text-xs text-muted-foreground">Today and the next 7 days</p>
+                <aside class="border-border bg-muted/20 hidden w-80 shrink-0 flex-col border-l lg:flex">
+                    <div class="border-border border-b px-4 py-3">
+                        <h2 class="text-foreground text-sm font-semibold tracking-tight">Up next</h2>
+                        <p class="text-muted-foreground text-xs">Today and the next 7 days</p>
                     </div>
 
                     <div class="flex-1 space-y-5 overflow-y-auto px-4 py-4">
-                        <!-- Today -->
-                        <div v-if="todayItems.length">
-                            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-primary">Today</p>
-                            <div class="space-y-1.5">
-                                <button
-                                    v-for="e in todayItems"
-                                    :key="e.id"
-                                    @click="openFromRail(e)"
-                                    class="group flex w-full items-start gap-2.5 rounded-lg border border-transparent px-2 py-2 text-left transition-colors hover:border-border hover:bg-card"
-                                >
-                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: e.color }"></span>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm font-medium text-foreground group-hover:text-primary">{{ e.title }}</p>
-                                        <p class="text-xs text-muted-foreground">{{ eventTimeLabel(e) }}</p>
-                                    </div>
-                                </button>
-                            </div>
+                        <!-- Loading skeleton -->
+                        <div v-if="isLoadingUpcoming && !upcoming.length" class="space-y-1.5" aria-hidden="true">
+                            <div v-for="n in 3" :key="n" class="bg-muted/60 h-11 animate-pulse rounded-lg"></div>
                         </div>
 
-                        <!-- Upcoming -->
-                        <div v-if="laterItems.length">
-                            <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Upcoming</p>
-                            <div class="space-y-1.5">
-                                <button
-                                    v-for="e in laterItems"
-                                    :key="e.id"
-                                    @click="openFromRail(e)"
-                                    class="group flex w-full items-start gap-2.5 rounded-lg border border-transparent px-2 py-2 text-left transition-colors hover:border-border hover:bg-card"
-                                >
-                                    <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" :style="{ backgroundColor: e.color }"></span>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm font-medium text-foreground group-hover:text-primary">{{ e.title }}</p>
-                                        <p class="text-xs text-muted-foreground">
-                                            {{ relativeDay(e.start_date || e.start, false) }} · {{ eventTimeLabel(e) }}
-                                        </p>
-                                    </div>
-                                </button>
-                            </div>
+                        <!-- Load failure -->
+                        <div v-else-if="upcomingFailed" class="flex flex-col items-center py-10 text-center">
+                            <p class="text-muted-foreground text-sm">Couldn't load upcoming events</p>
+                            <Button variant="outline" size="sm" class="mt-3" @click="fetchUpcoming"> Try again </Button>
                         </div>
 
-                        <!-- Empty -->
-                        <div v-if="!todayItems.length && !laterItems.length" class="flex flex-col items-center py-10 text-center">
-                            <CalendarIcon class="mb-2 h-7 w-7 text-muted-foreground/40" />
-                            <p class="text-sm text-muted-foreground">Nothing coming up</p>
-                        </div>
+                        <template v-else>
+                            <!-- Today -->
+                            <div v-if="todayItems.length">
+                                <p class="text-primary mb-2 text-xs font-medium">Today</p>
+                                <div class="space-y-1.5">
+                                    <button
+                                        v-for="e in todayItems"
+                                        :key="e.id"
+                                        @click="openFromRail(e)"
+                                        class="group hover:border-border hover:bg-card focus-visible:ring-ring/50 flex w-full cursor-pointer items-start gap-2.5 rounded-lg border border-transparent px-2 py-2.5 text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <span class="mt-1.5 size-2 shrink-0 rounded-full" :style="{ backgroundColor: displayColor(e.color) }"></span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-foreground group-hover:text-primary truncate text-sm font-medium">{{ e.title }}</p>
+                                            <p class="text-muted-foreground text-xs tabular-nums">{{ eventTimeLabel(e) }}</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Upcoming -->
+                            <div v-if="laterItems.length">
+                                <p class="text-muted-foreground mb-2 text-xs font-medium">Upcoming</p>
+                                <div class="space-y-1.5">
+                                    <button
+                                        v-for="e in laterItems"
+                                        :key="e.id"
+                                        @click="openFromRail(e)"
+                                        class="group hover:border-border hover:bg-card focus-visible:ring-ring/50 flex w-full cursor-pointer items-start gap-2.5 rounded-lg border border-transparent px-2 py-2.5 text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                                    >
+                                        <span class="mt-1.5 size-2 shrink-0 rounded-full" :style="{ backgroundColor: displayColor(e.color) }"></span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-foreground group-hover:text-primary truncate text-sm font-medium">{{ e.title }}</p>
+                                            <p class="text-muted-foreground text-xs tabular-nums">
+                                                {{ relativeDay(e.start_date || e.start, false) }} · {{ eventTimeLabel(e) }}
+                                            </p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Empty -->
+                            <div v-if="!todayItems.length && !laterItems.length" class="flex flex-col items-center py-10 text-center">
+                                <CalendarIcon class="text-muted-foreground/40 mb-2 size-6" />
+                                <p class="text-muted-foreground text-sm">Nothing in the next 7 days</p>
+                            </div>
+                        </template>
                     </div>
 
-                    <!-- Category legend (pinned footer) -->
-                    <div class="mt-auto border-t border-border bg-muted/30 px-4 py-3">
-                        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Categories</p>
-                        <div class="flex flex-wrap gap-x-3 gap-y-1.5">
-                            <span v-for="c in CATEGORIES" :key="c.key" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: c.color }"></span>
-                                {{ c.label }}
-                            </span>
+                    <!-- Legend + shortcuts (pinned footer) -->
+                    <div class="border-border bg-muted/30 mt-auto space-y-3 border-t px-4 py-3">
+                        <div>
+                            <p class="text-muted-foreground mb-2 text-xs font-medium">Categories</p>
+                            <div class="flex flex-wrap gap-x-3 gap-y-1.5">
+                                <span v-for="c in CATEGORIES" :key="c.key" class="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
+                                    <span class="size-2 rounded-full" :style="{ backgroundColor: displayColor(c.color) }"></span>
+                                    {{ c.label }}
+                                </span>
+                            </div>
                         </div>
+                        <p class="text-muted-foreground text-xs">
+                            <kbd class="border-border bg-card text-foreground rounded border px-1 font-sans text-[10px] font-medium">t</kbd> today ·
+                            <kbd class="border-border bg-card text-foreground rounded border px-1 font-sans text-[10px] font-medium">←</kbd>
+                            <kbd class="border-border bg-card text-foreground rounded border px-1 font-sans text-[10px] font-medium">→</kbd> navigate
+                            · <kbd class="border-border bg-card text-foreground rounded border px-1 font-sans text-[10px] font-medium">m</kbd>
+                            <kbd class="border-border bg-card text-foreground rounded border px-1 font-sans text-[10px] font-medium">w</kbd>
+                            <kbd class="border-border bg-card text-foreground rounded border px-1 font-sans text-[10px] font-medium">d</kbd>
+                            <kbd class="border-border bg-card text-foreground rounded border px-1 font-sans text-[10px] font-medium">l</kbd> views
+                        </p>
                     </div>
                 </aside>
             </div>
 
+            <!-- Mobile "Up next" strip (agenda rail equivalent below lg) -->
+            <div class="border-border bg-card shrink-0 border-t px-4 py-3 lg:hidden">
+                <p class="text-muted-foreground text-xs font-medium">Up next</p>
+                <div v-if="upcoming.length" class="mt-2 flex gap-2 overflow-x-auto pb-1">
+                    <button
+                        v-for="e in upcoming"
+                        :key="e.id"
+                        @click="openFromRail(e)"
+                        class="border-border bg-background hover:bg-muted/60 focus-visible:ring-ring/50 inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                        <span class="size-2 shrink-0 rounded-full" :style="{ backgroundColor: displayColor(e.color) }"></span>
+                        <span class="text-foreground max-w-40 truncate text-sm font-medium">{{ e.title }}</span>
+                        <span class="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
+                            {{ relativeDay(e.start_date || e.start, e.is_today) }} · {{ eventTimeLabel(e) }}
+                        </span>
+                    </button>
+                </div>
+                <p v-else class="text-muted-foreground mt-2 text-sm">Nothing in the next 7 days</p>
+                <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                    <span v-for="c in CATEGORIES" :key="c.key" class="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                        <span class="size-1.5 rounded-full" :style="{ backgroundColor: displayColor(c.color) }"></span>
+                        {{ c.label }}
+                    </span>
+                </div>
+            </div>
+
             <!-- Quick-add popover -->
-            <div
-                v-if="quickAddOpen"
-                class="fixed inset-0 z-50 flex items-start justify-center bg-foreground/10 pt-32"
-                @click.self="quickAddOpen = false"
+            <Transition
+                enter-active-class="transition-opacity duration-150"
+                enter-from-class="opacity-0"
+                leave-active-class="transition-opacity duration-150"
+                leave-to-class="opacity-0"
             >
-                <div class="w-full max-w-sm rounded-xl border border-border bg-card p-4 shadow-xl">
-                    <p class="mb-2 text-xs font-medium text-muted-foreground">
-                        New event · {{ quickAddDate ? relativeDay(quickAddDate.start.toISOString(), false) : '' }}
-                    </p>
-                    <input
-                        ref="quickAddInput"
-                        v-model="quickAddTitle"
-                        type="text"
-                        placeholder="Event title…"
-                        class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        @keydown.enter.prevent="submitQuickAdd"
-                        @keydown.esc.prevent="quickAddOpen = false"
-                    />
-                    <div class="mt-3 flex items-center justify-between">
-                        <button class="text-xs text-muted-foreground hover:text-primary" @click="escalateQuickAdd">
-                            More options →
-                        </button>
-                        <div class="flex gap-2">
-                            <Button variant="ghost" size="sm" @click="quickAddOpen = false">Cancel</Button>
-                            <Button size="sm" :disabled="!quickAddTitle.trim()" @click="submitQuickAdd">Add</Button>
+                <div
+                    v-if="quickAddOpen"
+                    class="bg-foreground/20 fixed inset-0 z-50 flex items-start justify-center pt-32"
+                    @click.self="closeQuickAdd"
+                    @keydown.esc.prevent="closeQuickAdd"
+                >
+                    <div role="dialog" aria-label="Quick add event" class="border-border bg-popover w-full max-w-sm rounded-lg border p-4 shadow-md">
+                        <p class="text-muted-foreground mb-2 text-xs font-medium">
+                            New event · {{ quickAddDate ? relativeDay(quickAddDate.start.toISOString(), false) : '' }}
+                        </p>
+                        <input
+                            ref="quickAddInput"
+                            v-model="quickAddTitle"
+                            type="text"
+                            placeholder="Event title…"
+                            :disabled="isSubmitting"
+                            class="border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm transition-colors duration-150 outline-none focus-visible:ring-2 disabled:opacity-50"
+                            @keydown.enter.prevent="submitQuickAdd"
+                        />
+                        <div class="mt-3 flex items-center justify-between">
+                            <button
+                                type="button"
+                                :disabled="isSubmitting"
+                                class="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -ml-1.5 inline-flex min-h-8 cursor-pointer items-center rounded-md px-1.5 text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+                                @click="escalateQuickAdd"
+                            >
+                                More options
+                            </button>
+                            <div class="flex gap-2">
+                                <Button variant="ghost" size="sm" :disabled="isSubmitting" @click="closeQuickAdd">Cancel</Button>
+                                <Button size="sm" :disabled="!quickAddTitle.trim() || isSubmitting" @click="submitQuickAdd">
+                                    {{ isSubmitting ? 'Adding…' : 'Add event' }}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </Transition>
         </div>
 
         <!-- Event Creation/Edit Dialog -->
@@ -660,7 +801,10 @@ const afterEventChange = async () => {
             :editing-event="editingEvent"
             :available-colors="availableColors"
             :is-submitting="isSubmitting"
-            @close="isEventDialogOpen = false; resetForm()"
+            @close="
+                isEventDialogOpen = false;
+                resetForm();
+            "
             @create="createEvent"
             @update="updateEvent"
         />
@@ -669,7 +813,10 @@ const afterEventChange = async () => {
         <CalendarEventDetailDialog
             :is-open="isEventDetailDialogOpen"
             :event="selectedEvent"
-            @close="isEventDetailDialogOpen = false; selectedEvent = null"
+            @close="
+                isEventDetailDialogOpen = false;
+                selectedEvent = null;
+            "
             @edit="handleEditEvent"
             @delete="deleteEvent"
         />
@@ -677,22 +824,20 @@ const afterEventChange = async () => {
 </template>
 
 <style scoped>
-/* Calendar container — driven by theme tokens so it flips automatically */
+/* FullCalendar chrome bound to theme tokens — flips with light/dark automatically */
 .calendar-container {
     --fc-border-color: var(--border);
     --fc-button-text-color: var(--foreground);
-    --fc-button-bg-color: var(--card);
+    --fc-button-bg-color: var(--background);
     --fc-button-border-color: var(--border);
     --fc-button-hover-bg-color: var(--accent);
     --fc-button-hover-border-color: var(--border);
     --fc-button-active-bg-color: var(--muted);
-    --fc-today-bg-color: color-mix(in srgb, var(--primary) 10%, transparent);
-    --fc-event-text-color: #ffffff;
+    --fc-today-bg-color: color-mix(in srgb, var(--primary) 7%, transparent);
+    --fc-highlight-color: color-mix(in srgb, var(--primary) 8%, transparent);
+    --fc-event-text-color: var(--primary-foreground);
     --fc-neutral-bg-color: var(--muted);
     --fc-page-bg-color: var(--background);
-}
-
-.calendar-container {
     flex: 1 1 auto;
     min-height: 0;
 }
@@ -709,8 +854,7 @@ const afterEventChange = async () => {
 }
 
 :deep(.fc-toolbar-title) {
-    font-family: var(--font-serif);
-    font-size: 1.15rem;
+    font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--foreground);
@@ -718,7 +862,7 @@ const afterEventChange = async () => {
 
 @media (min-width: 640px) {
     :deep(.fc-toolbar-title) {
-        font-size: 1.35rem;
+        font-size: 1.125rem;
     }
 }
 
@@ -726,29 +870,76 @@ const afterEventChange = async () => {
     margin-top: 0.75rem;
 }
 
+/* Toolbar buttons mirror the app's outline Button (border + bg-background + shadow-xs) */
 :deep(.fc-button) {
-    border-radius: 0.5rem !important;
+    display: inline-flex;
+    align-items: center;
+    height: 2rem;
+    padding: 0 0.75rem;
     border: 1px solid var(--border) !important;
+    border-radius: calc(var(--radius) - 2px) !important;
+    background-color: var(--background) !important;
+    color: var(--foreground) !important;
+    font-size: 0.8125rem;
     font-weight: 500;
-    font-size: 0.875rem;
-    padding: 0.45rem 0.85rem;
     text-transform: capitalize;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    box-shadow: 0 1px 2px 0 color-mix(in srgb, var(--foreground) 5%, transparent) !important;
+    transition:
+        background-color 150ms,
+        border-color 150ms,
+        color 150ms;
+    cursor: pointer;
 }
 
 :deep(.fc-button:hover) {
-    border-color: var(--primary) !important;
+    background-color: var(--accent) !important;
+    color: var(--accent-foreground) !important;
 }
 
-/* Space out buttons within FullCalendar's button groups */
-:deep(.fc-button-group) {
-    gap: 0.375rem;
+:deep(.fc-button:focus) {
+    box-shadow: 0 1px 2px 0 color-mix(in srgb, var(--foreground) 5%, transparent) !important;
+    outline: none;
 }
 
+:deep(.fc-button:focus-visible) {
+    outline: 2px solid color-mix(in srgb, var(--ring) 50%, transparent);
+    outline-offset: 1px;
+}
+
+:deep(.fc-button:disabled) {
+    opacity: 0.5;
+    cursor: default;
+    box-shadow: none !important;
+}
+
+/* Active view: quiet primary tint, matching the app's soft-badge status language */
+:deep(.fc-button-active) {
+    background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+    color: var(--primary) !important;
+    font-weight: 600;
+    box-shadow: none !important;
+}
+
+/* Button groups join into one segmented outline control (FC supplies the -1px overlap) */
 :deep(.fc-button-group > .fc-button) {
-    border-radius: 0.5rem !important;
-    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+:deep(.fc-button-group > .fc-button:first-child) {
+    border-top-left-radius: calc(var(--radius) - 2px) !important;
+    border-bottom-left-radius: calc(var(--radius) - 2px) !important;
+}
+
+:deep(.fc-button-group > .fc-button:last-child) {
+    border-top-right-radius: calc(var(--radius) - 2px) !important;
+    border-bottom-right-radius: calc(var(--radius) - 2px) !important;
+}
+
+:deep(.fc-button-group > .fc-button:hover),
+:deep(.fc-button-group > .fc-button:focus-visible),
+:deep(.fc-button-group > .fc-button-active) {
+    position: relative;
+    z-index: 1;
 }
 
 /* Gap between the toolbar chunks (prev/next | title | views) */
@@ -756,43 +947,24 @@ const afterEventChange = async () => {
     margin-left: 0.5rem;
 }
 
-/* View switcher (Month/Week/Day/List) as a segmented control — keeps
-   saffron reserved for true primary actions like "New Event". */
-:deep(.fc-toolbar-chunk:last-child .fc-button-group) {
-    gap: 0 !important;
-    background-color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 0.625rem;
-    padding: 0.25rem;
-}
-
-:deep(.fc-toolbar-chunk:last-child .fc-button-group > .fc-button) {
-    border: 1px solid transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    color: var(--muted-foreground) !important;
-    padding: 0.3rem 0.75rem !important;
-}
-
-:deep(.fc-toolbar-chunk:last-child .fc-button-group > .fc-button:hover) {
-    color: var(--foreground) !important;
-    border-color: transparent !important;
-}
-
-:deep(.fc-toolbar-chunk:last-child .fc-button-group > .fc-button-active) {
-    background-color: var(--card) !important;
-    color: var(--foreground) !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
-    font-weight: 600 !important;
-}
-
+/* Event chips */
 :deep(.fc-event) {
     border: none;
-    border-radius: 0.375rem;
+    border-radius: calc(var(--radius) - 2px);
     font-size: 0.75rem;
     font-weight: 500;
-    padding: 0.125rem 0.35rem;
+    padding: 0.125rem 0.375rem;
     cursor: pointer;
+    transition: opacity 150ms;
+}
+
+:deep(.fc-event:hover) {
+    opacity: 0.85;
+}
+
+:deep(.fc-event:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
 }
 
 :deep(.fc-daygrid-event) {
@@ -800,15 +972,11 @@ const afterEventChange = async () => {
     margin-bottom: 1px;
 }
 
-:deep(.fc-timegrid-event) {
-    border-radius: 0.375rem;
-}
-
 :deep(.fc-day-today) {
     background-color: var(--fc-today-bg-color) !important;
 }
 
-/* Saffron pill on today's date number */
+/* Primary pill on today's date number */
 :deep(.fc-daygrid-day.fc-day-today .fc-daygrid-day-number) {
     background-color: var(--primary);
     color: var(--primary-foreground);
@@ -824,9 +992,10 @@ const afterEventChange = async () => {
     font-weight: 600;
 }
 
-:deep(.fc-scrollgrid) {
+:deep(.fc-scrollgrid),
+:deep(.fc-list) {
     border: 1px solid var(--border);
-    border-radius: 0.625rem;
+    border-radius: var(--radius);
     overflow: hidden;
 }
 
@@ -840,12 +1009,10 @@ const afterEventChange = async () => {
 }
 
 :deep(.fc-col-header-cell) {
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 500;
     color: var(--muted-foreground);
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-    padding: 0.6rem 0;
+    padding: 0.5rem 0;
 }
 
 :deep(.fc-daygrid-day-number),
@@ -855,37 +1022,14 @@ const afterEventChange = async () => {
 :deep(.fc-list-event-title) {
     color: var(--foreground);
     font-weight: 500;
+    font-variant-numeric: tabular-nums;
 }
 
 :deep(.fc-list-event:hover td) {
     background-color: var(--accent);
 }
 
-:deep(.fc-event:hover) {
-    opacity: 0.85;
-    transition: opacity 0.2s ease;
-}
-
 :deep(.fc-highlight) {
-    background-color: color-mix(in srgb, var(--primary) 12%, transparent);
-}
-
-/* Slim scrollbar to match the app */
-:deep(.fc-scroller::-webkit-scrollbar) {
-    width: 5px;
-    height: 5px;
-}
-
-:deep(.fc-scroller::-webkit-scrollbar-track) {
-    background: transparent;
-}
-
-:deep(.fc-scroller::-webkit-scrollbar-thumb) {
-    background: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
-    border-radius: 9999px;
-}
-
-:deep(.fc-scroller::-webkit-scrollbar-thumb:hover) {
-    background: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
+    background-color: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 </style>

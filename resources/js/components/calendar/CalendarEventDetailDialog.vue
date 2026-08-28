@@ -1,11 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Calendar, Clock, Edit, Trash2 } from 'lucide-vue-next';
 import { categoryForColor } from '@/lib/eventCategories';
+import { Calendar, Clock, Edit, Trash2 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 interface Props {
     isOpen: boolean;
@@ -19,6 +29,28 @@ const emit = defineEmits<{
     edit: [event: any];
     delete: [eventId: string];
 }>();
+
+/* The DB stores a raw hex per category; the UI renders it through theme tokens
+   so the dot and badge adapt to light/dark. Display-only mapping. */
+const CATEGORY_DISPLAY: Record<string, string> = {
+    '#3B82F6': 'var(--chart-2)', // work
+    '#10B981': 'var(--success)', // personal
+    '#8B5CF6': 'color-mix(in oklch, var(--chart-2) 55%, var(--chart-4) 45%)', // meeting — violet derived from tokens
+    '#EF4444': 'var(--destructive)', // deadline
+    '#F59E0B': 'var(--warning)', // reminder
+    '#6B7280': 'var(--chart-5)', // other
+};
+
+const displayColor = (hex?: string | null): string => CATEGORY_DISPLAY[(hex || '').trim().toUpperCase()] || hex || 'var(--primary)';
+
+const catDisplay = computed(() => displayColor(props.event?.backgroundColor));
+
+// Soft badge in the app's status language: 10% tint, colored text
+const categoryBadgeStyle = computed(() => ({
+    color: catDisplay.value,
+    borderColor: `color-mix(in srgb, ${catDisplay.value} 30%, transparent)`,
+    backgroundColor: `color-mix(in srgb, ${catDisplay.value} 10%, transparent)`,
+}));
 
 // Helper function to parse date without timezone conversion
 const parseLocalDate = (date: Date | string): Date => {
@@ -37,7 +69,7 @@ const parseLocalDate = (date: Date | string): Date => {
                 parseInt(dateParts[2]), // day
                 parseInt(timeParts[0]) || 0, // hour
                 parseInt(timeParts[1]) || 0, // minute
-                parseInt(timeParts[2]) || 0  // second
+                parseInt(timeParts[2]) || 0, // second
             );
         }
         // For other string formats, fall back to regular parsing
@@ -163,112 +195,98 @@ const handleClose = () => {
 <template>
     <Sheet :open="isOpen" @update:open="(open) => !open && handleClose()">
         <SheetContent side="right" class="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-            <SheetHeader class="border-b border-border px-5 py-4 text-left">
+            <SheetHeader class="border-border border-b px-5 py-4 text-left">
                 <SheetTitle class="flex items-center gap-2.5">
-                    <span
-                        class="h-4 w-4 shrink-0 rounded-full ring-1 ring-border"
-                        :style="{ backgroundColor: event?.backgroundColor || 'var(--primary)' }"
-                    />
-                    <span class="truncate font-display text-xl tracking-tight">{{ event?.title || 'Event Details' }}</span>
+                    <span class="size-3 shrink-0 rounded-full" :style="{ backgroundColor: catDisplay }" />
+                    <span class="truncate text-base font-semibold tracking-tight">{{ event?.title || 'Event details' }}</span>
                 </SheetTitle>
-                <SheetDescription>
-                    View and manage this calendar event.
-                </SheetDescription>
+                <SheetDescription> View and manage this calendar event. </SheetDescription>
             </SheetHeader>
 
             <div v-if="event" class="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-                <!-- Event Times -->
+                <!-- Event times -->
                 <div class="space-y-3">
-                    <!-- Start Time -->
-                    <div class="flex items-start space-x-3">
-                        <Calendar class="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <!-- Start -->
+                    <div class="flex items-start gap-3">
+                        <Calendar class="text-muted-foreground mt-0.5 size-4 shrink-0" />
                         <div>
-                            <p class="font-medium text-foreground">
+                            <p class="text-foreground text-sm font-medium tabular-nums">
                                 {{ formatDateTime(event.start, event.allDay) }}
                             </p>
-                            <p class="text-sm text-muted-foreground">
-                                Start {{ getRelativeTime }}
+                            <p class="text-muted-foreground text-xs">
+                                {{ getRelativeTime }}
                             </p>
                         </div>
                     </div>
 
-                    <!-- End Time -->
-                    <div v-if="event.end" class="flex items-start space-x-3">
-                        <Clock class="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <!-- End -->
+                    <div v-if="event.end" class="flex items-start gap-3">
+                        <Clock class="text-muted-foreground mt-0.5 size-4 shrink-0" />
                         <div>
-                            <p class="font-medium text-foreground">
+                            <p class="text-foreground text-sm font-medium tabular-nums">
                                 {{ formatDateTime(event.end, event.allDay) }}
                             </p>
-                            <p class="text-sm text-muted-foreground">
-                                Duration: {{ getDurationText }}
-                            </p>
+                            <p class="text-muted-foreground text-xs tabular-nums">Duration: {{ getDurationText }}</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Event Properties -->
+                <!-- Event properties -->
                 <div class="flex flex-wrap gap-2">
-                    <Badge v-if="event.allDay" variant="secondary" class="flex items-center space-x-1">
-                        <Clock class="h-3 w-3" />
-                        <span>All Day</span>
+                    <Badge v-if="event.allDay" variant="secondary" class="flex items-center gap-1">
+                        <Clock class="size-3" />
+                        <span>All day</span>
                     </Badge>
 
-                    <Badge
-                        variant="outline"
-                        class="flex items-center gap-1.5"
-                        :style="{ borderColor: event.backgroundColor, color: event.backgroundColor }"
-                    >
-                        <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: event.backgroundColor }" />
+                    <Badge variant="outline" class="flex items-center gap-1.5" :style="categoryBadgeStyle">
+                        <span class="size-1.5 rounded-full" :style="{ backgroundColor: catDisplay }" />
                         <span>{{ categoryForColor(event.backgroundColor).label }}</span>
                     </Badge>
                 </div>
 
                 <!-- Description -->
-                <div v-if="event.extendedProps?.description" class="space-y-2">
-                    <h4 class="font-medium text-foreground">Description</h4>
-                    <p class="text-sm text-muted-foreground whitespace-pre-wrap">
+                <div v-if="event.extendedProps?.description" class="space-y-1.5">
+                    <h4 class="text-muted-foreground text-xs font-medium">Description</h4>
+                    <p class="text-foreground text-sm whitespace-pre-wrap">
                         {{ event.extendedProps.description }}
                     </p>
                 </div>
             </div>
 
-            <SheetFooter class="flex-row items-center justify-between gap-2 border-t border-border px-5 py-4">
+            <SheetFooter class="border-border flex-row items-center justify-between gap-2 border-t px-5 py-4">
+                <AlertDialog>
+                    <AlertDialogTrigger as-child>
+                        <Button variant="ghost" class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive gap-1.5">
+                            <Trash2 class="size-4" />
+                            <span>Delete</span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete event</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to delete "{{ event?.title }}"? This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                @click="handleDelete"
+                                class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/30"
+                            >
+                                Delete event
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
                 <div class="flex gap-2">
-                    <Button variant="outline" size="sm" @click="handleEdit" class="gap-1.5">
-                        <Edit class="h-4 w-4" />
+                    <Button variant="outline" @click="handleClose"> Close </Button>
+                    <Button @click="handleEdit" class="gap-1.5">
+                        <Edit class="size-4" />
                         <span>Edit</span>
                     </Button>
-
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" class="gap-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-                                <Trash2 class="h-4 w-4" />
-                                <span>Delete</span>
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Event</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Are you sure you want to delete "{{ event?.title }}"? This action cannot be undone.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    @click="handleDelete"
-                                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive"
-                                >
-                                    Delete Event
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
                 </div>
-
-                <Button size="sm" @click="handleClose">
-                    Close
-                </Button>
             </SheetFooter>
         </SheetContent>
     </Sheet>

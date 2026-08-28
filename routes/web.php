@@ -11,11 +11,14 @@ use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/', function () {
-        return redirect()->route('dashboard');
-    });
+// Guests get the landing page; signed-in users go straight to the dashboard
+Route::get('/', function () {
+    return auth()->check()
+        ? redirect()->route('dashboard')
+        : Inertia::render('Welcome');
+})->name('home');
 
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Projects

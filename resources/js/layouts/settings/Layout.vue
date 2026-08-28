@@ -23,33 +23,37 @@ const sidebarNavItems: NavItem[] = [
 
 const page = usePage();
 
-const currentPath = page.props.ziggy?.location ? new URL(page.props.ziggy.location).pathname : '';
+// Normalize the trailing slash so "/settings/profile/" still matches its nav item
+const location = (page.props.ziggy as { location?: string } | undefined)?.location;
+const currentPath = location ? new URL(location).pathname.replace(/\/+$/, '') : '';
+
+const isActive = (href: string) => currentPath === href || currentPath.startsWith(`${href}/`);
 </script>
 
 <template>
     <PageContainer>
         <PageHeader title="Settings" description="Manage your profile and account settings" />
 
-        <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
+        <div class="flex flex-col gap-8 lg:flex-row lg:gap-12">
             <aside class="w-full max-w-xl lg:w-48">
-                <nav class="flex flex-col space-x-0 space-y-1">
+                <nav class="flex flex-col space-y-1" aria-label="Settings sections">
                     <Button
                         v-for="item in sidebarNavItems"
                         :key="item.href"
                         variant="ghost"
-                        :class="['w-full justify-start', { 'bg-muted': currentPath === item.href }]"
+                        :class="['w-full justify-start', isActive(item.href) ? 'bg-muted text-foreground' : 'text-muted-foreground']"
                         as-child
                     >
-                        <Link :href="item.href">
+                        <Link :href="item.href" :aria-current="isActive(item.href) ? 'page' : undefined">
                             {{ item.title }}
                         </Link>
                     </Button>
                 </nav>
             </aside>
 
-            <Separator class="my-6 md:hidden" />
+            <Separator class="lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
+            <div class="flex-1 lg:max-w-2xl">
                 <section class="max-w-xl space-y-12">
                     <slot />
                 </section>
