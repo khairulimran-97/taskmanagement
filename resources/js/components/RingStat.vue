@@ -34,7 +34,9 @@ const dash = computed(() => (Math.min(100, Math.max(0, props.value)) / 100) * ci
                 />
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-foreground text-2xl leading-none font-semibold tracking-tight tabular-nums">{{ Math.round(value) }}%</span>
+                <span :class="['text-foreground leading-none font-semibold tracking-tight tabular-nums', size < 110 ? 'text-lg' : 'text-2xl']"
+                    >{{ Math.round(value) }}%</span
+                >
             </div>
         </div>
         <p class="text-foreground mt-3 text-sm font-medium">{{ label }}</p>

@@ -12,7 +12,7 @@ import { useAppearance } from '@/composables/useAppearance';
 import type { BreadcrumbItemType } from '@/types';
 import { Link, router } from '@inertiajs/vue3';
 import { AlertTriangle, Bell, CalendarDays, ChevronRight, Clock, Loader2, Monitor, Moon, PenTool, Sun } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { toast } from 'vue-sonner';
 
 interface Props {
@@ -47,6 +47,19 @@ const cycleTheme = () => {
     updateAppearance(nextTheme[appearance.value]);
 };
 
+// Live clock in the app bar — visible on every page
+const now = ref(new Date());
+let clockTimer: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+    clockTimer = setInterval(() => (now.value = new Date()), 1000);
+});
+onUnmounted(() => clearInterval(clockTimer));
+
+const clockText = computed(
+    () =>
+        `${now.value.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${now.value.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`,
+);
+
 // Guarded so a double-click cannot create two notes
 const creatingNote = ref(false);
 const createNewNote = () => {
@@ -74,6 +87,11 @@ const createNewNote = () => {
         </div>
 
         <div class="flex items-center gap-1">
+            <!-- Live clock -->
+            <time class="text-muted-foreground mr-2 hidden text-sm tabular-nums md:block" :datetime="now.toISOString()">
+                {{ clockText }}
+            </time>
+
             <!-- Quick note -->
             <Button variant="outline" size="sm" class="hidden sm:inline-flex" :disabled="creatingNote" @click="createNewNote">
                 <Loader2 v-if="creatingNote" class="size-4 animate-spin" />
