@@ -20,5 +20,12 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Passport::authorizationView(fn ($parameters) => view('mcp.authorize', $parameters));
+
+        // Env carries the PEMs single-line with literal "\n" — restore real newlines
+        foreach (['passport.private_key', 'passport.public_key'] as $key) {
+            if (is_string(config($key))) {
+                config([$key => str_replace('\\n', "\n", config($key))]);
+            }
+        }
     }
 }
