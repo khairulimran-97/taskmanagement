@@ -6,7 +6,7 @@ Nothing may read as "AI-generated": no gradients, no glassmorphism, no oversized
 ## Typography — ONE font
 - **Inter only**, loaded from bunny.net in `app.blade.php`. Weights 400 / 500 / 600 / 700.
 - `font-display`, `font-serif`, Fraunces, Hanken Grotesk: **must not appear anywhere**. Remove the class entirely (the sans is the default); when a heading needs presence use `font-semibold tracking-tight`.
-- Readability: `--text-sm` is raised to 15px and `--text-xs` to 13px in app.css — don't shrink text below these.
+- Type sizes are stock Tailwind (text-sm = 14px, text-xs = 12px) — no size overrides in app.css, and don't add any; don't shrink text below text-xs.
 - Scale (use these, nothing arbitrary):
   - Page title: `text-xl font-semibold tracking-tight` (PageHeader handles this — pages must use PageHeader)
   - Section/card title: `text-sm font-semibold` or CardTitle default (`text-base`)
