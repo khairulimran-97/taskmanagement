@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { Calendar, FileText, Folder, KeyRound, LayoutDashboard, Settings } from 'lucide-vue-next';
+import { Calendar, FileText, Folder, KeyRound, LayoutDashboard, Plug, Settings } from 'lucide-vue-next';
 
 const overviewItems: NavItem[] = [{ title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }];
 
@@ -17,6 +17,7 @@ const workspaceItems: NavItem[] = [
 
 const toolItems: NavItem[] = [
     { title: 'Vault', href: '/secrets', icon: KeyRound },
+    { title: 'MCP', href: '/mcp-access', icon: Plug },
     { title: 'Settings', href: '/settings', icon: Settings },
 ];
 </script>

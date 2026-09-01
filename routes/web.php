@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\McpAccessController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteImageController;
 use App\Http\Controllers\ProjectController;
@@ -83,6 +84,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Note Images - Pure JSON API endpoints (for fetch() requests, not Inertia)
     Route::post('/api/notes/images/upload', [NoteImageController::class, 'pureApiStore'])->name('notes.images.pure-api.store');
     Route::get('/api/images', [NoteImageController::class, 'apiAllImages'])->name('images.api.index');
+
+    // MCP access: API tokens + OAuth connections for the MCP server
+    Route::get('/mcp-access', [McpAccessController::class, 'index'])->name('mcp.index');
+    Route::post('/mcp-access/tokens', [McpAccessController::class, 'storeToken'])->name('mcp.tokens.store');
+    Route::delete('/mcp-access/tokens/{tokenId}', [McpAccessController::class, 'destroyToken'])->name('mcp.tokens.destroy');
+    Route::delete('/mcp-access/connections/{clientId}', [McpAccessController::class, 'destroyConnection'])->name('mcp.connections.destroy');
 
     // Secret Vault
     Route::get('/secrets', [SecretController::class, 'index'])->name('secrets.index');
