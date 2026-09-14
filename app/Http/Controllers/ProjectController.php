@@ -81,9 +81,9 @@ class ProjectController extends Controller
     {
         $project = Project::where('user_id', Auth::id())
             ->with([
+                // Flat set: the project page splits roots from subtasks client-side.
                 'tasks' => function ($query) {
-                    $query->whereNull('parent_task_id')
-                        ->with(['tags', 'subtasks.tags'])
+                    $query->with('tags')
                         ->orderBy('sort_order')
                         ->orderBy('created_at');
                 }
