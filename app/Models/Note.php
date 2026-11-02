@@ -125,7 +125,8 @@ class Note extends Model
      */
     public function markAsAccessed(): void
     {
-        $this->update(['last_accessed_at' => now()]);
+        // Reading is not editing: the note lists sort by updated_at.
+        static::withoutTimestamps(fn () => $this->update(['last_accessed_at' => now()]));
     }
 
     /**

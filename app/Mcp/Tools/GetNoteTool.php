@@ -33,7 +33,7 @@ class GetNoteTool extends Tool
             return Response::error('Note not found.');
         }
 
-        $note->update(['last_accessed_at' => now()]);
+        $note->markAsAccessed();
 
         return Response::json(['note' => $this->notePayload($note, withContent: true)]);
     }
