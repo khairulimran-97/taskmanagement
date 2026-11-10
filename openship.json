@@ -10,5 +10,5 @@
   "productionMode": "host",
   "port": 8000,
   "volumes": ["storage:/app/storage"],
-  "domains": ["nota.khairulimran.me"]
+  "domains": ["nota.khairulimran.dev"]
 }
